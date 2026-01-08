@@ -1,0 +1,271 @@
+// API Configuration and Helper Functions
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Get auth token from localStorage
+const getAuthToken = (): string | null => {
+  return localStorage.getItem('authToken');
+};
+
+// Set auth token in localStorage
+export const setAuthToken = (token: string): void => {
+  localStorage.setItem('authToken', token);
+};
+
+// Remove auth token from localStorage
+export const removeAuthToken = (): void => {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('isAuthenticated');
+};
+
+// Generic API request function
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = getAuthToken();
+  
+  console.log('API Request:', endpoint, 'Token:', token ? 'Present' : 'Missing');
+  
+  const config: RequestInit = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    },
+  };
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Something went wrong');
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Network error occurred');
+  }
+}
+
+// Auth API
+export const authAPI = {
+  login: async (email: string, password: string) => {
+    const response = await apiRequest<{ success: boolean; data: { token: string; id: string; name: string; email: string; role: string } }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    console.log('Login response:', response);
+    if (response.data?.token) {
+      setAuthToken(response.data.token);
+      console.log('Token saved:', response.data.token);
+      console.log('Token retrieved:', getAuthToken());
+    }
+    return response;
+  },
+
+  register: async (userData: any) => {
+    const response = await apiRequest<{ success: boolean; data: { token: string; [key: string]: any } }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+    if (response.data?.token) {
+      setAuthToken(response.data.token);
+    }
+    return response;
+  },
+
+  getCurrentUser: async () => {
+    return apiRequest<{ success: boolean; data: any }>('/auth/me');
+  },
+};
+
+// Inventory API
+export const inventoryAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiRequest<{ success: boolean; data: any[]; pagination: any }>(`/inventory${queryString}`);
+  },
+
+  getById: async (id: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/inventory/${id}`);
+  },
+
+  create: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/inventory', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: string, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/inventory/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest<{ success: boolean; message: string }>(`/inventory/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getStats: async () => {
+    return apiRequest<{ success: boolean; data: any }>('/inventory/stats/summary');
+  },
+};
+
+// Customer API
+export const customerAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiRequest<{ success: boolean; data: any[]; pagination: any }>(`/customers${queryString}`);
+  },
+
+  getById: async (id: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/customers/${id}`);
+  },
+
+  create: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/customers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: string, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/customers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest<{ success: boolean; message: string }>(`/customers/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Forms API
+export const formsAPI = {
+  // Biyana
+  getBiyanaForms: async () => {
+    return apiRequest<{ success: boolean; data: any[] }>('/forms/biyana');
+  },
+
+  createBiyana: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/forms/biyana', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Sale Agreement
+  getSaleAgreements: async () => {
+    return apiRequest<{ success: boolean; data: any[] }>('/forms/sale-agreement');
+  },
+
+  getSaleAgreementById: async (id: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/forms/sale-agreement/${id}`);
+  },
+
+  createSaleAgreement: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/forms/sale-agreement', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  approveSaleAgreement: async (id: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/forms/sale-agreement/${id}/approve`, {
+      method: 'PUT',
+    });
+  },
+
+  // Transfer
+  getTransferForms: async () => {
+    return apiRequest<{ success: boolean; data: any[] }>('/forms/transfer');
+  },
+
+  createTransfer: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/forms/transfer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  approveTransfer: async (id: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/forms/transfer/${id}/approve`, {
+      method: 'PUT',
+    });
+  },
+};
+
+// Voucher API
+export const voucherAPI = {
+  getAll: async (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiRequest<{ success: boolean; data: any[]; pagination: any }>(`/vouchers${queryString}`);
+  },
+
+  getById: async (id: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/vouchers/${id}`);
+  },
+
+  create: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/vouchers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: string, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/vouchers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest<{ success: boolean; message: string }>(`/vouchers/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Reports API
+export const reportsAPI = {
+  getDashboardStats: async () => {
+    return apiRequest<{ success: boolean; data: any }>('/reports/dashboard');
+  },
+
+  getSalesReport: async (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiRequest<{ success: boolean; data: any }>(`/reports/sales${queryString}`);
+  },
+
+  getPaymentReport: async (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiRequest<{ success: boolean; data: any }>(`/reports/payments${queryString}`);
+  },
+
+  getComparisonReport: async (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiRequest<{ success: boolean; data: any }>(`/reports/comparison${queryString}`);
+  },
+};
+
+export default {
+  auth: authAPI,
+  inventory: inventoryAPI,
+  customer: customerAPI,
+  forms: formsAPI,
+  voucher: voucherAPI,
+  reports: reportsAPI,
+};

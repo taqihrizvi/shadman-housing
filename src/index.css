@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* LaHomes Theme - Professional Real Estate */
+    /* Shadman Housing Theme - Professional Real Estate */
     --background: 40 20% 98%;
     --foreground: 160 30% 15%;
 
@@ -217,4 +217,57 @@
 
 .data-table tbody tr {
   @apply transition-colors hover:bg-muted/30;
+}
+
+/* Urdu Font Support */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'Jameel Noori Nastaleeq';
+  src: url('https://db.onlinewebfonts.com/t/4a8e337ed85177f07c58eeaa4a4816b4.woff2') format('woff2'),
+       url('https://db.onlinewebfonts.com/t/4a8e337ed85177f07c58eeaa4a4816b4.woff') format('woff'),
+       url('https://db.onlinewebfonts.com/t/4a8e337ed85177f07c58eeaa4a4816b4.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+input[lang="ur"],
+textarea[lang="ur"] {
+  font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', 'Noto Nastalikh Urdu', serif !important;
+  direction: rtl;
+  text-align: right;
+  line-height: 1.8;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    size: legal;
+    margin: 15mm;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .page-break-before {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .urdu-text,
+  .urdu-text * {
+    font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+  }
 }

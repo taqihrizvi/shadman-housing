@@ -24,11 +24,11 @@ const variantStyles = {
 };
 
 const iconBgStyles = {
-  default: "bg-primary/10 text-primary",
-  primary: "bg-primary/10 text-primary",
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  accent: "bg-accent/20 text-accent-foreground",
+  default: "text-primary",
+  primary: "text-primary",
+  success: "text-success",
+  warning: "text-warning",
+  accent: "text-accent",
 };
 
 export function StatCard({
@@ -42,10 +42,10 @@ export function StatCard({
   return (
     <Card className={cn("border-l-4 card-hover", variantStyles[variant])}>
       <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
+        <div className="flex items-start justify-between gap-6">
+          <div className="space-y-2 flex-1 min-w-0 max-w-[calc(100%-60px)]">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold tracking-tight">{value}</p>
+            <p className="text-2xl font-bold tracking-tight">{value}</p>
             {subtitle && (
               <p className="text-sm text-muted-foreground">{subtitle}</p>
             )}
@@ -63,8 +63,8 @@ export function StatCard({
               </div>
             )}
           </div>
-          <div className={cn("rounded-xl p-3", iconBgStyles[variant])}>
-            <Icon className="h-6 w-6" />
+          <div className={cn("rounded-full p-2.5 flex-shrink-0 mt-1", iconBgStyles[variant])}>
+            <Icon className="h-5 w-5" strokeWidth={2.5} />
           </div>
         </div>
       </CardContent>

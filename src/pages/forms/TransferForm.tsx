@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,38 +15,166 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { FileOutput, Save, Printer, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
 
-const projects = ["Green Valley", "Lake View", "Palm Heights", "Sunset Gardens"];
 const transferReasons = ["Sale to Third Party", "Inheritance", "Gift", "Court Order", "Other"];
 
 export default function TransferForm() {
+  const queryClient = useQueryClient();
+  const [selectedPlot, setSelectedPlot] = useState<any>(null);
+  const [fromCustomerId, setFromCustomerId] = useState("");
+  const [toCustomerId, setToCustomerId] = useState("");
+  
   const [formData, setFormData] = useState({
-    // Current Owner
-    currentOwnerName: "",
-    currentOwnerCnic: "",
-    currentOwnerPhone: "",
-    // New Owner
-    newOwnerName: "",
-    newOwnerFatherName: "",
-    newOwnerCnic: "",
-    newOwnerPhone: "",
-    newOwnerAddress: "",
     // Property
-    plotNo: "",
-    project: "",
+    plotId: "",
     // Transfer Details
     transferReason: "",
     transferAmount: "",
-    transferDate: new Date().toISOString().split("T")[0],
+    transferFee: "",
+    date: new Date().toISOString().split("T")[0],
     remarks: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // New owner form data
+  const [newOwnerData, setNewOwnerData] = useState({
+    name: "",
+    fatherName: "",
+    cnic: "",
+    phone: "",
+    address: "",
+  });
+
+  // Fetch sold plots (plots that have owners)
+  const { data: plotsData } = useQuery({
+    queryKey: ['soldPlots'],
+    queryFn: async () => {
+      const response = await inventoryAPI.getAll({ status: 'SOLD' });
+      return response.data;
+    },
+  });
+
+  // Handle plot selection
+  const handlePlotSelect = async (plotId: string) => {
+    setFormData({ ...formData, plotId });
+    
+    const plot = plotsData?.find((p: any) => p.id === plotId);
+    setSelectedPlot(plot);
+    
+    // Fetch current owner (buyer) details
+    if (plot?.buyerId) {
+      setFromCustomerId(plot.buyerId);
+    }
+  };
+
+  // Fetch current owner details
+  const { data: currentOwner } = useQuery({
+    queryKey: ['customer', fromCustomerId],
+    queryFn: async () => {
+      if (!fromCustomerId) return null;
+      const response = await customerAPI.getById(fromCustomerId);
+      return response.data;
+    },
+    enabled: !!fromCustomerId,
+  });
+
+  // Create transfer mutation
+  const createTransferMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await formsAPI.createTransfer(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transferForms'] });
+      queryClient.invalidateQueries({ queryKey: ['soldPlots'] });
+      toast({
+        title: "Transfer Form Submitted",
+        description: "Transfer form has been submitted successfully and is pending approval.",
+      });
+      // Reset form
+      setFormData({
+        plotId: "",
+        transferReason: "",
+        transferAmount: "",
+        transferFee: "",
+        date: new Date().toISOString().split("T")[0],
+        remarks: "",
+      });
+      setNewOwnerData({
+        name: "",
+        fatherName: "",
+        cnic: "",
+        phone: "",
+        address: "",
+      });
+      setSelectedPlot(null);
+      setFromCustomerId("");
+      setToCustomerId("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to submit transfer form",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Transfer Form Submitted",
-      description: `Transfer initiated for Plot ${formData.plotNo} to ${formData.newOwnerName}.`,
-    });
+    
+    if (!fromCustomerId) {
+      toast({
+        title: "Error",
+        description: "Please select a plot with a current owner",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // First, create or find the new owner customer
+    try {
+      let newOwnerId = toCustomerId;
+      
+      // Check if customer exists by CNIC
+      const existingCustomers = await customerAPI.getAll({ search: newOwnerData.cnic });
+      const existingCustomer = existingCustomers.data.find((c: any) => c.cnic === newOwnerData.cnic);
+      
+      if (existingCustomer) {
+        newOwnerId = existingCustomer.id;
+        setToCustomerId(existingCustomer.id);
+      } else {
+        // Create new customer
+        const newCustomer = await customerAPI.create(newOwnerData);
+        newOwnerId = newCustomer.data.id;
+        setToCustomerId(newCustomer.data.id);
+      }
+
+      // Create transfer form
+      const transferData = {
+        plotId: formData.plotId,
+        fromCustomerId: fromCustomerId,
+        toCustomerId: newOwnerId,
+        transferAmount: parseFloat(formData.transferAmount) || 0,
+        transferFee: parseFloat(formData.transferFee) || 0,
+        date: formData.date,
+        remarks: formData.remarks,
+      };
+
+      createTransferMutation.mutate(transferData);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to process transfer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatEnum = (value: string) => {
+    if (!value) return "";
+    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
   return (
@@ -86,77 +214,73 @@ export default function TransferForm() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Current Owner */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Current Owner Information</h3>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentOwnerName">Owner Name *</Label>
-                    <Input
-                      id="currentOwnerName"
-                      placeholder="Current owner's name"
-                      value={formData.currentOwnerName}
-                      onChange={(e) => setFormData({ ...formData, currentOwnerName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="currentOwnerCnic">CNIC *</Label>
-                    <Input
-                      id="currentOwnerCnic"
-                      placeholder="00000-0000000-0"
-                      value={formData.currentOwnerCnic}
-                      onChange={(e) => setFormData({ ...formData, currentOwnerCnic: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="currentOwnerPhone">Phone *</Label>
-                    <Input
-                      id="currentOwnerPhone"
-                      placeholder="+92 300 0000000"
-                      value={formData.currentOwnerPhone}
-                      onChange={(e) => setFormData({ ...formData, currentOwnerPhone: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Property */}
+              {/* Property Selection */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">Property Information</h3>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-1">
                   <div className="space-y-2">
-                    <Label htmlFor="project">Project *</Label>
+                    <Label htmlFor="plotId">Select Plot *</Label>
                     <Select
-                      value={formData.project}
-                      onValueChange={(value) => setFormData({ ...formData, project: value })}
+                      value={formData.plotId}
+                      onValueChange={handlePlotSelect}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select project" />
+                        <SelectValue placeholder="Select a sold plot to transfer" />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem key={project} value={project}>
-                            {project}
+                        {plotsData?.map((plot: any) => (
+                          <SelectItem key={plot.id} value={plot.id}>
+                            {plot.plotNo} - {formatEnum(plot.project)} - {formatEnum(plot.size)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="plotNo">Plot Number *</Label>
-                    <Input
-                      id="plotNo"
-                      placeholder="e.g., A-101"
-                      value={formData.plotNo}
-                      onChange={(e) => setFormData({ ...formData, plotNo: e.target.value })}
-                      required
-                    />
-                  </div>
+                  
+                  {selectedPlot && (
+                    <div className="p-4 bg-muted rounded-lg">
+                      <h4 className="font-semibold mb-2">Plot Details</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div><span className="text-muted-foreground">Plot No:</span> {selectedPlot.plotNo}</div>
+                        <div><span className="text-muted-foreground">Project:</span> {formatEnum(selectedPlot.project)}</div>
+                        <div><span className="text-muted-foreground">Block:</span> {selectedPlot.block}</div>
+                        <div><span className="text-muted-foreground">Size:</span> {formatEnum(selectedPlot.size)}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Current Owner - Auto-populated */}
+              {currentOwner && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Current Owner Information</h3>
+                  <div className="p-4 bg-muted rounded-lg">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <Label className="text-muted-foreground">Owner Name</Label>
+                        <p className="font-medium">{currentOwner.name}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Father's Name</Label>
+                        <p className="font-medium">{currentOwner.fatherName}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">CNIC</Label>
+                        <p className="font-medium">{currentOwner.cnic}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Phone</Label>
+                        <p className="font-medium">{currentOwner.phone}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-muted-foreground">Address</Label>
+                        <p className="font-medium">{currentOwner.address}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* New Owner */}
               <div className="space-y-4">
@@ -167,8 +291,8 @@ export default function TransferForm() {
                     <Input
                       id="newOwnerName"
                       placeholder="New owner's full name"
-                      value={formData.newOwnerName}
-                      onChange={(e) => setFormData({ ...formData, newOwnerName: e.target.value })}
+                      value={newOwnerData.name}
+                      onChange={(e) => setNewOwnerData({ ...newOwnerData, name: e.target.value })}
                       required
                     />
                   </div>
@@ -177,8 +301,8 @@ export default function TransferForm() {
                     <Input
                       id="newOwnerFatherName"
                       placeholder="Father's name"
-                      value={formData.newOwnerFatherName}
-                      onChange={(e) => setFormData({ ...formData, newOwnerFatherName: e.target.value })}
+                      value={newOwnerData.fatherName}
+                      onChange={(e) => setNewOwnerData({ ...newOwnerData, fatherName: e.target.value })}
                       required
                     />
                   </div>
@@ -187,8 +311,8 @@ export default function TransferForm() {
                     <Input
                       id="newOwnerCnic"
                       placeholder="00000-0000000-0"
-                      value={formData.newOwnerCnic}
-                      onChange={(e) => setFormData({ ...formData, newOwnerCnic: e.target.value })}
+                      value={newOwnerData.cnic}
+                      onChange={(e) => setNewOwnerData({ ...newOwnerData, cnic: e.target.value })}
                       required
                     />
                   </div>
@@ -197,8 +321,8 @@ export default function TransferForm() {
                     <Input
                       id="newOwnerPhone"
                       placeholder="+92 300 0000000"
-                      value={formData.newOwnerPhone}
-                      onChange={(e) => setFormData({ ...formData, newOwnerPhone: e.target.value })}
+                      value={newOwnerData.phone}
+                      onChange={(e) => setNewOwnerData({ ...newOwnerData, phone: e.target.value })}
                       required
                     />
                   </div>
@@ -207,8 +331,8 @@ export default function TransferForm() {
                     <Textarea
                       id="newOwnerAddress"
                       placeholder="New owner's complete address"
-                      value={formData.newOwnerAddress}
-                      onChange={(e) => setFormData({ ...formData, newOwnerAddress: e.target.value })}
+                      value={newOwnerData.address}
+                      onChange={(e) => setNewOwnerData({ ...newOwnerData, address: e.target.value })}
                       required
                     />
                   </div>
@@ -218,42 +342,36 @@ export default function TransferForm() {
               {/* Transfer Details */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">Transfer Details</h3>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="transferReason">Reason for Transfer *</Label>
-                    <Select
-                      value={formData.transferReason}
-                      onValueChange={(value) => setFormData({ ...formData, transferReason: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select reason" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {transferReasons.map((reason) => (
-                          <SelectItem key={reason} value={reason}>
-                            {reason}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transferAmount">Transfer Amount (PKR)</Label>
+                    <Label htmlFor="transferAmount">Transfer Amount (PKR) *</Label>
                     <Input
                       id="transferAmount"
                       type="number"
-                      placeholder="Amount if applicable"
+                      placeholder="Enter transfer/sale amount"
                       value={formData.transferAmount}
                       onChange={(e) => setFormData({ ...formData, transferAmount: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="transferDate">Transfer Date *</Label>
+                    <Label htmlFor="transferFee">Transfer Fee (PKR) *</Label>
                     <Input
-                      id="transferDate"
+                      id="transferFee"
+                      type="number"
+                      placeholder="Enter transfer fee"
+                      value={formData.transferFee}
+                      onChange={(e) => setFormData({ ...formData, transferFee: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Transfer Date *</Label>
+                    <Input
+                      id="date"
                       type="date"
-                      value={formData.transferDate}
-                      onChange={(e) => setFormData({ ...formData, transferDate: e.target.value })}
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       required
                     />
                   </div>
@@ -270,9 +388,9 @@ export default function TransferForm() {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <Button type="submit" className="flex-1">
+                <Button type="submit" className="flex-1" disabled={createTransferMutation.isPending}>
                   <Save className="mr-2 h-4 w-4" />
-                  Submit Transfer
+                  {createTransferMutation.isPending ? "Submitting..." : "Submit Transfer"}
                 </Button>
               </div>
             </form>
