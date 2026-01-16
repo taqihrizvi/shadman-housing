@@ -18,168 +18,188 @@ import {
   Building2,
   LogOut,
   ClipboardCheck,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { getUserData, getUserRole, type UserRole } from "@/lib/rbac";
+import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { NotificationBell } from "@/components/NotificationBell";
+import { useQuery } from "@tanstack/react-query";
+
+const API_URL = "http://localhost:5000/api";
+const getAuthToken = () => localStorage.getItem('authToken');
 
 interface NavItem {
-  title: string;
+  titleKey: string; // Translation key
   href: string;
   icon: ReactNode;
   children?: NavItem[];
   roles?: UserRole[]; // Allowed roles
 }
 
-const navigation: NavItem[] = [
-  {
-    title: "Dashboard",
-    href: "/",
-    icon: <LayoutDashboard className="h-5 w-5" />,
-  },
-  {
-    title: "Inventory",
-    href: "/inventory",
-    icon: <Package className="h-5 w-5" />,
-    roles: ['ADMIN', 'MANAGER'],
-    children: [
-      {
-        title: "Sold Inventory",
-        href: "/inventory/sold",
-        icon: <PackageCheck className="h-4 w-4" />,
-      },
-      {
-        title: "Unsold Inventory",
-        href: "/inventory/unsold",
-        icon: <PackageX className="h-4 w-4" />,
-      },
-      {
-        title: "Add Inventory",
-        href: "/inventory/add",
-        icon: <PackagePlus className="h-4 w-4" />,
-      },
-    ],
-  },
-  {
-    title: "Forms",
-    href: "/forms",
-    icon: <FileText className="h-5 w-5" />,
-    roles: ['ADMIN', 'MANAGER'],
-    children: [
-      {
-        title: "Biyana Form",
-        href: "/forms/biyana",
-        icon: <FileText className="h-4 w-4" />,
-        roles: ['ADMIN', 'MANAGER'],
-      },
-      {
-        title: "Sale Agreement",
-        href: "/forms/sale-agreement",
-        icon: <FileSignature className="h-4 w-4" />,
-        roles: ['ADMIN'],
-      },
-      {
-        title: "Transfer Form",
-        href: "/forms/transfer",
-        icon: <FileOutput className="h-4 w-4" />,
-        roles: ['ADMIN'],
-      },
-    ],
-  },
-  {
-    title: "Submitted Forms",
-    href: "/submitted-forms",
-    icon: <FileSignature className="h-5 w-5" />,
-    roles: ['ADMIN', 'MANAGER'],
-    children: [
-      {
-        title: "View Biyana Forms",
-        href: "/submitted-forms/biyana",
-        icon: <FileText className="h-4 w-4" />,
-      },
-      {
-        title: "View Sales Agreement",
-        href: "/submitted-forms/sale-agreement",
-        icon: <FileSignature className="h-4 w-4" />,
-      },
-      {
-        title: "View Transfer Forms",
-        href: "/submitted-forms/transfer",
-        icon: <FileOutput className="h-4 w-4" />,
-      },
-    ],
-  },
-  {
-    title: "Payments",
-    href: "/payments",
-    icon: <DollarSign className="h-5 w-5" />,
-    roles: ['ADMIN', 'MANAGER'],
-    children: [
-      {
-        title: "Pending Payments",
-        href: "/payments/pending",
-        icon: <DollarSign className="h-4 w-4" />,
-        roles: ['ADMIN'],
-      },
-      {
-        title: "Record Payment",
-        href: "/payments/record",
-        icon: <Receipt className="h-4 w-4" />,
-        roles: ['ADMIN', 'MANAGER'],
-      },
-    ],
-  },
-  {
-    title: "Reports",
-    href: "/reports",
-    icon: <BarChart3 className="h-5 w-5" />,
-    roles: ['ADMIN'],
-    children: [
-      {
-        title: "Sales Report",
-        href: "/reports/sales",
-        icon: <TrendingUp className="h-4 w-4" />,
-      },
-      {
-        title: "Payment Report",
-        href: "/reports/payment",
-        icon: <DollarSign className="h-4 w-4" />,
-      },
-      {
-        title: "Sold & Unsold",
-        href: "/reports/comparison",
-        icon: <BarChart3 className="h-4 w-4" />,
-      },
-    ],
-  },
-  {
-    title: "Vouchers",
-    href: "/vouchers",
-    icon: <Receipt className="h-5 w-5" />,
-    roles: ['ADMIN'],
-  },
-  {
-    title: "Approvals",
-    href: "/approvals",
-    icon: <ClipboardCheck className="h-5 w-5" />,
-    roles: ['ADMIN'],
-  },
-];
-
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
-  const userData = getUserData();
   const userRole = getUserRole();
+  const userData = getUserData();
+
+  // Fetch notifications to get pending approval count
+  const { data: notifications = [] } = useQuery<any[]>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/notifications`, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+      });
+      const result = await response.json();
+      return result.data || [];
+    },
+    refetchInterval: 30000,
+  });
+
+  // Count unread pending approval notifications
+  const pendingApprovalsCount = notifications.filter(
+    n => !n.read && n.type === 'APPROVAL_PENDING'
+  ).length;
+
+  const navigation: NavItem[] = [
+    {
+      titleKey: "nav.dashboard",
+      href: "/",
+      icon: <LayoutDashboard className="h-5 w-5" />,
+    },
+    {
+      titleKey: "nav.inventory",
+      href: "/inventory",
+      icon: <Package className="h-5 w-5" />,
+      roles: ['ADMIN', 'MANAGER'],
+      children: [
+        {
+          titleKey: "inventory.soldInventory",
+          href: "/inventory/sold",
+          icon: <PackageCheck className="h-4 w-4" />,
+        },
+        {
+          titleKey: "inventory.unsoldInventory",
+          href: "/inventory/unsold",
+          icon: <PackageX className="h-4 w-4" />,
+        },
+        {
+          titleKey: "inventory.addInventory",
+          href: "/inventory/add",
+          icon: <PackagePlus className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      titleKey: "nav.forms",
+      href: "/forms",
+      icon: <FileText className="h-5 w-5" />,
+      roles: ['ADMIN', 'MANAGER'],
+      children: [
+        {
+          titleKey: "forms.biyanaForm",
+          href: "/forms/biyana",
+          icon: <FileText className="h-4 w-4" />,
+          roles: ['ADMIN', 'MANAGER'],
+        },
+        {
+          titleKey: "forms.saleAgreement",
+          href: "/forms/sale-agreement",
+          icon: <FileSignature className="h-4 w-4" />,
+          roles: ['ADMIN', 'MANAGER'],
+        },
+        {
+          titleKey: "forms.transferForm",
+          href: "/forms/transfer",
+          icon: <FileOutput className="h-4 w-4" />,
+          roles: ['ADMIN', 'MANAGER'],
+        },
+      ],
+    },
+    {
+      titleKey: "forms.submittedForms",
+      href: "/submitted-forms",
+      icon: <FileSignature className="h-5 w-5" />,
+      roles: ['ADMIN', 'MANAGER'],
+      children: [
+        {
+          titleKey: "forms.viewBiyana",
+          href: "/submitted-forms/biyana",
+          icon: <FileText className="h-4 w-4" />,
+        },
+        {
+          titleKey: "forms.viewSaleAgreement",
+          href: "/submitted-forms/sale-agreement",
+          icon: <FileSignature className="h-4 w-4" />,
+        },
+        {
+          titleKey: "forms.transferForm",
+          href: "/submitted-forms/transfer",
+          icon: <FileOutput className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      titleKey: "nav.vouchers",
+      href: "/vouchers",
+      icon: <Receipt className="h-5 w-5" />,
+      roles: ['ADMIN', 'MANAGER'],
+    },
+    {
+      titleKey: "payments.title",
+      href: "/payments",
+      icon: <DollarSign className="h-5 w-5" />,
+      roles: ['ADMIN', 'MANAGER'],
+      children: [
+        {
+          titleKey: "payments.pendingPayments",
+          href: "/payments/pending",
+          icon: <Clock className="h-4 w-4" />,
+        },
+        {
+          titleKey: "payments.recordPayment",
+          href: "/payments/record",
+          icon: <DollarSign className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      titleKey: "nav.reports",
+      href: "/reports",
+      icon: <BarChart3 className="h-5 w-5" />,
+      roles: ['ADMIN'],
+    },
+    {
+      titleKey: "nav.approvals",
+      href: "/approvals",
+      icon: <ClipboardCheck className="h-5 w-5" />,
+      roles: ['ADMIN'],
+    },
+    {
+      titleKey: "nav.calculator",
+      href: "/calculator",
+      icon: <Calculator className="h-5 w-5" />,
+      roles: ['ADMIN', 'MANAGER'],
+    },
+  ];
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
@@ -246,7 +266,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             {item.icon}
             <span className={cn(sidebarOpen ? "opacity-100 flex-1 text-left" : "opacity-0 w-0 overflow-hidden", "transition-all duration-200")}>
-              {item.title}
+              {t(item.titleKey)}
             </span>
             {sidebarOpen && (
               <svg
@@ -280,8 +300,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         {item.icon}
         <span className={cn(sidebarOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden", "transition-all duration-200")}>
-          {item.title}
+          {t(item.titleKey)}
         </span>
+        {/* Show badge for Approvals tab if there are pending approvals */}
+        {item.href === "/approvals" && pendingApprovalsCount > 0 && sidebarOpen && (
+          <Badge className="ml-auto h-5 w-5 flex items-center justify-center p-0 bg-green-500">
+            {pendingApprovalsCount}
+          </Badge>
+        )}
+        {/* Show dot indicator when sidebar is collapsed */}
+        {item.href === "/approvals" && pendingApprovalsCount > 0 && !sidebarOpen && (
+          <div className="absolute top-1 right-1 h-2 w-2 rounded-full bg-green-500" />
+        )}
       </Link>
     );
   };
@@ -299,6 +329,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         )}>
           Shadman Housing
         </span>
+      </div>
+
+      {/* Notification Bell */}
+      <div className="px-4 py-3 border-b border-sidebar-border">
+        <NotificationBell sidebarOpen={sidebarOpen} />
+      </div>
+
+      {/* Language Toggle */}
+      <div className="flex items-center justify-center px-4 py-3">
+        <LanguageToggle collapsed={!sidebarOpen} />
       </div>
 
       {/* Navigation */}
@@ -360,7 +400,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             sidebarOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden",
             "transition-all duration-200"
           )}>
-            Logout
+            {t('nav.logout')}
           </span>
         </Button>
       </div>
@@ -368,11 +408,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={isUrdu ? 'rtl' : 'ltr'}>
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 hidden lg:block",
+          "fixed top-0 z-40 h-screen bg-sidebar transition-all duration-300 hidden lg:block",
+          isUrdu ? "right-0 border-l" : "left-0 border-r",
+          "border-sidebar-border",
           sidebarOpen ? "w-64" : "w-20"
         )}
       >
@@ -380,7 +422,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute -right-3 top-7 h-6 w-6 rounded-full border bg-background shadow-md hover:bg-secondary"
+          className={cn(
+            "absolute top-7 h-6 w-6 rounded-full border bg-background shadow-md hover:bg-secondary",
+            isUrdu ? "-left-3" : "-right-3"
+          )}
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
           <Menu className="h-3 w-3" />
@@ -395,9 +440,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           <span className="text-lg font-bold">Shadman Housing</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
+          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </header>
 
       {/* Mobile Menu */}
@@ -411,7 +459,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <main
         className={cn(
           "min-h-screen transition-all duration-300 pt-16 lg:pt-0",
-          sidebarOpen ? "lg:ml-64" : "lg:ml-20"
+          isUrdu 
+            ? (sidebarOpen ? "lg:mr-64" : "lg:mr-20")
+            : (sidebarOpen ? "lg:ml-64" : "lg:ml-20")
         )}
       >
         <div className="p-4 lg:p-8">{children}</div>

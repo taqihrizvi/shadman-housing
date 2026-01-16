@@ -1,16 +1,15 @@
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Printer, Download } from "lucide-react";
-import html2pdf from "html2pdf.js";
+import { Printer } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface PrintableBiyanaFormProps {
   data: {
     formNumber?: string;
     customerName: string;
-    fatherName: string;
+    fatherHusbandName: string;
     cnic: string;
-    phone: string;
-    address: string;
+    phone?: string;
     plot: {
       plotNo: string;
       project: string;
@@ -18,11 +17,14 @@ interface PrintableBiyanaFormProps {
       block: string;
       price: number;
     };
+    pricePerMarla?: number;
+    totalAmount?: number;
     biyanaAmount: number;
-    paymentMethod: string;
-    chequeNumber?: string;
-    bankName?: string;
-    transactionId?: string;
+    totalRemaining?: number;
+    monthlyInstallments?: number;
+    agreementDuration?: string;
+    monthlyInstallmentAmount?: number;
+    quarterlyInstallmentAmount?: number;
     date: string;
     remarks?: string;
     status?: string;
@@ -35,7 +37,17 @@ interface PrintableBiyanaFormProps {
 }
 
 export default function PrintableBiyanaForm({ data, onClose }: PrintableBiyanaFormProps) {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Debug: Log the data to check status and signature
+  console.log('Printable Form Data:', {
+    status: data.status,
+    approvedBy: data.approvedBy,
+    hasSignature: !!data.approvedBy?.signature,
+    signaturePath: data.approvedBy?.signature
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-PK", {
@@ -59,241 +71,469 @@ export default function PrintableBiyanaForm({ data, onClose }: PrintableBiyanaFo
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const handlePrint = () => {
-    window.print();
+  // Helper function to translate duration string
+  const translateDuration = (duration: string) => {
+    if (!duration) return duration;
+    
+    // Parse the duration string (e.g., "1 year", "2 years", "6 months", "1 year 3 months")
+    let translated = duration;
+    
+    // Replace year/years
+    translated = translated.replace(/(\d+)\s+year(?!s)/g, (match, num) => 
+      `${num} ${t('printableForms.year')}`
+    );
+    translated = translated.replace(/(\d+)\s+years/g, (match, num) => 
+      `${num} ${t('printableForms.years')}`
+    );
+    
+    // Replace month/months
+    translated = translated.replace(/(\d+)\s+month(?!s)/g, (match, num) => 
+      `${num} ${t('printableForms.month')}`
+    );
+    translated = translated.replace(/(\d+)\s+months/g, (match, num) => 
+      `${num} ${t('printableForms.months')}`
+    );
+    
+    return translated;
   };
 
-  const handleDownloadPDF = async () => {
+  const handlePrint = () => {
     if (!contentRef.current) return;
 
-    const plotNumber = data.plot.plotNo.replace(/[^a-zA-Z0-9]/g, '-');
-    const fileName = `Biyana-Receipt-${data.formNumber || plotNumber}.pdf`;
-
-    const opt = {
-      margin: [10, 10, 10, 10] as [number, number, number, number],
-      filename: fileName,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        letterRendering: true,
-        logging: false,
-      },
-      jsPDF: { 
-        unit: 'mm' as const, 
-        format: 'a4', 
-        orientation: 'portrait' as const,
-      },
-    };
-
-    try {
-      const controls = document.querySelectorAll('.print\\:hidden');
-      controls.forEach(el => (el as HTMLElement).style.display = 'none');
-      await html2pdf().set(opt).from(contentRef.current).save();
-      controls.forEach(el => (el as HTMLElement).style.display = '');
-    } catch (error) {
-      console.error('PDF generation failed:', error);
+    // Create a new window
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!printWindow) {
+      alert('Please allow pop-ups for this website to print the form.');
+      return;
     }
+
+    // Get all styles from the current document
+    const styles = Array.from(document.styleSheets)
+      .map(styleSheet => {
+        try {
+          return Array.from(styleSheet.cssRules)
+            .map(rule => rule.cssText)
+            .join('\n');
+        } catch (e) {
+          // Handle cross-origin stylesheets
+          const link = styleSheet.href;
+          return link ? `@import url("${link}");` : '';
+        }
+      })
+      .join('\n');
+
+    // Write the content to the new window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="${isUrdu ? 'ur' : 'en'}" dir="${isUrdu ? 'rtl' : 'ltr'}">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Biyana Receipt - ${data.formNumber || data.plot.plotNo}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap" rel="stylesheet">
+          <style>
+            ${styles}
+            
+            body {
+              margin: 0;
+              padding: 20px;
+              font-family: ${isUrdu ? "'Noto Nastaliq Urdu', serif" : "'Outfit', sans-serif"};
+              background: white;
+            }
+            
+            [lang="ur"],
+            [lang="ur"] * {
+              font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif !important;
+            }
+            
+            @media print {
+              body {
+                padding: 0;
+              }
+              @page {
+                size: legal;
+                margin: 10mm 5mm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${contentRef.current.innerHTML}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    
+    // Wait for content and fonts to load, then trigger print dialog
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    };
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4">
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-2 mb-4 print:hidden">
-        <Button onClick={handlePrint} variant="outline" size="sm">
-          <Printer className="h-4 w-4 mr-2" />
-          Print
-        </Button>
-        <Button onClick={handleDownloadPDF} variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
-          Download PDF
-        </Button>
-        {onClose && (
-          <Button onClick={onClose} variant="outline" size="sm">
-            Close
-          </Button>
-        )}
+    <div className="bg-gray-50 max-h-screen overflow-auto print:max-h-none print:overflow-visible print:bg-white">
+      {/* Print Controls - Hidden during print */}
+      <div className="print:hidden sticky top-0 z-50 bg-white border-b shadow-sm">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">{t('printableForms.biyanaReceipt')} - {data.formNumber || data.plot.plotNo}</h2>
+          <div className="flex gap-2">
+            {onClose && (
+              <Button onClick={onClose} variant="outline">
+                {t('common.close')}
+              </Button>
+            )}
+            <Button onClick={handlePrint} variant="outline">
+              <Printer className="mr-2 h-4 w-4" />
+              {t('printableForms.printDocument')}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Printable Content */}
-      <div ref={contentRef} className="bg-white p-8 print:p-6">
-        <div className="border-4 border-black p-6">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold mb-2">BIYANA RECEIPT</h1>
-            <p className="text-lg font-semibold">Token Money / Advance Payment</p>
-            {data.formNumber && (
-              <p className="text-sm mt-2 font-mono">Receipt No: {data.formNumber}</p>
-            )}
-            <p className="text-sm">Date: {formatDate(data.date)}</p>
+      <div ref={contentRef} className="bg-white print:p-0" dir={isUrdu ? 'rtl' : 'ltr'} lang={isUrdu ? 'ur' : 'en'}>
+          {/* Letterhead Header */}
+          <div className="letterhead-header w-full" style={{ marginBottom: '20px' }}>
+            <img src="/letterhead header.png" alt="Header" className="w-full" style={{ display: 'block', width: '100%', maxWidth: '100%' }} />
           </div>
-
-          <div className="border-t-2 border-black my-4"></div>
-
-          {/* Customer Information */}
-          <div className="mb-6">
-            <h2 className="text-lg font-bold mb-3 bg-gray-100 p-2">CUSTOMER INFORMATION</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-semibold">Name:</p>
-                <p className="text-base">{data.customerName}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Father's Name:</p>
-                <p className="text-base">{data.fatherName}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">CNIC:</p>
-                <p className="text-base font-mono">{data.cnic}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Phone:</p>
-                <p className="text-base">{data.phone}</p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-sm font-semibold">Address:</p>
-                <p className="text-base">{data.address}</p>
-              </div>
+          
+          <div className="p-6 print:p-4 page-content" style={{ position: 'relative' }}>
+            {/* Logo Watermark */}
+            <div className="watermark-logo" style={{ 
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              opacity: 0.15,
+              zIndex: 0,
+              pointerEvents: 'none',
+              width: '600px',
+              height: '600px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <img src="/Logo.png" alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
             </div>
-          </div>
-
-          {/* Plot Information */}
-          <div className="mb-6">
-            <h2 className="text-lg font-bold mb-3 bg-gray-100 p-2">PLOT INFORMATION</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-semibold">Plot No:</p>
-                <p className="text-base font-bold">{data.plot.plotNo}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Project:</p>
-                <p className="text-base">{formatEnum(data.plot.project)}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Block:</p>
-                <p className="text-base">{data.plot.block}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Plot Size:</p>
-                <p className="text-base">{data.plot.size}</p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-sm font-semibold">Total Plot Price:</p>
-                <p className="text-xl font-bold text-green-700">{formatCurrency(data.plot.price)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Information */}
-          <div className="mb-6">
-            <h2 className="text-lg font-bold mb-3 bg-gray-100 p-2">PAYMENT DETAILS</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-semibold">Biyana Amount:</p>
-                <p className="text-2xl font-bold text-blue-700">{formatCurrency(data.biyanaAmount)}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Payment Method:</p>
-                <p className="text-base">{formatEnum(data.paymentMethod)}</p>
-              </div>
-              {data.paymentMethod === 'CHEQUE' && data.chequeNumber && (
-                <>
-                  <div>
-                    <p className="text-sm font-semibold">Cheque Number:</p>
-                    <p className="text-base font-mono">{data.chequeNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Bank Name:</p>
-                    <p className="text-base">{data.bankName}</p>
-                  </div>
-                </>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>{/* Content area with margins for header/footer */}
+            {/* Form Title */}
+            <div className="mb-6 print:mb-4" style={{ textAlign: 'center' }}>
+              <h1 className="text-4xl print:text-3xl font-bold mb-2 print:mb-1" style={{ textAlign: 'center', fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>{t('printableForms.biyanaReceipt')}</h1>
+              {data.formNumber && (
+                <p className="text-sm print:text-xs" style={{ textAlign: 'center' }}>{t('printableForms.receiptNo')}: {data.formNumber}</p>
               )}
-              {data.paymentMethod === 'BANK_TRANSFER' && data.transactionId && (
-                <div className="col-span-2">
-                  <p className="text-sm font-semibold">Transaction ID:</p>
-                  <p className="text-base font-mono">{data.transactionId}</p>
+              <p className="text-sm print:text-xs" style={{ textAlign: 'center' }}>{t('printableForms.date')}: {formatDate(data.date)}</p>
+            </div>
+
+            <div>
+              {/* Customer Info */}
+              <div className="space-y-4 mb-6">
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-semibold whitespace-nowrap w-40">{t('printableForms.buyerName')}:</span>
+                    <div className="border-b-2 border-black px-3 py-1 flex-1">{data.customerName}</div>
+                  </div>
+                  
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-semibold whitespace-nowrap w-40">{t('printableForms.fatherHusbandName')}:</span>
+                    <div className="border-b-2 border-black px-3 py-1 flex-1">{data.fatherHusbandName}</div>
+                  </div>
+
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-semibold whitespace-nowrap w-40">{t('printableForms.cnicNo')}:</span>
+                    <div className="border-b-2 border-black px-3 py-1 flex-1">{data.cnic}</div>
+                  </div>
                 </div>
-              )}
-              <div className="col-span-2">
-                <p className="text-sm font-semibold">Remaining Balance:</p>
-                <p className="text-xl font-bold text-red-700">{formatCurrency(data.plot.price - data.biyanaAmount)}</p>
+
+                {/* Description */}
+                <div className="mb-6 text-sm leading-relaxed text-justify">
+                  <p>
+                    {t('printableForms.receiptConfirmation', { 
+                      customerName: data.customerName, 
+                      amount: formatCurrency(data.biyanaAmount) 
+                    })}
+                  </p>
+                </div>
+
+                {/* Plot Details & Payment Table */}
+                <h2 className="text-3xl print:text-2xl font-bold mb-4 print:mb-2" style={{ textAlign: 'center', fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>{t('printableForms.plotAndPaymentDetails')}</h2>
+
+                <div className="grid grid-cols-2 gap-4 mb-6 print:mb-3">
+                  {/* Left Column */}
+                  <div className="border-2 border-black">
+                    <table className="w-full text-sm print:text-xs">
+                      <tbody>
+                        <tr className="border-b-2 border-black">
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold w-1/2">{t('printableForms.plotNumber')}</td>
+                          <td className="p-3 print:p-2">{data.plot.plotNo}</td>
+                        </tr>
+                        <tr className="border-b-2 border-black">
+
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.marla')}</td>
+                          <td className="p-3 print:p-2">{data.plot.size}</td>
+                        </tr>
+                        <tr className="border-b-2 border-black">
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.ratePerMarla')}</td>
+                          <td className="p-3 print:p-2">{data.pricePerMarla ? formatCurrency(data.pricePerMarla) : 'Rs 50,000'}</td>
+                        </tr>
+                        <tr className="border-b-2 border-black">
+                          <td className="border-r-2 border-black p-3 print:p-2 font-bold">{t('printableForms.totalAmount')}</td>
+                          <td className="p-3 print:p-2 font-bold">{formatCurrency(data.totalAmount || data.plot.price)}</td>
+                        </tr>
+                        <tr>
+                          <td className="border-r-2 border-black p-3 print:p-2 font-bold">{t('printableForms.downPayment')}</td>
+                          <td className="p-3 print:p-2 font-bold">{formatCurrency(data.biyanaAmount)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="border-2 border-black">
+                    <table className="w-full text-sm print:text-xs">
+                      <tbody>
+                        <tr className="border-b-2 border-black">
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold w-1/2">{t('printableForms.downPaymentDate')}</td>
+                          <td className="p-3 print:p-2">{formatDate(data.date)}</td>
+                        </tr>
+                        <tr className="border-b-2 border-black">
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.remainingInstallments')}</td>
+                          <td className="p-3 print:p-2">{formatCurrency(data.totalRemaining || ((data.totalAmount || data.plot.price) - data.biyanaAmount))}</td>
+                        </tr>
+                        <tr className="border-b-2 border-black">
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.agreementDuration')}</td>
+                          <td className="p-3 print:p-2">{translateDuration(data.agreementDuration || '12')}</td>
+                        </tr>
+                        <tr className="border-b-2 border-black">
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.monthlyInstallments')}</td>
+                          <td className="p-3 print:p-2">{data.monthlyInstallments || '12'}</td>
+                        </tr>
+                        <tr className="border-b-2 border-black">
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.monthlyInstallment')}</td>
+                          <td className="p-3 print:p-2">{data.monthlyInstallmentAmount ? formatCurrency(data.monthlyInstallmentAmount) : '50000'}</td>
+                        </tr>
+                        <tr>
+                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.quarterlyInstallment')}</td>
+                          <td className="p-3 print:p-2">{data.quarterlyInstallmentAmount ? formatCurrency(data.quarterlyInstallmentAmount) : 'Rs 0'}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+            </div>
+
+            {/* Disclaimer Text */}
+            <div className="mt-6 print:mt-4 mb-6 print:mb-4 p-4 print:p-3 bg-yellow-200 bg-opacity-50 border border-yellow-300 rounded-lg break-inside-avoid" style={{ fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>
+              <div className="text-xs print:text-[10px] leading-relaxed print:leading-snug space-y-2 print:space-y-1">
+                <p className="text-right" dir="rtl">میں بحیثیت خریدار اوپر دیئے گئے تمام کوائف کو درست تسلیم کرتا ہوں۔</p>
+                <p className="text-right" dir="rtl"><strong>نوٹ:</strong> پیمانہ فارم پر شادمان گریز کی مر اور ڈاکر یک شرط شادمان گریز کے محقق ہونا لازم ہے ورنہ محاہدہ قابل قبول نہ ہوگا۔</p>
+                <p className="text-right" dir="rtl">فریق دوئم پر لازم ہے کہ 3 پاسپورٹ سائز تصاویر معاہدے کے لیے مہیا کرتے۔</p>
+              </div>
+            </div>
+
+            {/* Signatures */}
+            <h2 className="text-3xl print:text-2xl font-bold mt-6 print:mt-3 mb-4 print:mb-2 break-after-avoid" style={{ textAlign: 'center', fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>{t('printableForms.signatures')}</h2>
+
+            <div className="grid grid-cols-3 gap-6 print:gap-3 mb-4 print:mb-2 break-inside-avoid">
+              <div className="text-center">
+                <div className="w-full h-16 print:h-12 mb-2 print:mb-1 border-b-2 border-black"></div>
+                <p className="font-bold text-sm print:text-xs">{t('printableForms.buyerSignature')}</p>
+              </div>
+              <div className="text-center">
+                {data.status === 'APPROVED' ? (
+                  <div className="flex flex-col items-center">
+                    <div className="w-full h-16 print:h-12 mb-2 print:mb-1 border-b-2 border-black flex items-end justify-center pb-1">
+                      <img 
+                        src={data.approvedBy?.signature 
+                          ? (data.approvedBy.signature.startsWith('http') 
+                            ? data.approvedBy.signature 
+                            : `http://localhost:5000${data.approvedBy.signature.startsWith('/') ? '' : '/'}${data.approvedBy.signature}`)
+                          : 'http://localhost:5000/signatures/admin-signature.png'
+                        } 
+                        alt={t('printableForms.salesManagerSignature')} 
+                        className="max-h-12 print:max-h-8 max-w-[120px] print:max-w-[100px] object-contain"
+                        onError={(e) => {
+                          console.error('Signature image failed to load:', data.approvedBy?.signature);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    <p className="font-bold text-sm print:text-xs">{t('printableForms.salesManagerSignature')}</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="w-full h-16 print:h-12 mb-2 print:mb-1 border-b-2 border-black flex items-center justify-center">
+                      <p className="text-red-500 font-semibold text-sm print:text-xs">{isUrdu ? 'غیر دستخط شدہ' : 'Unsigned'}</p>
+                    </div>
+                    <p className="font-bold text-sm print:text-xs">{t('printableForms.salesManagerSignature')}</p>
+                  </div>
+                )}
+              </div>
+              <div className="text-center">
+                <div className="w-full h-16 print:h-12 mb-2 print:mb-1 border-b-2 border-black"></div>
+                <p className="font-bold text-sm print:text-xs">{t('printableForms.directorSignature')}</p>
               </div>
             </div>
           </div>
-
-          {data.remarks && (
-            <div className="mb-6">
-              <p className="text-sm font-semibold">Remarks:</p>
-              <p className="text-sm italic">{data.remarks}</p>
-            </div>
-          )}
-
-          <div className="border-t-2 border-black my-6"></div>
-
-          {/* Important Note */}
-          <div className="mb-6 bg-yellow-50 border-2 border-yellow-400 p-4">
-            <p className="text-sm font-bold mb-2">IMPORTANT NOTICE:</p>
-            <ul className="text-xs space-y-1 list-disc pl-5">
-              <li>This receipt confirms the payment of token/advance money (Biyana) only.</li>
-              <li>Full sales agreement will be executed after completing all formalities.</li>
-              <li>Plot will be reserved for 15 days from the date of this receipt.</li>
-              <li>This amount will be adjusted in the final payment as per agreement terms.</li>
-              <li>This receipt is subject to approval by management.</li>
-            </ul>
           </div>
-
-          {/* Signatures */}
-          <div className="grid grid-cols-2 gap-8 mt-8">
-            <div className="text-center">
-              {data.status === 'APPROVED' && data.approvedBy?.signature ? (
-                <div className="flex flex-col items-center">
-                  <div className="w-full border-b-2 border-black h-16 mb-2 flex items-center justify-center">
-                    <img 
-                      src={`http://localhost:5000${data.approvedBy.signature}`} 
-                      alt="Authorized Signature" 
-                      className="max-h-14 max-w-full object-contain"
-                    />
-                  </div>
-                  <p className="font-bold text-sm">Authorized Signature</p>
-                  <p className="text-xs mt-1">({data.approvedBy.name})</p>
-                </div>
-              ) : (
-                <>
-                  <div className="border-b-2 border-black h-16 mb-2"></div>
-                  <p className="font-bold text-sm">Authorized Signature</p>
-                  <p className="text-xs mt-1">(Company Representative)</p>
-                </>
-              )}
-            </div>
-            <div className="text-center">
-              <div className="border-b-2 border-black h-16 mb-2"></div>
-              <p className="font-bold text-sm">Customer Signature</p>
-              <p className="text-xs mt-1">({data.customerName})</p>
-            </div>
+          
+          {/* Letterhead Footer */}
+          <div className="letterhead-footer w-full">
+            <img src="/letterhead footer.png" alt="Footer" className="w-full" style={{ display: 'block', width: '100%', maxWidth: '100%' }} />
           </div>
-
-          {/* Footer */}
-          <div className="text-center mt-8 text-xs text-gray-600">
-            <p>This is a computer-generated receipt and requires authorized signature for validity.</p>
-          </div>
-        </div>
       </div>
 
       <style>{`
         @media print {
           @page {
             size: A4;
-            margin: 15mm;
+            margin: 0;
+          }
+
+          .letterhead-header {
+            position: relative;
+            width: 100%;
+            page-break-inside: avoid;
+          }
+
+          .letterhead-header img {
+            width: 100%;
+            height: auto;
+            display: block;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .letterhead-footer {
+            position: relative;
+            width: 100%;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+            display: block;
+            page-break-inside: avoid;
+          }
+
+          .letterhead-footer img {
+            width: 100%;
+            height: auto;
+            display: block;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .page-content {
+            margin-top: 0;
+            margin-bottom: 0;
+            padding: 20px 10px;
+          }
+
+          .page-content::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background-image: url('/Logo.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+          }
+
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            max-height: none !important;
+          }
+
+          * {
+            box-shadow: none !important;
+            border-color: #000 !important;
+            overflow: visible !important;
+            max-height: none !important;
           }
 
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white;
+          }
+
+          img {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          /* Urdu font rendering for print */
+          [lang="ur"] h1,
+          [lang="ur"] h2,
+          [lang="ur"] h3,
+          [lang="ur"] h4,
+          [lang="ur"] * {
+            font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+          }
+
+          p {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+
+          h2, h3 {
+            page-break-after: avoid;
+            break-after: avoid;
           }
 
           .print\\:hidden {
             display: none !important;
           }
+          
+          .bg-gray-50, .max-h-screen {
+            max-height: none !important;
+            overflow: visible !important;
+          }
+          
+          /* Ensure proper spacing and visibility */
+          .p-6 {
+            padding: 0.5rem !important;
+          }
+        }
+
+        /* Urdu font rendering for screen */
+        [lang="ur"] h1,
+        [lang="ur"] h2,
+        [lang="ur"] h3,
+        [lang="ur"] h4 {
+          font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          text-rendering: optimizeLegibility;
+          font-weight: bold !important;
+          letter-spacing: 0.05em;
+        }
+
+        [lang="ur"] * {
+          font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          text-rendering: optimizeLegibility;
+        }
+
+        p {
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
       `}</style>
     </div>

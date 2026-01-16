@@ -17,8 +17,9 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { PackagePlus, Save, RotateCcw } from "lucide-react";
 import { inventoryAPI } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
-const projects = ["GREEN_VALLEY", "LAKE_VIEW", "PALM_HEIGHTS", "SUNSET_GARDENS"];
+const projects = ["SHADMAN_GREENS"];
 const sizes = ["FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
 const blocks = ["Block A", "Block B", "Block C", "Block D"];
 
@@ -42,12 +43,22 @@ const formatSize = (value: string) => {
 };
 
 export default function AddInventory() {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const navigate = useNavigate();
+
+  // Helper function to format project names
+  const formatProjectName = (value: string) => {
+    if (value === 'SHADMAN_GREENS') {
+      return t('projects.shadmanGreens');
+    }
+    return formatEnum(value);
+  };
+
   const [formData, setFormData] = useState({
     plotNo: "",
     project: "",
     size: "",
-    block: "",
     price: "",
     description: "",
   });
@@ -82,7 +93,6 @@ export default function AddInventory() {
       plotNo: formData.plotNo,
       project: formData.project,
       size: formData.size,
-      block: formData.block,
       price: parseFloat(formData.price),
       description: formData.description || undefined,
       status: "AVAILABLE",
@@ -96,7 +106,6 @@ export default function AddInventory() {
       plotNo: "",
       project: "",
       size: "",
-      block: "",
       price: "",
       description: "",
     });
@@ -104,12 +113,9 @@ export default function AddInventory() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in max-w-3xl">
+      <div className="space-y-6 animate-fade-in max-w-3xl" dir={isUrdu ? 'rtl' : 'ltr'}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Add New Inventory</h1>
-          <p className="text-muted-foreground">
-            Register a new plot or property to the system
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('inventory.addInventory')}</h1>
         </div>
 
         <Card variant="elevated">
@@ -119,8 +125,7 @@ export default function AddInventory() {
                 <PackagePlus className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle>Property Details</CardTitle>
-                <CardDescription>Fill in all the required information</CardDescription>
+                <CardTitle>{t('inventory.title')}</CardTitle>
               </div>
             </div>
           </CardHeader>
@@ -128,7 +133,7 @@ export default function AddInventory() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="plotNo">Plot Number *</Label>
+                  <Label htmlFor="plotNo">{t('inventory.plotNo')} *</Label>
                   <Input
                     id="plotNo"
                     placeholder="e.g., A-101"
@@ -138,31 +143,31 @@ export default function AddInventory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="project">Project *</Label>
+                  <Label htmlFor="project">{t('inventory.project')} *</Label>
                   <Select
                     value={formData.project}
                     onValueChange={(value) => setFormData({ ...formData, project: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
+                      <SelectValue placeholder={t('forms.selectOption')} />
                     </SelectTrigger>
                     <SelectContent>
                       {projects.map((project) => (
                         <SelectItem key={project} value={project}>
-                          {formatEnum(project)}
+                          {formatProjectName(project)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="size">Plot Size *</Label>
+                  <Label htmlFor="size">{t('inventory.size')} *</Label>
                   <Select
                     value={formData.size}
                     onValueChange={(value) => setFormData({ ...formData, size: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select size" />
+                      <SelectValue placeholder={t('forms.selectOption')} />
                     </SelectTrigger>
                     <SelectContent>
                       {sizes.map((size) => (
@@ -173,26 +178,8 @@ export default function AddInventory() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="block">Block *</Label>
-                  <Select
-                    value={formData.block}
-                    onValueChange={(value) => setFormData({ ...formData, block: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select block" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {blocks.map((block) => (
-                        <SelectItem key={block} value={block}>
-                          {block}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="price">Price (PKR) *</Label>
+                  <Label htmlFor="price">{t('inventory.price')} *</Label>
                   <Input
                     id="price"
                     type="number"
@@ -203,7 +190,7 @@ export default function AddInventory() {
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="description">Additional Notes</Label>
+                  <Label htmlFor="description">{t('inventory.description')}</Label>
                   <Textarea
                     id="description"
                     placeholder="Enter any additional information about the property..."
@@ -217,11 +204,11 @@ export default function AddInventory() {
               <div className="flex gap-4 pt-4">
                 <Button type="submit" className="flex-1" disabled={createInventoryMutation.isPending}>
                   <Save className="mr-2 h-4 w-4" />
-                  {createInventoryMutation.isPending ? "Adding..." : "Add Property"}
+                  {createInventoryMutation.isPending ? t('common.loading') : t('common.add')}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleReset}>
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset
+                  {t('forms.resetForm')}
                 </Button>
               </div>
             </form>

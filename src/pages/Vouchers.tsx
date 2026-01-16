@@ -15,9 +15,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Receipt, Search, Printer, Eye } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 
 export default function Vouchers() {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -68,20 +71,18 @@ export default function Vouchers() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir={isUrdu ? 'rtl' : 'ltr'}>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <Receipt className="h-8 w-8" />
-              Payment Vouchers
+              {t('vouchers.title')}
             </h1>
-            <p className="text-muted-foreground">
-              View and print all payment receipts
-            </p>
           </div>
           <Button onClick={() => navigate('/payments/record')}>
             <Receipt className="h-4 w-4 mr-2" />
-            Record New Payment
+            {t('payments.recordPayment')}
           </Button>
         </div>
         {/* Summary Cards */}
@@ -90,7 +91,7 @@ export default function Vouchers() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Vouchers</p>
+                  <p className="text-sm text-muted-foreground">{t('vouchers.totalVouchers')}</p>
                   <p className="text-3xl font-bold">{vouchers.length}</p>
                 </div>
                 <div className="rounded-xl bg-primary/10 p-3">
@@ -131,7 +132,7 @@ export default function Vouchers() {
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by customer, plot, or voucher number..."
+                placeholder={t('common.search')}
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -143,27 +144,26 @@ export default function Vouchers() {
         {/* Receipts Table */}
         <Card variant="elevated">
           <CardHeader>
-            <CardTitle>All Payment Receipts</CardTitle>
-            <CardDescription>View and print payment vouchers</CardDescription>
+            <CardTitle>{t('vouchers.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8">Loading vouchers...</div>
+              <div className="text-center py-8">{t('common.loading')}</div>
             ) : filteredVouchers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No vouchers found
+                {t('vouchers.noVouchers')}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Voucher No.</TableHead>
-                    <TableHead>Customer Name</TableHead>
-                    <TableHead>Plot</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Payment Method</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('vouchers.voucherNo')}</TableHead>
+                    <TableHead>{t('forms.customerName')}</TableHead>
+                    <TableHead>{t('inventory.plotNo')}</TableHead>
+                    <TableHead>{t('payments.amount')}</TableHead>
+                    <TableHead>{t('payments.date')}</TableHead>
+                    <TableHead>{t('payments.paymentMethod')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

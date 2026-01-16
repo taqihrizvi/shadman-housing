@@ -30,11 +30,14 @@ import { Separator } from "@/components/ui/separator";
 import { Search, Filter, Download, Eye, FileText, Receipt, DollarSign, ChevronDown, ChevronUp, Printer } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { inventoryAPI, formsAPI, voucherAPI } from "@/lib/api";
-import PrintableBiyanaForm from "@/pages/forms/PrintableBiyanaForm";
+import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
+import { useTranslation } from "react-i18next";
 
 const projects = ["All Projects", "GREEN_VALLEY", "LAKE_VIEW", "PALM_HEIGHTS", "SUNSET_GARDENS"];
 
 export default function SoldInventory() {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProject, setSelectedProject] = useState("All Projects");
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
@@ -114,10 +117,9 @@ export default function SoldInventory() {
     
     const data = {
       customerName: plot.buyer?.name || "",
-      fatherName: plot.buyer?.fatherName || "",
+      fatherHusbandName: biyana.fatherHusbandName || plot.buyer?.fatherName || "",
       cnic: plot.buyer?.cnic || "",
       phone: plot.buyer?.phone || "",
-      address: plot.buyer?.address || "",
       plot: {
         plotNo: plot.plotNo || "",
         project: plot.project || "",
@@ -125,8 +127,17 @@ export default function SoldInventory() {
         block: plot.block || "",
         price: plot.price || 0,
       },
+      pricePerMarla: biyana.pricePerMarla,
+      totalAmount: biyana.totalAmount,
       biyanaAmount: biyana.biyanaAmount || 0,
-      paymentMethod: biyana.paymentMethod || "",
+      totalRemaining: biyana.totalRemaining,
+      firstInstallmentRemaining: biyana.firstInstallmentRemaining,
+      lastInstallmentDate: biyana.lastInstallmentDate,
+      monthlyInstallments: biyana.monthlyInstallments,
+      quarterlyInstallments: biyana.quarterlyInstallments,
+      agreementDuration: biyana.agreementDuration,
+      monthlyInstallmentAmount: biyana.monthlyInstallmentAmount,
+      quarterlyInstallmentAmount: biyana.quarterlyInstallmentAmount,
       date: biyana.date || new Date().toISOString(),
       agreementNumber: biyana.id,
       status: biyana.status,
@@ -168,13 +179,10 @@ export default function SoldInventory() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in" dir={isUrdu ? 'rtl' : 'ltr'}>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Sold Inventory</h1>
-            <p className="text-muted-foreground">
-              View and manage all sold properties ({inventoryData?.length || 0} properties)
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('inventory.soldInventory')}</h1>
           </div>
           <div className="flex gap-3">
             <Button variant="outline">
@@ -199,7 +207,7 @@ export default function SoldInventory() {
               </div>
               <Select value={selectedProject} onValueChange={setSelectedProject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Project" />
+                  <SelectValue placeholder={t('inventory.project')} />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map((project) => (
@@ -216,25 +224,25 @@ export default function SoldInventory() {
         {/* Table */}
         <Card variant="elevated">
           <CardHeader>
-            <CardTitle>Sold Properties</CardTitle>
+            <CardTitle>{t('inventory.soldInventory')}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
             ) : !inventoryData || inventoryData.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No sold properties found</div>
+              <div className="text-center py-8 text-muted-foreground">{t('inventory.noData')}</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Plot No.</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead>Buyer</TableHead>
-                    <TableHead>Agent</TableHead>
-                    <TableHead>Sold Date</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('inventory.plotNo')}</TableHead>
+                    <TableHead>{t('inventory.project')}</TableHead>
+                    <TableHead>{t('inventory.size')}</TableHead>
+                    <TableHead>{t('customers.buyer')}</TableHead>
+                    <TableHead>{t('customers.agent')}</TableHead>
+                    <TableHead>{t('inventory.soldDate')}</TableHead>
+                    <TableHead>{t('inventory.price')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -271,9 +279,9 @@ export default function SoldInventory() {
         <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Plot Details - {selectedPlot?.plotNo}</DialogTitle>
+              <DialogTitle>{t('inventory.details')} - {selectedPlot?.plotNo}</DialogTitle>
               <DialogDescription>
-                Complete transaction history and payment details
+                {t('inventory.transactionHistory')}
               </DialogDescription>
             </DialogHeader>
 
@@ -536,7 +544,7 @@ export default function SoldInventory() {
           <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
             <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
               <DialogTitle className="sr-only">Print Biyana Form</DialogTitle>
-              <PrintableBiyanaForm 
+              <PrintableBiyanaFormSimple 
                 data={printData} 
                 onClose={() => setIsPrintOpen(false)}
               />

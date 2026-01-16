@@ -23,14 +23,31 @@ import { formsAPI } from "@/lib/api";
 import { FileText, Loader2, Eye, Printer } from "lucide-react";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import { getUserData, isManager } from "@/lib/rbac";
+import { useTranslation } from 'react-i18next';
 
 const ViewBiyanaForms = () => {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
   const userData = getUserData();
   const isManagerUser = isManager();
+
+  // Helper function to format project names
+  const formatProjectName = (value: string) => {
+    if (value === 'SHADMAN_GREENS') {
+      return t('projects.shadmanGreens');
+    }
+    return value;
+  };
+
+  // Helper function to format status
+  const formatStatus = (status: string) => {
+    const statusLower = status?.toLowerCase() || 'pending';
+    return t(`status.${statusLower}`);
+  };
   
   const { data: forms, isLoading } = useQuery({
     queryKey: ['biyanaForms'],
@@ -98,10 +115,9 @@ const ViewBiyanaForms = () => {
   const handlePrintForm = (form: any) => {
     const data = {
       customerName: form.customer?.name || "",
-      fatherName: form.customer?.fatherName || "",
+      fatherHusbandName: form.fatherHusbandName || form.customer?.fatherName || "",
       cnic: form.customer?.cnic || "",
       phone: form.customer?.phone || "",
-      address: form.customer?.address || "",
       plot: {
         plotNo: form.plot?.plotNo || "",
         project: form.plot?.project || "",
@@ -109,8 +125,17 @@ const ViewBiyanaForms = () => {
         block: form.plot?.block || "",
         price: form.plot?.price || 0,
       },
+      pricePerMarla: form.pricePerMarla,
+      totalAmount: form.totalAmount,
       biyanaAmount: form.biyanaAmount || 0,
-      paymentMethod: form.paymentMethod || "",
+      totalRemaining: form.totalRemaining,
+      firstInstallmentRemaining: form.firstInstallmentRemaining,
+      lastInstallmentDate: form.lastInstallmentDate,
+      monthlyInstallments: form.monthlyInstallments,
+      quarterlyInstallments: form.quarterlyInstallments,
+      agreementDuration: form.agreementDuration,
+      monthlyInstallmentAmount: form.monthlyInstallmentAmount,
+      quarterlyInstallmentAmount: form.quarterlyInstallmentAmount,
       date: form.date || new Date().toISOString(),
       agreementNumber: form.id,
       status: form.status,
@@ -122,22 +147,20 @@ const ViewBiyanaForms = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir={isUrdu ? 'rtl' : 'ltr'}>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <FileText className="h-8 w-8" />
-              Biyana Forms
+              {t('forms.biyanaForm')}
             </h1>
-            <p className="text-muted-foreground">
-              View all submitted Biyana forms
-            </p>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Submitted Forms</CardTitle>
+            <CardTitle>{t('forms.submittedForms')}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -146,22 +169,22 @@ const ViewBiyanaForms = () => {
               </div>
             ) : !filteredForms || filteredForms.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No Biyana forms submitted yet
+                {t('forms.noBiyanaForms')}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Form No</TableHead>
-                      <TableHead>Customer Name</TableHead>
-                      <TableHead>CNIC</TableHead>
-                      <TableHead>Plot No</TableHead>
-                      <TableHead>Project</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>{t('forms.formNo')}</TableHead>
+                      <TableHead>{t('forms.customerName')}</TableHead>
+                      <TableHead>{t('customers.cnic')}</TableHead>
+                      <TableHead>{t('inventory.plotNo')}</TableHead>
+                      <TableHead>{t('inventory.project')}</TableHead>
+                      <TableHead>{t('forms.amount')}</TableHead>
+                      <TableHead>{t('forms.date')}</TableHead>
+                      <TableHead>{t('forms.status')}</TableHead>
+                      <TableHead>{t('forms.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -171,7 +194,7 @@ const ViewBiyanaForms = () => {
                         <TableCell>{form.customer?.name || 'N/A'}</TableCell>
                         <TableCell>{form.customer?.cnic || 'N/A'}</TableCell>
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
-                        <TableCell>{form.plot?.project || 'N/A'}</TableCell>
+                        <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>
                         <TableCell>{formatCurrency(form.biyanaAmount)}</TableCell>
                         <TableCell>{formatDate(form.date)}</TableCell>
                         <TableCell>
@@ -182,7 +205,7 @@ const ViewBiyanaForms = () => {
                               'secondary'
                             }
                           >
-                            {form.status || 'PENDING'}
+                            {formatStatus(form.status)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -218,82 +241,82 @@ const ViewBiyanaForms = () => {
 
         {/* Details Dialog */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir={isUrdu ? 'rtl' : 'ltr'}>
             <DialogHeader>
-              <DialogTitle>Biyana Form Details</DialogTitle>
-              <DialogDescription>Complete information about the submitted form</DialogDescription>
+              <DialogTitle>{t('forms.biyanaFormDetails')}</DialogTitle>
+              <DialogDescription>{t('forms.completeInfo')}</DialogDescription>
             </DialogHeader>
             {selectedForm && (
               <div className="space-y-6">
                 <div className="grid gap-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Form Number</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('forms.formNumber')}</label>
                       <p className="text-base font-semibold">{selectedForm.formNumber}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Date</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('forms.date')}</label>
                       <p className="text-base">{formatDate(selectedForm.date)}</p>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Property Information</h3>
+                    <h3 className="font-semibold mb-3">{t('forms.propertyInfo')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Plot Number</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.plotNo')}</label>
                         <p className="text-base">{selectedForm.plot?.plotNo || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Project</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.project')}</label>
                         <p className="text-base">{formatEnum(selectedForm.plot?.project || '')}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Block</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.block')}</label>
                         <p className="text-base">{selectedForm.plot?.block || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Size</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.size')}</label>
                         <p className="text-base">{formatSize(selectedForm.plot?.size || '')}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Customer Information</h3>
+                    <h3 className="font-semibold mb-3">{t('forms.customerInfo')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Customer Name</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.customerName')}</label>
                         <p className="text-base">{selectedForm.customer?.name || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Father's Name</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.fatherName')}</label>
                         <p className="text-base">{selectedForm.customer?.fatherName || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">CNIC</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('customers.cnic')}</label>
                         <p className="text-base">{selectedForm.customer?.cnic || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Phone</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('customers.phone')}</label>
                         <p className="text-base">{selectedForm.customer?.phone || 'N/A'}</p>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-sm font-medium text-muted-foreground">Address</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.address')}</label>
                         <p className="text-base">{selectedForm.customer?.address || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Payment Information</h3>
+                    <h3 className="font-semibold mb-3">{t('forms.paymentInfo')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Biyana Amount</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.biyanaAmount')}</label>
                         <p className="text-base font-semibold text-green-600">{formatCurrency(selectedForm.biyanaAmount)}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.paymentMethod')}</label>
                         <p className="text-base">{formatEnum(selectedForm.paymentMethod || '')}</p>
                       </div>
                     </div>
@@ -301,7 +324,7 @@ const ViewBiyanaForms = () => {
 
                   {selectedForm.remarks && (
                     <div className="border-t pt-4">
-                      <label className="text-sm font-medium text-muted-foreground">Remarks</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('forms.remarks')}</label>
                       <p className="text-base">{selectedForm.remarks}</p>
                     </div>
                   )}
@@ -309,7 +332,7 @@ const ViewBiyanaForms = () => {
                   <div className="border-t pt-4 flex gap-2">
                     <Button onClick={() => handlePrintForm(selectedForm)} className="flex-1">
                       <Printer className="mr-2 h-4 w-4" />
-                      Print Form
+                      {t('forms.printForm')}
                     </Button>
                   </div>
                 </div>

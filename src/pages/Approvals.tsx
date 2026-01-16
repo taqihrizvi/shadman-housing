@@ -3,28 +3,15 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, Clock, FileCheck, Wallet } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -50,12 +37,23 @@ const formatEnum = (value: string) => {
 };
 
 export default function Approvals() {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const queryClient = useQueryClient();
+
+  // Helper function to format project names
+  const formatProjectName = (value: string) => {
+    if (value === 'SHADMAN_GREENS') {
+      return t('projects.shadmanGreens');
+    }
+    return value;
+  };
+
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [approvalType, setApprovalType] = useState<'biyana' | 'payment' | 'agreement'>('biyana');
+  const [approvalType, setApprovalType] = useState<'biyana' | 'payment' | 'agreement' | 'transfer'>('biyana');
 
   // Fetch pending Biyana forms
   const { data: pendingBiyanas, isLoading: loadingBiyanas } = useQuery({
@@ -105,6 +103,22 @@ export default function Approvals() {
     },
   });
 
+  // Fetch pending Transfer forms
+  const { data: pendingTransfers, isLoading: loadingTransfers } = useQuery({
+    queryKey: ['pendingTransfers'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_URL}/approvals/transfer`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.message);
+      return result.data;
+    },
+  });
+
   // Fetch approval stats
   const { data: stats } = useQuery({
     queryKey: ['approvalStats'],
@@ -144,6 +158,8 @@ export default function Approvals() {
       queryClient.invalidateQueries({ queryKey: ['pendingBiyanas'] });
       queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
       queryClient.invalidateQueries({ queryKey: ['biyanaForms'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       setShowDialog(false);
       setSelectedItem(null);
     },
@@ -179,6 +195,45 @@ export default function Approvals() {
       queryClient.invalidateQueries({ queryKey: ['pendingPayments'] });
       queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      setShowDialog(false);
+      setSelectedItem(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Approve Transfer mutation
+  const approveTransferMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_URL}/approvals/transfer/${id}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.message);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Transfer form approved successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['pendingTransfers'] });
+      queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
+      queryClient.invalidateQueries({ queryKey: ['transferForms'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       setShowDialog(false);
       setSelectedItem(null);
     },
@@ -215,6 +270,8 @@ export default function Approvals() {
       queryClient.invalidateQueries({ queryKey: ['pendingBiyanas'] });
       queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
       queryClient.invalidateQueries({ queryKey: ['biyanaForms'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       setShowRejectDialog(false);
       setSelectedItem(null);
       setRejectReason("");
@@ -252,6 +309,8 @@ export default function Approvals() {
       queryClient.invalidateQueries({ queryKey: ['pendingPayments'] });
       queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       setShowRejectDialog(false);
       setSelectedItem(null);
       setRejectReason("");
@@ -288,6 +347,8 @@ export default function Approvals() {
       queryClient.invalidateQueries({ queryKey: ['pendingAgreements'] });
       queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
       queryClient.invalidateQueries({ queryKey: ['saleAgreements'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       setShowDialog(false);
       setSelectedItem(null);
     },
@@ -324,6 +385,8 @@ export default function Approvals() {
       queryClient.invalidateQueries({ queryKey: ['pendingAgreements'] });
       queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
       queryClient.invalidateQueries({ queryKey: ['saleAgreements'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       setShowRejectDialog(false);
       setSelectedItem(null);
       setRejectReason("");
@@ -337,13 +400,52 @@ export default function Approvals() {
     },
   });
 
-  const handleApprove = (item: any, type: 'biyana' | 'payment' | 'agreement') => {
+  // Reject Transfer mutation
+  const rejectTransferMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_URL}/approvals/transfer/${id}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.message);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Transfer form rejected",
+      });
+      queryClient.invalidateQueries({ queryKey: ['pendingTransfers'] });
+      queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
+      queryClient.invalidateQueries({ queryKey: ['transferForms'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      setShowRejectDialog(false);
+      setSelectedItem(null);
+      setRejectReason("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleApprove = (item: any, type: 'biyana' | 'payment' | 'agreement' | 'transfer') => {
     setSelectedItem(item);
     setApprovalType(type);
     setShowDialog(true);
   };
 
-  const handleReject = (item: any, type: 'biyana' | 'payment' | 'agreement') => {
+  const handleReject = (item: any, type: 'biyana' | 'payment' | 'agreement' | 'transfer') => {
     setSelectedItem(item);
     setApprovalType(type);
     setShowRejectDialog(true);
@@ -355,6 +457,8 @@ export default function Approvals() {
         approveBiyanaMutation.mutate(selectedItem.id);
       } else if (approvalType === 'payment') {
         approvePaymentMutation.mutate(selectedItem.id);
+      } else if (approvalType === 'transfer') {
+        approveTransferMutation.mutate(selectedItem.id);
       } else {
         approveAgreementMutation.mutate(selectedItem.id);
       }
@@ -367,6 +471,8 @@ export default function Approvals() {
         rejectBiyanaMutation.mutate({ id: selectedItem.id, reason: rejectReason });
       } else if (approvalType === 'payment') {
         rejectPaymentMutation.mutate({ id: selectedItem.id, reason: rejectReason });
+      } else if (approvalType === 'transfer') {
+        rejectTransferMutation.mutate({ id: selectedItem.id, reason: rejectReason });
       } else {
         rejectAgreementMutation.mutate({ id: selectedItem.id, reason: rejectReason });
       }
@@ -384,83 +490,111 @@ export default function Approvals() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Approvals</h1>
-          <p className="text-muted-foreground">Review and approve pending forms and payments</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('approvals.title')}</h1>
         </div>
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Form Approvals Stats */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            {/* Biyana Form Approvals */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Biyana Approvals</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('approvals.biyanaApprovals')}
+                </CardTitle>
+                <FileCheck className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-600" />
-                      <p className="text-sm font-medium">Pending</p>
-                    </div>
-                    <p className="text-2xl font-bold mt-1">{stats.forms.pending}</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    <span className="text-sm font-semibold">{stats.forms.pending}</span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <p className="text-sm font-medium">Approved</p>
-                    </div>
-                    <p className="text-2xl font-bold mt-1">{stats.forms.approved}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    <span className="text-sm font-semibold text-green-600">{stats.forms.approved}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    <span className="text-sm font-semibold text-red-600">{stats.forms.rejected}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Agreement Approvals Stats */}
+            {/* Agreement Approvals */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Agreement Approvals</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('approvals.agreementApprovals')}
+                </CardTitle>
+                <FileCheck className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-600" />
-                      <p className="text-sm font-medium">Pending</p>
-                    </div>
-                    <p className="text-2xl font-bold mt-1">{stats.agreements?.pending || 0}</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    <span className="text-sm font-semibold">{stats.agreements?.pending || 0}</span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <p className="text-sm font-medium">Approved</p>
-                    </div>
-                    <p className="text-2xl font-bold mt-1">{stats.agreements?.approved || 0}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    <span className="text-sm font-semibold text-green-600">{stats.agreements?.approved || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    <span className="text-sm font-semibold text-red-600">{stats.agreements?.rejected || 0}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Payment Approvals Stats */}
+            {/* Transfer Form Approvals */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Payment Approvals</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('approvals.transferApprovals')}
+                </CardTitle>
+                <FileCheck className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-600" />
-                      <p className="text-sm font-medium">Pending</p>
-                    </div>
-                    <p className="text-2xl font-bold mt-1">{stats.payments.pending}</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    <span className="text-sm font-semibold">{stats.transfers?.pending || 0}</span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <p className="text-sm font-medium">Approved</p>
-                    </div>
-                    <p className="text-2xl font-bold mt-1">{stats.payments.approved}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    <span className="text-sm font-semibold text-green-600">{stats.transfers?.approved || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    <span className="text-sm font-semibold text-red-600">{stats.transfers?.rejected || 0}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Approvals */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('approvals.paymentApprovals')}
+                </CardTitle>
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    <span className="text-sm font-semibold">{stats.payments.pending}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    <span className="text-sm font-semibold text-green-600">{stats.payments.approved}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    <span className="text-sm font-semibold text-red-600">{stats.payments.rejected}</span>
                   </div>
                 </div>
               </CardContent>
@@ -468,20 +602,32 @@ export default function Approvals() {
           </div>
         )}
 
-        {/* Tabs for Biyana Forms, Agreements, and Payments */}
+        {/* Tabs for Biyana Forms, Agreements, Transfers, and Payments */}
         <Tabs defaultValue="forms" className="space-y-4">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
-            <TabsTrigger value="forms">
-              <FileCheck className="mr-2 h-4 w-4" />
-              Biyana Forms
+          <TabsList className="grid w-full grid-cols-4 h-auto">
+            <TabsTrigger value="forms" className="px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
+              {t('approvals.biyanaForms')}
+              {pendingBiyanas && pendingBiyanas.length > 0 && (
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-green-500 rounded-full"></span>
+              )}
             </TabsTrigger>
-            <TabsTrigger value="agreements">
-              <FileCheck className="mr-2 h-4 w-4" />
-              Sale Agreements
+            <TabsTrigger value="agreements" className="px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
+              {t('approvals.saleAgreement')}
+              {pendingAgreements && pendingAgreements.length > 0 && (
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-green-500 rounded-full"></span>
+              )}
             </TabsTrigger>
-            <TabsTrigger value="payments">
-              <Wallet className="mr-2 h-4 w-4" />
-              Payment Approvals
+            <TabsTrigger value="transfers" className="px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
+              {t('approvals.transferForms')}
+              {pendingTransfers && pendingTransfers.length > 0 && (
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-green-500 rounded-full"></span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
+              {t('approvals.paymentApprovals')}
+              {pendingPayments && pendingPayments.length > 0 && (
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-green-500 rounded-full"></span>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -489,76 +635,63 @@ export default function Approvals() {
           <TabsContent value="forms" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Pending Biyana Forms</CardTitle>
-                <CardDescription>Review and approve Biyana forms submitted by managers</CardDescription>
+                <CardTitle>{t('approvals.pendingBiyanaForms')}</CardTitle>
+                <CardDescription>{t('approvals.reviewBiyanaForms')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingBiyanas ? (
-                  <div className="text-center py-8">Loading...</div>
+                  <div className="text-center py-8">{t('common.loading')}</div>
                 ) : !pendingBiyanas || pendingBiyanas.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No pending form approvals
+                    {t('approvals.noPendingForms')}
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Form #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Plot</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Payment Method</TableHead>
-                        <TableHead>Submitted By</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t('forms.formNumber')}</TableHead>
+                        <TableHead>{t('forms.customer')}</TableHead>
+                        <TableHead>{t('inventory.plotNo')}</TableHead>
+                        <TableHead>{t('payments.amount')}</TableHead>
+                        <TableHead>{t('payments.paymentMethod')}</TableHead>
+                        <TableHead>{t('approvals.submittedBy')}</TableHead>
+                        <TableHead>{t('forms.date')}</TableHead>
+                        <TableHead>{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {pendingBiyanas.map((biyana: any) => (
                         <TableRow key={biyana.id}>
-                          <TableCell className="font-medium">{biyana.formNumber}</TableCell>
+                          <TableCell>{biyana.formNumber}</TableCell>
                           <TableCell>
-                            <div>
-                              <p className="font-medium">{biyana.customer.name}</p>
-                              <p className="text-sm text-muted-foreground">{biyana.customer.cnic}</p>
-                            </div>
+                            <div>{biyana.customer.name}</div>
+                            <div className="text-xs text-muted-foreground">{biyana.customer.cnic}</div>
                           </TableCell>
                           <TableCell>
-                            <div>
-                              <p className="font-medium">{biyana.plot.plotNo}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {formatEnum(biyana.plot.project)}
-                              </p>
-                            </div>
+                            <div>{biyana.plot.plotNo}</div>
+                            <div className="text-xs text-muted-foreground">{formatProjectName(biyana.plot.project)}</div>
                           </TableCell>
-                          <TableCell className="font-semibold">
-                            {formatCurrency(biyana.biyanaAmount)}
-                          </TableCell>
+                          <TableCell>{formatCurrency(biyana.biyanaAmount)}</TableCell>
                           <TableCell>{formatEnum(biyana.paymentMethod)}</TableCell>
                           <TableCell>
-                            <div>
-                              <p>{biyana.createdBy.name}</p>
-                              <p className="text-sm text-muted-foreground">{biyana.createdBy.email}</p>
-                            </div>
+                            <div>{biyana.createdBy.name}</div>
+                            <div className="text-xs text-muted-foreground">{biyana.createdBy.email}</div>
                           </TableCell>
                           <TableCell>{formatDate(biyana.date)}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
-                                variant="default"
                                 onClick={() => handleApprove(biyana, 'biyana')}
                               >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Approve
+                                {t('approvals.approve')}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => handleReject(biyana, 'biyana')}
                               >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Reject
+                                {t('approvals.reject')}
                               </Button>
                             </div>
                           </TableCell>
@@ -575,26 +708,26 @@ export default function Approvals() {
           <TabsContent value="agreements" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Pending Sale Agreements</CardTitle>
-                <CardDescription>Review and approve sale agreements submitted by managers</CardDescription>
+                <CardTitle>{t('approvals.pendingSaleAgreements')}</CardTitle>
+                <CardDescription>{t('approvals.reviewSaleAgreements')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingAgreements ? (
-                  <div className="text-center py-8">Loading...</div>
+                  <div className="text-center py-8">{t('common.loading')}</div>
                 ) : !pendingAgreements || pendingAgreements.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No pending agreement approvals
+                    {t('approvals.noPendingAgreements')}
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Agreement #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Plot</TableHead>
-                        <TableHead>Total Amount</TableHead>
-                        <TableHead>Down Payment</TableHead>
-                        <TableHead>Installments</TableHead>
+                        <TableHead>{t('forms.agreementNumber')}</TableHead>
+                        <TableHead>{t('forms.customer')}</TableHead>
+                        <TableHead>{t('inventory.plotNo')}</TableHead>
+                        <TableHead>{t('forms.totalPrice')}</TableHead>
+                        <TableHead>{t('forms.downPayment')}</TableHead>
+                        <TableHead>{t('forms.installmentMonths')}</TableHead>
                         <TableHead>Submitted By</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Actions</TableHead>
@@ -603,18 +736,14 @@ export default function Approvals() {
                     <TableBody>
                       {pendingAgreements.map((agreement: any) => (
                         <TableRow key={agreement.id}>
-                          <TableCell className="font-medium">{agreement.agreementNumber}</TableCell>
+                          <TableCell>{agreement.agreementNumber}</TableCell>
                           <TableCell>
-                            <div>
-                              <div className="font-medium">{agreement.customer.name}</div>
-                              <div className="text-sm text-muted-foreground">{agreement.customer.cnic}</div>
-                            </div>
+                            <div>{agreement.customer.name}</div>
+                            <div className="text-xs text-muted-foreground">{agreement.customer.cnic}</div>
                           </TableCell>
                           <TableCell>
-                            <div>
-                              <div className="font-medium">{agreement.plot.plotNo}</div>
-                              <div className="text-sm text-muted-foreground">{formatEnum(agreement.plot.project)} - Block {agreement.plot.block}</div>
-                            </div>
+                            <div>{agreement.plot.plotNo}</div>
+                            <div className="text-xs text-muted-foreground">{formatProjectName(agreement.plot.project)} - Block {agreement.plot.block}</div>
                           </TableCell>
                           <TableCell>{formatCurrency(agreement.totalAmount)}</TableCell>
                           <TableCell>{formatCurrency(agreement.downPayment)}</TableCell>
@@ -622,27 +751,23 @@ export default function Approvals() {
                             {agreement.installmentMonths > 0 ? (
                               <div>
                                 <div>{agreement.installmentMonths} months</div>
-                                <div className="text-sm text-muted-foreground">{formatCurrency(agreement.monthlyAmount)}/mo</div>
+                                <div className="text-xs text-muted-foreground">{formatCurrency(agreement.monthlyAmount)}/mo</div>
                               </div>
                             ) : (
-                              <Badge variant="secondary">Full Payment</Badge>
+                              <span>Full Payment</span>
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm">
-                              <div>{agreement.createdBy.name}</div>
-                              <div className="text-muted-foreground">{agreement.createdBy.email}</div>
-                            </div>
+                            <div>{agreement.createdBy.name}</div>
+                            <div className="text-xs text-muted-foreground">{agreement.createdBy.email}</div>
                           </TableCell>
                           <TableCell>{formatDate(agreement.agreementDate)}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
-                                variant="default"
                                 onClick={() => handleApprove(agreement, 'agreement')}
                               >
-                                <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
                               </Button>
                               <Button
@@ -650,8 +775,7 @@ export default function Approvals() {
                                 variant="destructive"
                                 onClick={() => handleReject(agreement, 'agreement')}
                               >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Reject
+                                {t('approvals.reject')}
                               </Button>
                             </div>
                           </TableCell>
@@ -664,90 +788,155 @@ export default function Approvals() {
             </Card>
           </TabsContent>
 
+          {/* Transfer Forms Tab */}
+          <TabsContent value="transfers" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('approvals.pendingTransferForms')}</CardTitle>
+                <CardDescription>{t('approvals.reviewTransferForms')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingTransfers ? (
+                  <div className="text-center py-8">{t('common.loading')}</div>
+                ) : !pendingTransfers || pendingTransfers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {t('approvals.noPendingTransfers')}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto" dir={isUrdu ? 'rtl' : 'ltr'}>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('forms.transferNumber')}</TableHead>
+                          <TableHead>{t('forms.fromCustomer')}</TableHead>
+                          <TableHead>{t('forms.toCustomer')}</TableHead>
+                          <TableHead>{t('inventory.plotNo')}</TableHead>
+                          <TableHead>{t('forms.transferFee')}</TableHead>
+                          <TableHead>{t('forms.transferReason')}</TableHead>
+                          <TableHead>{t('approvals.submittedBy')}</TableHead>
+                          <TableHead>{t('forms.date')}</TableHead>
+                          <TableHead>{t('common.actions')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingTransfers.map((transfer: any) => (
+                          <TableRow key={transfer.id}>
+                            <TableCell>{transfer.transferNumber}</TableCell>
+                            <TableCell>
+                              <div>{transfer.fromCustomer.name}</div>
+                              <div className="text-xs text-muted-foreground">{transfer.fromCustomer.cnic}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div>{transfer.toCustomer.name}</div>
+                              <div className="text-xs text-muted-foreground">{transfer.toCustomer.cnic}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div>{transfer.plot.plotNo}</div>
+                              <div className="text-xs text-muted-foreground">{formatProjectName(transfer.plot.project)}</div>
+                            </TableCell>
+                            <TableCell>{formatCurrency(transfer.transferFee)}</TableCell>
+                            <TableCell>{transfer.transferReason}</TableCell>
+                            <TableCell>
+                              <div>{transfer.createdBy.name}</div>
+                              <div className="text-xs text-muted-foreground">{transfer.createdBy.email}</div>
+                            </TableCell>
+                            <TableCell>{formatDate(transfer.transferDate)}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleApprove(transfer, 'transfer')}
+                                >
+                                  {t('approvals.approve')}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleReject(transfer, 'transfer')}
+                                >
+                                  {t('approvals.reject')}
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Payments Tab */}
           <TabsContent value="payments" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Pending Payment Vouchers</CardTitle>
-                <CardDescription>Review and approve payment vouchers submitted by managers</CardDescription>
+                <CardTitle>{t('approvals.pendingPayments')}</CardTitle>
+                <CardDescription>{t('approvals.reviewPayments')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingPayments ? (
-                  <div className="text-center py-8">Loading...</div>
+                  <div className="text-center py-8">{t('common.loading')}</div>
                 ) : !pendingPayments || pendingPayments.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No pending payment approvals
+                    {t('approvals.noPendingPayments')}
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Voucher #</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Plot</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Payment Method</TableHead>
-                        <TableHead>Submitted By</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t('vouchers.voucherNo')}</TableHead>
+                        <TableHead>{t('vouchers.type')}</TableHead>
+                        <TableHead>{t('forms.customer')}</TableHead>
+                        <TableHead>{t('inventory.plotNo')}</TableHead>
+                        <TableHead>{t('payments.amount')}</TableHead>
+                        <TableHead>{t('payments.paymentMethod')}</TableHead>
+                        <TableHead>{t('approvals.submittedBy')}</TableHead>
+                        <TableHead>{t('forms.date')}</TableHead>
+                        <TableHead>{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {pendingPayments.map((payment: any) => (
                         <TableRow key={payment.id}>
-                          <TableCell className="font-medium">{payment.voucherNo}</TableCell>
+                          <TableCell>{payment.voucherNo}</TableCell>
+                          <TableCell>{formatEnum(payment.type)}</TableCell>
                           <TableCell>
-                            <Badge variant={payment.type === 'RECEIPT' ? 'default' : 'secondary'}>
-                              {formatEnum(payment.type)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{payment.customer.name}</p>
-                              <p className="text-sm text-muted-foreground">{payment.customer.cnic}</p>
-                            </div>
+                            <div>{payment.customer.name}</div>
+                            <div className="text-xs text-muted-foreground">{payment.customer.cnic}</div>
                           </TableCell>
                           <TableCell>
                             {payment.plot ? (
                               <div>
-                                <p className="font-medium">{payment.plot.plotNo}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {formatEnum(payment.plot.project)}
-                                </p>
+                                <div>{payment.plot.plotNo}</div>
+                                <div className="text-xs text-muted-foreground">{formatProjectName(payment.plot.project)}</div>
                               </div>
                             ) : (
-                              <span className="text-muted-foreground">-</span>
+                              <span>-</span>
                             )}
                           </TableCell>
-                          <TableCell className="font-semibold">
-                            {formatCurrency(payment.amount)}
-                          </TableCell>
+                          <TableCell>{formatCurrency(payment.amount)}</TableCell>
                           <TableCell>{formatEnum(payment.paymentMethod)}</TableCell>
                           <TableCell>
-                            <div>
-                              <p>{payment.createdBy.name}</p>
-                              <p className="text-sm text-muted-foreground">{payment.createdBy.email}</p>
-                            </div>
+                            <div>{payment.createdBy.name}</div>
+                            <div className="text-xs text-muted-foreground">{payment.createdBy.email}</div>
                           </TableCell>
                           <TableCell>{formatDate(payment.date)}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
-                                variant="default"
                                 onClick={() => handleApprove(payment, 'payment')}
                               >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Approve
+                                {t('approvals.approve')}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => handleReject(payment, 'payment')}
                               >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Reject
+                                {t('approvals.reject')}
                               </Button>
                             </div>
                           </TableCell>
@@ -765,43 +954,37 @@ export default function Approvals() {
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Approve {approvalType === 'biyana' ? 'Biyana Form' : 'Payment Voucher'}</DialogTitle>
+              <DialogTitle>{t('approvals.approve')} {approvalType === 'biyana' ? t('forms.biyanaForm') : t('vouchers.title')}</DialogTitle>
               <DialogDescription>
-                Are you sure you want to approve this {approvalType === 'biyana' ? 'Biyana form' : 'payment voucher'}?
+                {t('approvals.confirmApprove')}
               </DialogDescription>
             </DialogHeader>
             {selectedItem && (
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium">{approvalType === 'biyana' ? 'Form Number' : 'Voucher Number'}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {approvalType === 'biyana' ? selectedItem.formNumber : selectedItem.voucherNo}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Customer</p>
-                    <p className="text-sm text-muted-foreground">{selectedItem.customer.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Amount</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatCurrency(approvalType === 'biyana' ? selectedItem.biyanaAmount : selectedItem.amount)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Date</p>
-                    <p className="text-sm text-muted-foreground">{formatDate(selectedItem.date)}</p>
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <div className="text-sm font-medium">{approvalType === 'biyana' ? t('forms.formNumber') : t('vouchers.voucherNo')}</div>
+                  <div className="text-sm text-muted-foreground">{approvalType === 'biyana' ? selectedItem.formNumber : selectedItem.voucherNo}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium">{t('forms.customer')}</div>
+                  <div className="text-sm text-muted-foreground">{selectedItem.customer.name}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium">{t('payments.amount')}</div>
+                  <div className="text-sm text-muted-foreground">{formatCurrency(approvalType === 'biyana' ? selectedItem.biyanaAmount : selectedItem.amount)}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium">{t('forms.date')}</div>
+                  <div className="text-sm text-muted-foreground">{formatDate(selectedItem.date)}</div>
                 </div>
               </div>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowDialog(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button onClick={confirmApprove}>
-                Confirm Approval
+                {t('approvals.confirmApproval')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -811,17 +994,16 @@ export default function Approvals() {
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Reject {approvalType === 'biyana' ? 'Biyana Form' : 'Payment Voucher'}</DialogTitle>
+              <DialogTitle>{t('approvals.reject')} {approvalType === 'biyana' ? t('forms.biyanaForm') : t('vouchers.title')}</DialogTitle>
               <DialogDescription>
-                Please provide a reason for rejecting this {approvalType === 'biyana' ? 'Biyana form' : 'payment voucher'}.
+                {t('approvals.provideReason')}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="reason">Rejection Reason</Label>
+                <Label htmlFor="rejectReason">{t('approvals.rejectionReason')}</Label>
                 <Textarea
-                  id="reason"
-                  placeholder="Enter reason for rejection..."
+                  id="rejectReason"
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   className="mt-2"
@@ -830,14 +1012,17 @@ export default function Approvals() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setShowRejectDialog(false);
-                setRejectReason("");
-              }}>
-                Cancel
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectDialog(false);
+                  setRejectReason("");
+                }}
+              >
+                {t('common.cancel')}
               </Button>
               <Button variant="destructive" onClick={confirmReject}>
-                Confirm Rejection
+                {t('approvals.confirmRejection')}
               </Button>
             </DialogFooter>
           </DialogContent>

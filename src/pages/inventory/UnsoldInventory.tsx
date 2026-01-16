@@ -33,12 +33,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { getUserRole } from "@/lib/rbac";
+import { useTranslation } from "react-i18next";
 
 const projects = ["All Projects", "GREEN_VALLEY", "LAKE_VIEW", "PALM_HEIGHTS", "SUNSET_GARDENS"];
 const sizes = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
 const blocks = ["Block A", "Block B", "Block C", "Block D"];
 
 export default function UnsoldInventory() {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const userRole = getUserRole();
@@ -48,11 +51,11 @@ export default function UnsoldInventory() {
   const [selectedSize, setSelectedSize] = useState("All Sizes");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
     plotNo: "",
     project: "",
     size: "",
-    block: "",
     price: "",
     status: "",
     description: "",
@@ -99,7 +102,6 @@ export default function UnsoldInventory() {
       plotNo: item.plotNo,
       project: item.project,
       size: item.size,
-      block: item.block,
       price: item.price.toString(),
       status: item.status,
       description: item.description || "",
@@ -115,7 +117,6 @@ export default function UnsoldInventory() {
       plotNo: editFormData.plotNo,
       project: editFormData.project,
       size: editFormData.size,
-      block: editFormData.block,
       price: parseFloat(editFormData.price),
       status: editFormData.status,
       description: editFormData.description || undefined,
@@ -135,6 +136,13 @@ export default function UnsoldInventory() {
   const formatEnum = (value: string) => {
     if (!value) return "";
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatProjectName = (value: string) => {
+    if (value === 'SHADMAN_GREENS') {
+      return t('projects.shadmanGreens');
+    }
+    return formatEnum(value);
   };
 
   const formatSize = (value: string) => {
@@ -158,35 +166,122 @@ export default function UnsoldInventory() {
 
   const totalValue = filteredInventory.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
 
+  const getCardTitle = (cardType: string) => {
+    switch(cardType) {
+      case 'totalUnits': return t('inventory.unsoldInventory');
+      case 'available': return t('inventory.available');
+      case 'totalValue': return t('inventory.totalValue');
+      default: return '';
+    }
+  };
+
+  const renderCardTable = (cardType: string) => {
+    let data: any[] = [];
+    let columns: string[] = [];
+
+    switch(cardType) {
+      case 'totalUnits':
+        data = filteredInventory.map((item: any) => ({
+          plotNo: item.plotNo,
+          project: formatProjectName(item.project),
+          size: formatSize(item.size),
+          price: formatCurrency(item.price),
+          status: formatEnum(item.status),
+        }));
+        columns = ['plotNo', 'project', 'size', 'price', 'status'];
+        break;
+      case 'available':
+        data = filteredInventory.filter(i => i.status === "AVAILABLE").map((item: any) => ({
+          plotNo: item.plotNo,
+          project: formatProjectName(item.project),
+          size: formatSize(item.size),
+          price: formatCurrency(item.price),
+        }));
+        columns = ['plotNo', 'project', 'size', 'price'];
+        break;
+      case 'totalValue':
+        data = filteredInventory.map((item: any) => ({
+          plotNo: item.plotNo,
+          project: formatProjectName(item.project),
+          price: formatCurrency(item.price),
+        }));
+        columns = ['plotNo', 'project', 'price'];
+        break;
+      default:
+        return null;
+    }
+
+    return (
+      <Card variant="elevated">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>{getCardTitle(cardType)}</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setSelectedCard(null)}>
+            {t('common.back')}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map(col => (
+                  <TableHead key={col} className="capitalize">
+                    {t(`inventory.${col}`) || col.replace(/([A-Z])/g, ' $1').trim()}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="text-center py-8 text-muted-foreground">
+                    {t('inventory.noData')}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data.map((row, idx) => (
+                  <TableRow key={idx}>
+                    {columns.map(col => (
+                      <TableCell key={col}>{row[col]}</TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in" dir={isUrdu ? 'rtl' : 'ltr'}>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Unsold Inventory</h1>
-            <p className="text-muted-foreground">
-              Browse and manage available properties ({filteredInventory.length} properties)
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('inventory.unsoldInventory')}</h1>
           </div>
           <div className="flex gap-3">
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {t('reports.exportPDF')}
             </Button>
             <Button>
               <ShoppingCart className="mr-2 h-4 w-4" />
-              Quick Sale
+              {t('common.add')}
             </Button>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-l-4 border-l-warning">
+          <Card 
+            className="border-l-4 border-l-warning cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setSelectedCard('totalUnits')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Unsold</p>
+                  <p className="text-sm text-muted-foreground">{t('inventory.unsoldInventory')}</p>
                   <p className="text-2xl font-bold">{filteredInventory.length}</p>
                 </div>
                 <div className="rounded-xl bg-warning/10 p-3">
@@ -195,13 +290,16 @@ export default function UnsoldInventory() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-success">
+          <Card 
+            className="border-l-4 border-l-success cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setSelectedCard('available')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Available</p>
+                  <p className="text-sm text-muted-foreground">{t('inventory.available')}</p>
                   <p className="text-2xl font-bold">
-                    {filteredInventory.filter(i => i.status === "available").length}
+                    {filteredInventory.filter(i => i.status === "AVAILABLE").length}
                   </p>
                 </div>
                 <div className="rounded-xl bg-success/10 p-3">
@@ -210,11 +308,14 @@ export default function UnsoldInventory() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-accent">
+          <Card 
+            className="border-l-4 border-l-accent cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setSelectedCard('totalValue')}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Value</p>
+                  <p className="text-sm text-muted-foreground">{t('inventory.totalValue')}</p>
                   <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
                 </div>
                 <div className="rounded-xl bg-accent/20 p-3">
@@ -226,114 +327,118 @@ export default function UnsoldInventory() {
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by plot number..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+        {!selectedCard && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={t('common.search')}
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Select value={selectedProject} onValueChange={setSelectedProject}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('inventory.project')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => (
+                      <SelectItem key={project} value={project}>
+                        {formatEnum(project)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedSize} onValueChange={setSelectedSize}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sizes.map((size) => (
+                      <SelectItem key={size} value={size}>
+                        {size === "All Sizes" ? size : formatSize(size)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={selectedProject} onValueChange={setSelectedProject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project} value={project}>
-                      {formatEnum(project)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedSize} onValueChange={setSelectedSize}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Size" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sizes.map((size) => (
-                    <SelectItem key={size} value={size}>
-                      {size === "All Sizes" ? size : formatSize(size)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Table */}
-        <Card variant="elevated">
-          <CardHeader>
-            <CardTitle>Available Properties</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
-            ) : !filteredInventory || filteredInventory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No unsold properties found</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Plot No.</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInventory.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.plotNo}</TableCell>
-                      <TableCell>{formatEnum(item.project)}</TableCell>
-                      <TableCell>{formatSize(item.size)}</TableCell>
-                      <TableCell>{item.block}</TableCell>
-                      <TableCell className="font-semibold">{formatCurrency(item.price)}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={
-                            item.status === "AVAILABLE" ? "default" : 
-                            item.status === "PENDING" ? "secondary" : 
-                            "outline"
-                          }
-                        >
-                          {formatEnum(item.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => handleEdit(item)}
-                          disabled={isManager}
-                        >
-                          <Pencil className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                      </TableCell>
+        {/* Conditional Rendering: Table or Card Detail */}
+        {selectedCard ? (
+          renderCardTable(selectedCard)
+        ) : (
+          <Card variant="elevated">
+            <CardHeader>
+              <CardTitle>{t('inventory.title')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+              ) : !filteredInventory || filteredInventory.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">{t('inventory.noData')}</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('inventory.plotNo')}</TableHead>
+                      <TableHead>{t('inventory.project')}</TableHead>
+                      <TableHead>{t('inventory.size')}</TableHead>
+                      <TableHead>{t('inventory.price')}</TableHead>
+                      <TableHead>{t('inventory.status')}</TableHead>
+                      <TableHead className="text-right">{t('common.actions')}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredInventory.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.plotNo}</TableCell>
+                        <TableCell>{formatProjectName(item.project)}</TableCell>
+                        <TableCell>{formatSize(item.size)}</TableCell>
+                        <TableCell>{formatCurrency(item.price)}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              item.status === "AVAILABLE" ? "default" : 
+                              item.status === "PENDING" ? "secondary" : 
+                              "outline"
+                            }
+                          >
+                            {formatEnum(item.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleEdit(item)}
+                            disabled={isManager}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            {t('common.edit')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Property</DialogTitle>
+              <DialogTitle>{t('common.edit')} {t('inventory.title')}</DialogTitle>
               <DialogDescription>
-                Update the property details below
+                {t('forms.fillForm')}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleUpdateSubmit} className="space-y-4 mt-4">
@@ -359,7 +464,7 @@ export default function UnsoldInventory() {
                     <SelectContent>
                       {projects.filter(p => p !== "All Projects").map((project) => (
                         <SelectItem key={project} value={project}>
-                          {formatEnum(project)}
+                          {formatProjectName(project)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -378,24 +483,6 @@ export default function UnsoldInventory() {
                       {sizes.filter(s => s !== "All Sizes").map((size) => (
                         <SelectItem key={size} value={size}>
                           {size === "All Sizes" ? size : formatSize(size)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-block">Block *</Label>
-                  <Select
-                    value={editFormData.block}
-                    onValueChange={(value) => setEditFormData({ ...editFormData, block: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {blocks.map((block) => (
-                        <SelectItem key={block} value={block}>
-                          {block}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -421,9 +508,9 @@ export default function UnsoldInventory() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AVAILABLE">Available</SelectItem>
-                      <SelectItem value="RESERVED">Reserved</SelectItem>
-                      <SelectItem value="SOLD">Sold</SelectItem>
+                      <SelectItem value="AVAILABLE">{isUrdu ? 'دستیاب' : 'Available'}</SelectItem>
+                      <SelectItem value="RESERVED">{isUrdu ? 'محفوظ شدہ' : 'Reserved'}</SelectItem>
+                      <SelectItem value="SOLD">{isUrdu ? 'فروخت شدہ' : 'Sold'}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -439,10 +526,10 @@ export default function UnsoldInventory() {
               </div>
               <div className="flex gap-3 justify-end pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={updateInventoryMutation.isPending}>
-                  {updateInventoryMutation.isPending ? "Updating..." : "Update Property"}
+                  {updateInventoryMutation.isPending ? t('common.loading') : t('common.update')}
                 </Button>
               </div>
             </form>

@@ -22,12 +22,30 @@ import {
 import { formsAPI } from "@/lib/api";
 import { FileSignature, Loader2, Eye, Printer } from "lucide-react";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
+import { useTranslation } from 'react-i18next';
 
 const ViewSaleAgreements = () => {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
+
+  // Helper function to format project names
+  const formatProjectName = (value: string) => {
+    if (value === 'SHADMAN_GREENS') {
+      return t('projects.shadmanGreens');
+    }
+    return value;
+  };
+
+  // Helper function to format status
+  const formatStatus = (status: string) => {
+    const statusLower = status?.toLowerCase() || 'pending';
+    return t(`status.${statusLower}`);
+  };
+
   const { data: forms, isLoading } = useQuery({
     queryKey: ['saleAgreements'],
     queryFn: async () => {
@@ -92,22 +110,20 @@ const ViewSaleAgreements = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir={isUrdu ? 'rtl' : 'ltr'}>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <FileSignature className="h-8 w-8" />
-              Sale Agreements
+              {t('forms.saleAgreement')}
             </h1>
-            <p className="text-muted-foreground">
-              View all submitted Sale Agreement forms
-            </p>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Submitted Forms</CardTitle>
+            <CardTitle>{t('forms.submittedForms')}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -116,24 +132,24 @@ const ViewSaleAgreements = () => {
               </div>
             ) : !forms || forms.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No Sale Agreement forms submitted yet
+                {t('forms.noSaleAgreements')}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Agreement No</TableHead>
-                      <TableHead>Customer Name</TableHead>
-                      <TableHead>CNIC</TableHead>
-                      <TableHead>Plot No</TableHead>
-                      <TableHead>Project</TableHead>
-                      <TableHead>Total Amount</TableHead>
-                      <TableHead>Down Payment</TableHead>
-                      <TableHead>Payment Plan</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>{t('forms.agreementNo')}</TableHead>
+                      <TableHead>{t('forms.customerName')}</TableHead>
+                      <TableHead>{t('customers.cnic')}</TableHead>
+                      <TableHead>{t('inventory.plotNo')}</TableHead>
+                      <TableHead>{t('inventory.project')}</TableHead>
+                      <TableHead>{t('forms.totalAmount')}</TableHead>
+                      <TableHead>{t('forms.downPayment')}</TableHead>
+                      <TableHead>{t('forms.paymentPlan')}</TableHead>
+                      <TableHead>{t('forms.date')}</TableHead>
+                      <TableHead>{t('forms.status')}</TableHead>
+                      <TableHead>{t('forms.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -143,7 +159,7 @@ const ViewSaleAgreements = () => {
                         <TableCell>{form.customer?.name || 'N/A'}</TableCell>
                         <TableCell>{form.customer?.cnic || 'N/A'}</TableCell>
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
-                        <TableCell>{form.plot?.project || 'N/A'}</TableCell>
+                        <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>
                         <TableCell>{formatCurrency(form.totalAmount)}</TableCell>
                         <TableCell>{formatCurrency(form.downPayment)}</TableCell>
                         <TableCell>{formatPaymentPlan(form.installmentMonths)}</TableCell>
@@ -157,7 +173,7 @@ const ViewSaleAgreements = () => {
                                 : "bg-yellow-50 text-yellow-700 border-yellow-200"
                             }
                           >
-                            {form.status === 'APPROVED' ? 'Approved' : 'Pending'}
+                            {form.status === 'APPROVED' ? t('status.approved') : t('status.pending')}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -191,10 +207,10 @@ const ViewSaleAgreements = () => {
 
         {/* Details Dialog */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir={isUrdu ? 'rtl' : 'ltr'}>
             <DialogHeader>
-              <DialogTitle>Sale Agreement Details</DialogTitle>
-              <DialogDescription>Complete information about the sale agreement</DialogDescription>
+              <DialogTitle>{t('forms.saleAgreementDetails')}</DialogTitle>
+              <DialogDescription>{t('forms.completeInfoAgreement')}</DialogDescription>
             </DialogHeader>
             {selectedForm && (
               <div className="space-y-6">
@@ -219,7 +235,7 @@ const ViewSaleAgreements = () => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Project</label>
-                        <p className="text-base">{formatEnum(selectedForm.plot?.project || '')}</p>
+                        <p className="text-base">{formatProjectName(selectedForm.plot?.project || '')}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Block</label>
@@ -283,7 +299,7 @@ const ViewSaleAgreements = () => {
                               : "bg-yellow-50 text-yellow-700 border-yellow-200"
                           }
                         >
-                          {selectedForm.status === 'APPROVED' ? 'Approved' : 'Pending'}
+                          {formatStatus(selectedForm.status)}
                         </Badge>
                       </div>
                     </div>

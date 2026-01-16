@@ -40,31 +40,35 @@ export function StatCard({
   variant = "default",
 }: StatCardProps) {
   return (
-    <Card className={cn("border-l-4 card-hover", variantStyles[variant])}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-6">
-          <div className="space-y-2 flex-1 min-w-0 max-w-[calc(100%-60px)]">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold tracking-tight">{value}</p>
-            {subtitle && (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
-            )}
-            {trend && (
-              <div className="flex items-center gap-1">
-                <span
-                  className={cn(
-                    "text-sm font-medium",
-                    trend.positive ? "text-success" : "text-destructive"
-                  )}
-                >
-                  {trend.positive ? "+" : ""}{trend.value}%
-                </span>
-                <span className="text-xs text-muted-foreground">vs last month</span>
-              </div>
-            )}
+    <Card className={cn("border-l-4 card-hover h-full", variantStyles[variant])}>
+      <CardContent className="p-4 h-full">
+        <div className="flex items-start justify-between gap-4 h-full">
+          <div className="space-y-1.5 flex-1 min-w-0 max-w-[calc(100%-48px)]">
+            <p className="text-xs font-medium text-muted-foreground line-clamp-2 min-h-[2rem]">{title}</p>
+            <p className="text-xl font-bold tracking-tight">{value}</p>
+            <div className="min-h-[1rem]">
+              {subtitle && (
+                <p className="text-xs text-muted-foreground">{subtitle}</p>
+              )}
+            </div>
+            <div className="min-h-[1.25rem]">
+              {trend && (
+                <div className="flex items-center gap-1">
+                  <span
+                    className={cn(
+                      "text-xs font-medium",
+                      trend.positive ? "text-success" : "text-destructive"
+                    )}
+                  >
+                    {trend.positive ? "+" : ""}{trend.value}%
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">vs last month</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className={cn("rounded-full p-2.5 flex-shrink-0 mt-1", iconBgStyles[variant])}>
-            <Icon className="h-5 w-5" strokeWidth={2.5} />
+          <div className={cn("rounded-full p-2 flex-shrink-0 mt-1", iconBgStyles[variant])}>
+            <Icon className="h-4 w-4" strokeWidth={2.5} />
           </div>
         </div>
       </CardContent>

@@ -48,13 +48,13 @@ export const ROUTE_PERMISSIONS = {
   
   // Forms
   '/forms/biyana': ['ADMIN', 'MANAGER'],
-  '/forms/sale-agreement': ['ADMIN'],
-  '/forms/transfer': ['ADMIN'],
+  '/forms/sale-agreement': ['ADMIN', 'MANAGER'],
+  '/forms/transfer': ['ADMIN', 'MANAGER'],
   
   // Submitted Forms
   '/submitted-forms/biyana': ['ADMIN', 'MANAGER'],
-  '/submitted-forms/sale-agreement': ['ADMIN'],
-  '/submitted-forms/transfer': ['ADMIN'],
+  '/submitted-forms/sale-agreement': ['ADMIN', 'MANAGER'],
+  '/submitted-forms/transfer': ['ADMIN', 'MANAGER'],
   
   // Payments
   '/payments/pending': ['ADMIN'],

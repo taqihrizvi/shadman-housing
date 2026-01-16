@@ -14,10 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { FileText, Save, Printer } from "lucide-react";
+import { FileText, Save } from "lucide-react";
 import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
-
-const paymentMethods = ["CASH", "BANK_TRANSFER", "CHEQUE", "ONLINE"];
+import { useTranslation } from "react-i18next";
 
 const formatEnum = (value: string) => {
   if (!value) return "";
@@ -37,18 +36,27 @@ const formatSize = (value: string) => {
 };
 
 export default function BiyanaForm() {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     customerName: "",
-    fatherName: "",
+    fatherHusbandName: "",
     cnic: "",
     phone: "",
-    permanentAddress: "",
-    currentAddress: "",
     plotId: "",
+    pricePerMarla: "",
+    totalAmount: "",
     biyanaAmount: "",
-    paymentMethod: "",
+    totalRemaining: "",
+    lastInstallmentDate: "",
+    monthlyInstallments: "",
+    quarterlyInstallments: "",
+    agreementDuration: "",
+    monthlyInstallmentAmount: "",
+    quarterlyInstallmentAmount: "",
+    installmentType: "MONTHLY_ONLY", // MONTHLY_ONLY or MONTHLY_AND_QUARTERLY
     date: new Date().toISOString().split("T")[0],
   });
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
@@ -78,10 +86,10 @@ export default function BiyanaForm() {
           // Create new customer
           const customerResponse = await customerAPI.create({
             name: data.customerName,
-            fatherName: data.fatherName,
+            fatherName: data.fatherHusbandName,
             cnic: data.cnic,
             phone: data.phone,
-            address: data.permanentAddress || data.currentAddress,
+            address: "N/A", // Not required in new format
           });
           customerId = customerResponse.data.id;
         }
@@ -94,8 +102,20 @@ export default function BiyanaForm() {
         customerId,
         plotId: data.plotId,
         biyanaAmount: parseFloat(data.biyanaAmount),
-        paymentMethod: data.paymentMethod,
+        paymentMethod: "CASH", // Default value - using valid enum value
         date: new Date(data.date).toISOString(),
+        // Additional fields for new format
+        pricePerMarla: parseFloat(data.pricePerMarla) || 0,
+        totalAmount: parseFloat(data.totalAmount) || 0,
+        totalRemaining: parseFloat(data.totalRemaining) || 0,
+
+        lastInstallmentDate: data.lastInstallmentDate || null,
+        monthlyInstallments: parseInt(data.monthlyInstallments) || 0,
+        quarterlyInstallments: parseInt(data.quarterlyInstallments) || 0,
+        agreementDuration: data.agreementDuration || "",
+        monthlyInstallmentAmount: parseFloat(data.monthlyInstallmentAmount) || 0,
+        quarterlyInstallmentAmount: parseFloat(data.quarterlyInstallmentAmount) || 0,
+        installmentType: data.installmentType || "MONTHLY_ONLY",
       };
 
       const response = await formsAPI.createBiyana(biyanaData);
@@ -123,7 +143,220 @@ export default function BiyanaForm() {
   const handlePlotSelect = (plotId: string) => {
     const plot = availablePlots?.find((p: any) => p.id === plotId);
     setSelectedPlot(plot);
-    setFormData({ ...formData, plotId });
+    
+    if (plot) {
+      // Get marla value from size
+      const sizeInMarla = getSizeInMarla(plot.size);
+      const pricePerMarla = sizeInMarla > 0 ? (plot.price / sizeInMarla).toFixed(2) : "0";
+      const totalAmount = plot.price.toString();
+      
+      // Calculate remaining if biyana already entered
+      const biyanaAmount = parseFloat(formData.biyanaAmount) || 0;
+      const totalRemaining = (plot.price - biyanaAmount).toString();
+      
+      setFormData({ 
+        ...formData, 
+        plotId,
+        pricePerMarla,
+        totalAmount,
+        totalRemaining: biyanaAmount > 0 ? totalRemaining : ""
+      });
+    } else {
+      setFormData({ ...formData, plotId });
+    }
+  };
+  
+  // Convert plot size enum to marla number
+  const getSizeInMarla = (size: string): number => {
+    const sizeMap: { [key: string]: number } = {
+      'FIVE_MARLA': 5,
+      'SEVEN_MARLA': 7,
+      'TEN_MARLA': 10,
+      'ONE_KANAL': 20, // 1 Kanal = 20 Marla
+      'TWO_KANAL': 40, // 2 Kanal = 40 Marla
+    };
+    return sizeMap[size] || 0;
+  };
+  
+  // Calculate months between two dates
+  const calculateMonthsBetween = (startDate: string, endDate: string): number => {
+    if (!startDate || !endDate) return 0;
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + 
+                   (end.getMonth() - start.getMonth());
+    
+    return Math.max(0, months);
+  };
+  
+  // Handle last installment date change and auto-calculate months
+  const handleLastInstallmentDateChange = (lastDate: string) => {
+    const months = calculateMonthsBetween(formData.date, lastDate);
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    
+    let duration = "";
+    if (years > 0) {
+      duration = `${years} ${years === 1 ? t('printableForms.year') : t('printableForms.years')}`;
+      if (remainingMonths > 0) {
+        duration += ` ${remainingMonths} ${remainingMonths === 1 ? t('printableForms.month') : t('printableForms.months')}`;
+      }
+    } else {
+      duration = `${months} ${months === 1 ? t('printableForms.month') : t('printableForms.months')}`;
+    }
+    
+    // Calculate installments based on type
+    let updatedData = {
+      ...formData,
+      lastInstallmentDate: lastDate,
+      monthlyInstallments: months.toString(),
+      agreementDuration: duration,
+    };
+    
+    // Auto-calculate installment amounts
+    if (formData.installmentType === "MONTHLY_ONLY") {
+      const remaining = parseFloat(formData.totalRemaining) || 0;
+      const monthlyAmount = months > 0 ? (remaining / months).toFixed(2) : "0";
+      updatedData = {
+        ...updatedData,
+        monthlyInstallmentAmount: monthlyAmount,
+        quarterlyInstallments: "0",
+        quarterlyInstallmentAmount: "0",
+      };
+    } else {
+      // For MONTHLY_AND_QUARTERLY, recalculate based on current quarterly amount
+      const remaining = parseFloat(formData.totalRemaining) || 0;
+      const quarters = Math.floor(months / 3);
+      const quarterlyAmount = parseFloat(formData.quarterlyInstallmentAmount) || 0;
+      const totalQuarterlyPayments = quarters * quarterlyAmount;
+      const remainingAfterQuarterly = remaining - totalQuarterlyPayments;
+      const monthlyAmount = months > 0 ? (remainingAfterQuarterly / months).toFixed(2) : "0";
+      
+      updatedData = {
+        ...updatedData,
+        quarterlyInstallments: quarters.toString(),
+        monthlyInstallmentAmount: monthlyAmount,
+      };
+    }
+    
+    setFormData(updatedData);
+  };
+  
+  // Handle installment type change
+  const handleInstallmentTypeChange = (type: string) => {
+    const months = parseInt(formData.monthlyInstallments) || 0;
+    const remaining = parseFloat(formData.totalRemaining) || 0;
+    
+    let updatedData = { ...formData, installmentType: type };
+    
+    if (type === "MONTHLY_ONLY") {
+      // Calculate monthly-only installment
+      const monthlyAmount = months > 0 ? (remaining / months).toFixed(2) : "0";
+      updatedData = {
+        ...updatedData,
+        monthlyInstallmentAmount: monthlyAmount,
+        quarterlyInstallments: "0",
+        quarterlyInstallmentAmount: "0",
+      };
+    } else {
+      // For MONTHLY_AND_QUARTERLY, initialize quarterly installments
+      const quarters = Math.floor(months / 3);
+      updatedData = {
+        ...updatedData,
+        quarterlyInstallments: quarters.toString(),
+        quarterlyInstallmentAmount: "0",
+      };
+    }
+    
+    setFormData(updatedData);
+  };
+  
+  // Handle quarterly installment amount change (bidirectional calculation)
+  const handleQuarterlyAmountChange = (quarterlyAmount: string) => {
+    const months = parseInt(formData.monthlyInstallments) || 0;
+    const remaining = parseFloat(formData.totalRemaining) || 0;
+    const quarters = parseInt(formData.quarterlyInstallments) || 0;
+    const qAmount = parseFloat(quarterlyAmount) || 0;
+    
+    const totalQuarterlyPayments = quarters * qAmount;
+    const remainingAfterQuarterly = remaining - totalQuarterlyPayments;
+    const monthlyAmount = months > 0 ? (remainingAfterQuarterly / months).toFixed(2) : "0";
+    
+    setFormData({
+      ...formData,
+      quarterlyInstallmentAmount: quarterlyAmount,
+      monthlyInstallmentAmount: monthlyAmount,
+    });
+  };
+  
+  // Handle monthly installment amount change (bidirectional calculation)
+  const handleMonthlyAmountChange = (monthlyAmount: string) => {
+    if (formData.installmentType === "MONTHLY_ONLY") {
+      // In monthly-only mode, just update the value
+      setFormData({
+        ...formData,
+        monthlyInstallmentAmount: monthlyAmount,
+      });
+      return;
+    }
+    
+    // For MONTHLY_AND_QUARTERLY, recalculate quarterly amount
+    const months = parseInt(formData.monthlyInstallments) || 0;
+    const remaining = parseFloat(formData.totalRemaining) || 0;
+    const quarters = parseInt(formData.quarterlyInstallments) || 0;
+    const mAmount = parseFloat(monthlyAmount) || 0;
+    
+    const totalMonthlyPayments = months * mAmount;
+    const remainingForQuarterly = remaining - totalMonthlyPayments;
+    const quarterlyAmount = quarters > 0 ? (remainingForQuarterly / quarters).toFixed(2) : "0";
+    
+    setFormData({
+      ...formData,
+      monthlyInstallmentAmount: monthlyAmount,
+      quarterlyInstallmentAmount: quarterlyAmount,
+    });
+  };
+  
+  // Handle biyana amount change and auto-calculate remaining
+  const handleBiyanaAmountChange = (value: string) => {
+    const biyanaAmount = parseFloat(value) || 0;
+    const totalAmount = parseFloat(formData.totalAmount) || 0;
+    const totalRemaining = totalAmount > 0 ? (totalAmount - biyanaAmount).toString() : "";
+    
+    // Recalculate installments if we have a last installment date
+    let updatedData = { 
+      ...formData, 
+      biyanaAmount: value,
+      totalRemaining 
+    };
+    
+    if (formData.lastInstallmentDate) {
+      const months = parseInt(formData.monthlyInstallments) || 0;
+      const remaining = parseFloat(totalRemaining) || 0;
+      
+      if (formData.installmentType === "MONTHLY_ONLY") {
+        const monthlyAmount = months > 0 ? (remaining / months).toFixed(2) : "0";
+        updatedData = {
+          ...updatedData,
+          monthlyInstallmentAmount: monthlyAmount,
+        };
+      } else {
+        const quarters = parseInt(formData.quarterlyInstallments) || 0;
+        const quarterlyAmount = parseFloat(formData.quarterlyInstallmentAmount) || 0;
+        const totalQuarterlyPayments = quarters * quarterlyAmount;
+        const remainingAfterQuarterly = remaining - totalQuarterlyPayments;
+        const monthlyAmount = months > 0 ? (remainingAfterQuarterly / months).toFixed(2) : "0";
+        
+        updatedData = {
+          ...updatedData,
+          monthlyInstallmentAmount: monthlyAmount,
+        };
+      }
+    }
+    
+    setFormData(updatedData);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -133,18 +366,21 @@ export default function BiyanaForm() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in max-w-4xl">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Biyana Form</h1>
-            <p className="text-muted-foreground">
-              Record advance payment and update inventory status
-            </p>
+      <div className="space-y-6 animate-fade-in max-w-4xl" dir={isUrdu ? 'rtl' : 'ltr'}>
+        {/* Info Alert */}
+        <div className="bg-blue-50 text-blue-900 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+          <div className="mt-0.5">
+            <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
           </div>
-          <Button variant="outline">
-            <Printer className="mr-2 h-4 w-4" />
-            Print Form
-          </Button>
+          <p className="text-sm">
+            {isUrdu ? 'فارم جمع کروانے سے پہلے تمام معلومات کی درستگی کی تصدیق یقینی بنائیں' : 'Please ensure to verify all information before submitting the form'}
+          </p>
+        </div>
+        
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t('forms.biyanaForm')}</h1>
         </div>
 
         <Card variant="elevated">
@@ -154,26 +390,86 @@ export default function BiyanaForm() {
                 <FileText className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle>Biyana Details</CardTitle>
-                <CardDescription>This will automatically update inventory status to reserved</CardDescription>
+                <CardTitle>{t('forms.biyanaForm')}</CardTitle>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Property Information */}
+              {/* Customer Information */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Property Information</h3>
+                <h3 className="text-lg font-semibold border-b pb-2">
+                  {isUrdu ? 'خریدار کی معلومات' : 'Buyer Information'}
+                </h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="plotId">Plot Number *</Label>
+                    <Label htmlFor="customerName">
+                      {isUrdu ? 'نام خریدار' : 'Buyer Name'} *
+                    </Label>
+                    <Input
+                      id="customerName"
+                      placeholder={isUrdu ? 'خریدار کا نام درج کریں' : 'Enter buyer name'}
+                      value={formData.customerName}
+                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fatherHusbandName">
+                      {isUrdu ? 'ولدیت/زوجیت' : 'Father/Husband Name'} *
+                    </Label>
+                    <Input
+                      id="fatherHusbandName"
+                      placeholder={isUrdu ? 'والد/شوہر کا نام درج کریں' : 'Enter father/husband name'}
+                      value={formData.fatherHusbandName}
+                      onChange={(e) => setFormData({ ...formData, fatherHusbandName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cnic">
+                      {isUrdu ? 'شناختی کارڈ نمبر' : 'CNIC Number'} *
+                    </Label>
+                    <Input
+                      id="cnic"
+                      placeholder={isUrdu ? 'شناختی کارڈ نمبر درج کریں' : 'Enter CNIC number'}
+                      value={formData.cnic}
+                      onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">
+                      {isUrdu ? 'موبائل نمبر' : 'Mobile Number'} *
+                    </Label>
+                    <Input
+                      id="phone"
+                      placeholder={isUrdu ? 'موبائل نمبر درج کریں' : 'Enter mobile number'}
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Property Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">
+                  {isUrdu ? 'پلاٹ کی تفصیلات' : 'Plot Details'}
+                </h3>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="plotId">
+                      {isUrdu ? 'پلاٹ نمبر' : 'Plot Number'} *
+                    </Label>
                     <Select
                       value={formData.plotId}
                       onValueChange={handlePlotSelect}
                       disabled={plotsLoading}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={plotsLoading ? "Loading plots..." : "Select available plot"} />
+                        <SelectValue placeholder={plotsLoading ? (isUrdu ? 'لوڈ ہو رہا ہے...' : 'Loading...') : (isUrdu ? 'پلاٹ منتخب کریں' : 'Select Plot')} />
                       </SelectTrigger>
                       <SelectContent>
                         {availablePlots?.map((plot: any) => (
@@ -187,87 +483,22 @@ export default function BiyanaForm() {
                   {selectedPlot && (
                     <>
                       <div className="space-y-2">
-                        <Label>Project</Label>
-                        <Input value={formatEnum(selectedPlot.project)} disabled className="bg-muted" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Size</Label>
+                        <Label>{isUrdu ? 'مرلے' : 'Marla (Size)'}</Label>
                         <Input value={formatSize(selectedPlot.size)} disabled className="bg-muted" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Location</Label>
-                        <Input value={selectedPlot.block} disabled className="bg-muted" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Price (PKR)</Label>
-                        <Input value={selectedPlot.price.toLocaleString()} disabled className="bg-muted" />
                       </div>
                     </>
                   )}
-                </div>
-              </div>
-
-              {/* Customer Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Customer Information</h3>
-                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="customerName">Customer Name *</Label>
+                    <Label htmlFor="pricePerMarla">
+                      {isUrdu ? 'فی مرلہ' : 'Price per Marla'} *
+                    </Label>
                     <Input
-                      id="customerName"
-                      placeholder="Full name"
-                      value={formData.customerName}
-                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fatherName">Father's Name *</Label>
-                    <Input
-                      id="fatherName"
-                      placeholder="Father's name"
-                      value={formData.fatherName}
-                      onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cnic">CNIC *</Label>
-                    <Input
-                      id="cnic"
-                      placeholder="00000-0000000-0"
-                      value={formData.cnic}
-                      onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      placeholder="+92 300 0000000"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="permanentAddress">Permanent Address *</Label>
-                    <Input
-                      id="permanentAddress"
-                      placeholder="Complete permanent address"
-                      value={formData.permanentAddress}
-                      onChange={(e) => setFormData({ ...formData, permanentAddress: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="currentAddress">Current Address</Label>
-                    <Input
-                      id="currentAddress"
-                      placeholder="Current address (if different)"
-                      value={formData.currentAddress}
-                      onChange={(e) => setFormData({ ...formData, currentAddress: e.target.value })}
+                      id="pricePerMarla"
+                      type="number"
+                      placeholder={isUrdu ? 'فی مرلہ قیمت' : 'Price per marla'}
+                      value={formData.pricePerMarla}
+                      disabled
+                      className="bg-muted"
                     />
                   </div>
                 </div>
@@ -275,39 +506,53 @@ export default function BiyanaForm() {
 
               {/* Payment Information */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Payment Information</h3>
+                <h3 className="text-lg font-semibold border-b pb-2">
+                  {isUrdu ? 'ادائیگی کی تفصیلات' : 'Payment Details'}
+                </h3>
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="biyanaAmount">Biyana Amount (PKR) *</Label>
+                    <Label htmlFor="totalAmount">
+                      {isUrdu ? 'ٹوٹل رقم' : 'Total Amount'} *
+                    </Label>
+                    <Input
+                      id="totalAmount"
+                      type="number"
+                      placeholder={isUrdu ? 'کل رقم' : 'Total amount'}
+                      value={formData.totalAmount}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="biyanaAmount">
+                      {isUrdu ? 'بیانہ ادائیگی' : 'Biyana Payment'} *
+                    </Label>
                     <Input
                       id="biyanaAmount"
                       type="number"
-                      placeholder="Amount in PKR"
+                      placeholder={isUrdu ? 'بیانہ رقم درج کریں' : 'Enter biyana amount'}
                       value={formData.biyanaAmount}
-                      onChange={(e) => setFormData({ ...formData, biyanaAmount: e.target.value })}
+                      onChange={(e) => handleBiyanaAmountChange(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="paymentMethod">Payment Method *</Label>
-                    <Select
-                      value={formData.paymentMethod}
-                      onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {paymentMethods.map((method) => (
-                          <SelectItem key={method} value={method}>
-                            {formatEnum(method)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="totalRemaining">
+                      {isUrdu ? 'ٹوٹل بقایا' : 'Total Remaining'} *
+                    </Label>
+                    <Input
+                      id="totalRemaining"
+                      type="number"
+                      placeholder={isUrdu ? 'کل بقایا رقم' : 'Total remaining'}
+                      value={formData.totalRemaining}
+                      disabled
+                      className="bg-muted"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="date">Date *</Label>
+                    <Label htmlFor="date">
+                      {isUrdu ? 'معاہدہ کی تاریخ' : 'Agreement Date'} *
+                    </Label>
                     <Input
                       id="date"
                       type="date"
@@ -316,13 +561,131 @@ export default function BiyanaForm() {
                       required
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastInstallmentDate">
+                      {isUrdu ? 'آخری قسط ادائیگی تاریخ' : 'Last Installment Date'} *
+                    </Label>
+                    <Input
+                      id="lastInstallmentDate"
+                      type="date"
+                      value={formData.lastInstallmentDate}
+                      onChange={(e) => handleLastInstallmentDateChange(e.target.value)}
+                      min={formData.date}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="agreementDuration">
+                      {isUrdu ? 'معاہدہ مدت' : 'Agreement Duration'}
+                    </Label>
+                    <Input
+                      id="agreementDuration"
+                      placeholder={isUrdu ? 'خودکار حساب' : 'Auto calculated'}
+                      value={formData.agreementDuration}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Installment Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">
+                  {isUrdu ? 'اقساط کی تفصیلات' : 'Installment Details'}
+                </h3>
+                
+                {/* Installment Type Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="installmentType">
+                    {isUrdu ? 'قسط کی قسم' : 'Installment Type'} *
+                  </Label>
+                  <Select
+                    value={formData.installmentType}
+                    onValueChange={handleInstallmentTypeChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MONTHLY_ONLY">
+                        {isUrdu ? 'صرف ماہانہ اقساط' : 'Monthly Installments Only'}
+                      </SelectItem>
+                      <SelectItem value="MONTHLY_AND_QUARTERLY">
+                        {isUrdu ? 'ماہانہ + سہ ماہی اقساط' : 'Monthly + Quarterly Installments'}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="monthlyInstallments">
+                      {isUrdu ? 'ماہانہ اقساط' : 'Monthly Installments'}
+                    </Label>
+                    <Input
+                      id="monthlyInstallments"
+                      type="number"
+                      placeholder={isUrdu ? 'خودکار حساب' : 'Auto calculated'}
+                      value={formData.monthlyInstallments}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                  
+                  {formData.installmentType === "MONTHLY_AND_QUARTERLY" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="quarterlyInstallments">
+                        {isUrdu ? 'سہ ماہی اقساط' : 'Quarterly Installments'}
+                      </Label>
+                      <Input
+                        id="quarterlyInstallments"
+                        type="number"
+                        placeholder={isUrdu ? 'خودکار حساب' : 'Auto calculated'}
+                        value={formData.quarterlyInstallments}
+                        disabled
+                        className="bg-muted"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="monthlyInstallmentAmount">
+                      {isUrdu ? 'ماہانہ قسط رقم' : 'Monthly Installment Amount'}
+                    </Label>
+                    <Input
+                      id="monthlyInstallmentAmount"
+                      type="number"
+                      placeholder={isUrdu ? formData.installmentType === "MONTHLY_ONLY" ? 'خودکار حساب' : 'رقم درج کریں' : formData.installmentType === "MONTHLY_ONLY" ? 'Auto calculated' : 'Enter amount'}
+                      value={formData.monthlyInstallmentAmount}
+                      onChange={(e) => handleMonthlyAmountChange(e.target.value)}
+                      disabled={formData.installmentType === "MONTHLY_ONLY"}
+                      className={formData.installmentType === "MONTHLY_ONLY" ? "bg-muted" : ""}
+                    />
+                  </div>
+                  
+                  {formData.installmentType === "MONTHLY_AND_QUARTERLY" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="quarterlyInstallmentAmount">
+                        {isUrdu ? 'سہ ماہی قسط رقم' : 'Quarterly Installment Amount'} *
+                      </Label>
+                      <Input
+                        id="quarterlyInstallmentAmount"
+                        type="number"
+                        placeholder={isUrdu ? 'سہ ماہی قسط کی رقم' : 'Enter quarterly amount'}
+                        value={formData.quarterlyInstallmentAmount}
+                        onChange={(e) => handleQuarterlyAmountChange(e.target.value)}
+                        required={formData.installmentType === "MONTHLY_AND_QUARTERLY"}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="flex gap-4 pt-4">
                 <Button type="submit" className="flex-1" disabled={createBiyanaMutation.isPending || plotsLoading}>
                   <Save className="mr-2 h-4 w-4" />
-                  {createBiyanaMutation.isPending ? "Submitting..." : "Submit Biyana Form"}
+                  {createBiyanaMutation.isPending ? (isUrdu ? 'جمع ہو رہا ہے...' : 'Submitting...') : (isUrdu ? 'فارم جمع کروائیں' : 'Submit Form')}
                 </Button>
               </div>
             </form>

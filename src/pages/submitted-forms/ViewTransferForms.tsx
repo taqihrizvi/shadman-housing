@@ -21,10 +21,21 @@ import {
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
 import { FileOutput, Loader2, Eye } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 const ViewTransferForms = () => {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // Helper function to format project names
+  const formatProjectName = (value: string) => {
+    if (value === 'SHADMAN_GREENS') {
+      return t('projects.shadmanGreens');
+    }
+    return value;
+  };
   const { data: forms, isLoading } = useQuery({
     queryKey: ['transferForms'],
     queryFn: async () => {
@@ -74,22 +85,20 @@ const ViewTransferForms = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir={isUrdu ? 'rtl' : 'ltr'}>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <FileOutput className="h-8 w-8" />
-              Transfer Forms
+              {t('forms.transferForm')}
             </h1>
-            <p className="text-muted-foreground">
-              View all submitted Transfer forms
-            </p>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Submitted Forms</CardTitle>
+            <CardTitle>{t('forms.submittedForms')}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -98,22 +107,22 @@ const ViewTransferForms = () => {
               </div>
             ) : !forms || forms.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No Transfer forms submitted yet
+                {t('forms.noTransferForms')}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Transfer No</TableHead>
-                      <TableHead>From (Seller)</TableHead>
-                      <TableHead>To (Buyer)</TableHead>
-                      <TableHead>Plot No</TableHead>
-                      <TableHead>Project</TableHead>
-                      <TableHead>Transfer Fee</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>{t('forms.transferNo')}</TableHead>
+                      <TableHead>{t('forms.from')}</TableHead>
+                      <TableHead>{t('forms.to')}</TableHead>
+                      <TableHead>{t('inventory.plotNo')}</TableHead>
+                      <TableHead>{t('inventory.project')}</TableHead>
+                      <TableHead>{t('forms.transferFee')}</TableHead>
+                      <TableHead>{t('forms.date')}</TableHead>
+                      <TableHead>{t('forms.status')}</TableHead>
+                      <TableHead>{t('forms.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -133,9 +142,9 @@ const ViewTransferForms = () => {
                           </div>
                         </TableCell>
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
-                        <TableCell>{form.plot?.project || 'N/A'}</TableCell>
+                        <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>
                         <TableCell>{formatCurrency(form.transferFee)}</TableCell>
-                        <TableCell>{formatDate(form.date)}</TableCell>
+                        <TableCell>{formatDate(form.transferDate)}</TableCell>
                         <TableCell>
                           <Badge 
                             variant="outline" 
@@ -145,7 +154,7 @@ const ViewTransferForms = () => {
                                 : "bg-yellow-50 text-yellow-700 border-yellow-200"
                             }
                           >
-                            {form.status === 'APPROVED' ? 'Approved' : 'Pending'}
+                            {form.status === 'APPROVED' ? t('status.approved') : t('status.pending')}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -168,108 +177,108 @@ const ViewTransferForms = () => {
 
         {/* Details Dialog */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir={isUrdu ? 'rtl' : 'ltr'}>
             <DialogHeader>
-              <DialogTitle>Transfer Form Details</DialogTitle>
-              <DialogDescription>Complete information about the transfer form</DialogDescription>
+              <DialogTitle>{t('forms.transferFormDetails')}</DialogTitle>
+              <DialogDescription>{t('forms.completeInfoTransfer')}</DialogDescription>
             </DialogHeader>
             {selectedForm && (
               <div className="space-y-6">
                 <div className="grid gap-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Transfer Number</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('forms.transferNumber')}</label>
                       <p className="text-base font-semibold">{selectedForm.transferNumber}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Date</label>
-                      <p className="text-base">{formatDate(selectedForm.date)}</p>
+                      <label className="text-sm font-medium text-muted-foreground">{t('forms.date')}</label>
+                      <p className="text-base">{formatDate(selectedForm.transferDate)}</p>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Property Information</h3>
+                    <h3 className="font-semibold mb-3">{t('forms.propertyInfo')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Plot Number</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.plotNo')}</label>
                         <p className="text-base">{selectedForm.plot?.plotNo || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Project</label>
-                        <p className="text-base">{formatEnum(selectedForm.plot?.project || '')}</p>
+                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.project')}</label>
+                        <p className="text-base">{formatProjectName(selectedForm.plot?.project || '')}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Block</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.block')}</label>
                         <p className="text-base">{selectedForm.plot?.block || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Size</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.size')}</label>
                         <p className="text-base">{formatSize(selectedForm.plot?.size || '')}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Seller Information (From)</h3>
+                    <h3 className="font-semibold mb-3">{t('forms.fromCustomerInfo')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Seller Name</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.customerName')}</label>
                         <p className="text-base">{selectedForm.fromCustomer?.name || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Father's Name</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.fatherName')}</label>
                         <p className="text-base">{selectedForm.fromCustomer?.fatherName || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">CNIC</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('customers.cnic')}</label>
                         <p className="text-base">{selectedForm.fromCustomer?.cnic || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Phone</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('customers.phone')}</label>
                         <p className="text-base">{selectedForm.fromCustomer?.phone || 'N/A'}</p>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-sm font-medium text-muted-foreground">Address</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.address')}</label>
                         <p className="text-base">{selectedForm.fromCustomer?.address || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Buyer Information (To)</h3>
+                    <h3 className="font-semibold mb-3">{t('forms.toCustomerInfo')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Buyer Name</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.customerName')}</label>
                         <p className="text-base">{selectedForm.toCustomer?.name || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Father's Name</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.fatherName')}</label>
                         <p className="text-base">{selectedForm.toCustomer?.fatherName || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">CNIC</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('customers.cnic')}</label>
                         <p className="text-base">{selectedForm.toCustomer?.cnic || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Phone</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('customers.phone')}</label>
                         <p className="text-base">{selectedForm.toCustomer?.phone || 'N/A'}</p>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-sm font-medium text-muted-foreground">Address</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.address')}</label>
                         <p className="text-base">{selectedForm.toCustomer?.address || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Transfer Information</h3>
+                    <h3 className="font-semibold mb-3">{t('forms.transferDetails')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Transfer Fee</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.transferFee')}</label>
                         <p className="text-base font-semibold text-green-600">{formatCurrency(selectedForm.transferFee)}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Status</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('forms.status')}</label>
                         <Badge 
                           variant="outline" 
                           className={
@@ -278,7 +287,7 @@ const ViewTransferForms = () => {
                               : "bg-yellow-50 text-yellow-700 border-yellow-200"
                           }
                         >
-                          {selectedForm.status === 'APPROVED' ? 'Approved' : 'Pending'}
+                          {selectedForm.status === 'APPROVED' ? t('status.approved') : t('status.pending')}
                         </Badge>
                       </div>
                     </div>
@@ -286,7 +295,7 @@ const ViewTransferForms = () => {
 
                   {selectedForm.remarks && (
                     <div className="border-t pt-4">
-                      <label className="text-sm font-medium text-muted-foreground">Remarks</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('forms.remarks')}</label>
                       <p className="text-base">{selectedForm.remarks}</p>
                     </div>
                   )}

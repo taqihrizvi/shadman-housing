@@ -15,8 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { FileSignature, Save, Printer } from "lucide-react";
+import { FileSignature, Save } from "lucide-react";
 import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 const paymentPlans = ["FULL_PAYMENT", "INSTALLMENT_12", "INSTALLMENT_24", "INSTALLMENT_36"];
 
@@ -38,6 +39,8 @@ const formatSize = (value: string) => {
 };
 
 export default function SaleAgreementForm() {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -50,6 +53,7 @@ export default function SaleAgreementForm() {
     totalPrice: "",
     downPayment: "",
     paymentPlan: "",
+    paymentPlanDisplay: "",
     agreementDate: new Date().toISOString().split("T")[0],
     terms: "",
   });
@@ -128,15 +132,34 @@ export default function SaleAgreementForm() {
   const handlePlotSelect = (plotId: string) => {
     const plot = reservedPlots?.find((p: any) => p.id === plotId);
     setSelectedPlot(plot);
-    const biyana = plot?.biyanaForms?.[0]?.biyanaAmount || 0;
-    const customer = plot?.biyanaForms?.[0]?.customer;
+    const biyanaForm = plot?.biyanaForms?.[0];
+    const biyana = biyanaForm?.biyanaAmount || 0;
+    const customer = biyanaForm?.customer;
     setBiyanaAmount(biyana);
     
-    // Auto-populate buyer information from Biyana form
+    console.log('Biyana Form Data:', biyanaForm);
+    console.log('Monthly Installments:', biyanaForm?.monthlyInstallments);
+    
+    // Get payment plan display text from biyana's agreement duration
+    let paymentPlanDisplay = "Full Payment";
+    let paymentPlanEnum = "FULL_PAYMENT";
+    if (biyanaForm?.monthlyInstallments) {
+      const months = biyanaForm.monthlyInstallments;
+      paymentPlanDisplay = `${months} Months Installment`;
+      if (months === 12) paymentPlanEnum = "INSTALLMENT_12";
+      else if (months === 24) paymentPlanEnum = "INSTALLMENT_24";
+      else if (months === 36) paymentPlanEnum = "INSTALLMENT_36";
+    }
+    
+    console.log('Payment Plan Display:', paymentPlanDisplay);
+    
+    // Auto-populate buyer information and payment details from Biyana form
     setFormData({ 
       ...formData, 
       plotId, 
-      totalPrice: plot?.price.toString() || "",
+      totalPrice: (biyanaForm?.totalAmount || plot?.price)?.toString() || "",
+      paymentPlan: paymentPlanEnum,
+      paymentPlanDisplay: paymentPlanDisplay,
       customerName: customer?.name || "",
       fatherName: customer?.fatherName || "",
       cnic: customer?.cnic || "",
@@ -179,18 +202,21 @@ export default function SaleAgreementForm() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in max-w-4xl">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Sale Agreement Form</h1>
-            <p className="text-muted-foreground">
-              Create a formal sale agreement for property transactions
-            </p>
+      <div className="space-y-6 animate-fade-in max-w-4xl" dir={isUrdu ? 'rtl' : 'ltr'}>
+        {/* Info Alert */}
+        <div className="bg-blue-50 text-blue-900 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+          <div className="mt-0.5">
+            <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
           </div>
-          <Button variant="outline">
-            <Printer className="mr-2 h-4 w-4" />
-            Print Agreement
-          </Button>
+          <p className="text-sm">
+            {isUrdu ? 'فارم جمع کروانے سے پہلے تمام معلومات کی درستگی کی تصدیق یقینی بنائیں' : 'Please ensure to verify all information before submitting the form'}
+          </p>
+        </div>
+        
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t('approvals.saleAgreement')}</h1>
         </div>
 
         <Card variant="elevated">
@@ -200,8 +226,7 @@ export default function SaleAgreementForm() {
                 <FileSignature className="h-6 w-6 text-success" />
               </div>
               <div>
-                <CardTitle>Agreement Details</CardTitle>
-                <CardDescription>This will automatically update plot status from Reserved to Sold</CardDescription>
+                <CardTitle>{t('approvals.saleAgreement')}</CardTitle>
               </div>
             </div>
           </CardHeader>
@@ -209,17 +234,17 @@ export default function SaleAgreementForm() {
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Property Details */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Property Details</h3>
+                <h3 className="text-lg font-semibold border-b pb-2">{t('forms.propertyDetails')}</h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="plotId">Reserved Plot *</Label>
+                    <Label htmlFor="plotId">{t('inventory.plotNo')} *</Label>
                     <Select
                       value={formData.plotId}
                       onValueChange={handlePlotSelect}
                       disabled={plotsLoading}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={plotsLoading ? "Loading reserved plots..." : "Select reserved plot"} />
+                        <SelectValue placeholder={plotsLoading ? t('common.loading') : t('forms.selectOption')} />
                       </SelectTrigger>
                       <SelectContent>
                         {reservedPlots && reservedPlots.length > 0 ? (
@@ -237,11 +262,11 @@ export default function SaleAgreementForm() {
                   {selectedPlot && (
                     <>
                       <div className="space-y-2">
-                        <Label>Project</Label>
+                        <Label>{t('inventory.project')}</Label>
                         <Input value={formatEnum(selectedPlot.project)} disabled className="bg-muted" />
                       </div>
                       <div className="space-y-2">
-                        <Label>Size</Label>
+                        <Label>{t('inventory.size')}</Label>
                         <Input value={formatSize(selectedPlot.size)} disabled className="bg-muted" />
                       </div>
                       <div className="space-y-2">
@@ -280,17 +305,17 @@ export default function SaleAgreementForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="fatherName">Father's/Husband's Name *</Label>
+                    <Label htmlFor="fatherName">{t('forms.fatherName')} *</Label>
                     <Input
                       id="fatherName"
-                      placeholder="Father's/Husband's name"
+                      placeholder={t('forms.fatherName')}
                       value={formData.fatherName}
                       onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cnic">CNIC *</Label>
+                    <Label htmlFor="cnic">{t('forms.cnicNumber')} *</Label>
                     <Input
                       id="cnic"
                       placeholder="00000-0000000-0"
@@ -300,7 +325,7 @@ export default function SaleAgreementForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Label htmlFor="phone">{t('forms.phoneNumber')} *</Label>
                     <Input
                       id="phone"
                       placeholder="+92 300 0000000"
@@ -310,10 +335,10 @@ export default function SaleAgreementForm() {
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="address">Complete Address *</Label>
+                    <Label htmlFor="address">{t('forms.address')} *</Label>
                     <Textarea
                       id="address"
-                      placeholder="Complete residential address"
+                      placeholder={t('forms.address')}
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       required
@@ -324,7 +349,7 @@ export default function SaleAgreementForm() {
 
               {/* Payment Details */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Payment Details</h3>
+                <h3 className="text-lg font-semibold border-b pb-2">{t('payments.paymentDetails')}</h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="totalPrice">Total Price (PKR) *</Label>
@@ -335,6 +360,8 @@ export default function SaleAgreementForm() {
                       value={formData.totalPrice}
                       onChange={(e) => setFormData({ ...formData, totalPrice: e.target.value })}
                       required
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed"
                     />
                   </div>
                   <div className="space-y-2">
@@ -350,21 +377,13 @@ export default function SaleAgreementForm() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="paymentPlan">Payment Plan *</Label>
-                    <Select
-                      value={formData.paymentPlan}
-                      onValueChange={(value) => setFormData({ ...formData, paymentPlan: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment plan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {paymentPlans.map((plan) => (
-                          <SelectItem key={plan} value={plan}>
-                            {formatEnum(plan)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="paymentPlan"
+                      type="text"
+                      value={formData.paymentPlanDisplay || ""}
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="agreementDate">Agreement Date *</Label>
@@ -398,12 +417,12 @@ export default function SaleAgreementForm() {
 
               {/* Terms */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Terms & Conditions</h3>
+                <h3 className="text-lg font-semibold border-b pb-2">{t('forms.termsConditions')}</h3>
                 <div className="space-y-2">
-                  <Label htmlFor="terms">Additional Terms</Label>
+                  <Label htmlFor="terms">{t('forms.additionalTerms')}</Label>
                   <Textarea
                     id="terms"
-                    placeholder="Any additional terms and conditions..."
+                    placeholder={t('forms.enterTerms')}
                     rows={4}
                     value={formData.terms}
                     onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
@@ -414,7 +433,7 @@ export default function SaleAgreementForm() {
               <div className="flex gap-4 pt-4">
                 <Button type="submit" className="flex-1" disabled={createAgreementMutation.isPending || plotsLoading}>
                   <Save className="mr-2 h-4 w-4" />
-                  {createAgreementMutation.isPending ? "Creating..." : "Create Sale Agreement"}
+                  {createAgreementMutation.isPending ? t('common.loading') : t('forms.submitForm')}
                 </Button>
               </div>
             </form>

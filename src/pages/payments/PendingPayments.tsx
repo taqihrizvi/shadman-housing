@@ -16,8 +16,11 @@ import { formsAPI } from "@/lib/api";
 import { DollarSign, Loader2, Search, Plus } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 
 const PendingPayments = () => {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -84,31 +87,29 @@ const PendingPayments = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir={isUrdu ? 'rtl' : 'ltr'}>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <DollarSign className="h-8 w-8" />
-              Pending Payments
+              {t('payments.pendingPayments')}
             </h1>
-            <p className="text-muted-foreground">
-              View all plots with outstanding payment balances
-            </p>
           </div>
           <Button onClick={() => navigate('/payments/record')}>
             <Plus className="h-4 w-4 mr-2" />
-            Record Payment
+            {t('payments.recordPayment')}
           </Button>
         </div>
 
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Outstanding Payments</CardTitle>
+              <CardTitle>{t('payments.outstandingPayments')}</CardTitle>
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search by customer, plot..."
+                  placeholder={t('common.search')}
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -123,23 +124,23 @@ const PendingPayments = () => {
               </div>
             ) : !filteredAgreements || filteredAgreements.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No pending payments found
+                {t('payments.noPending')}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Agreement No</TableHead>
-                      <TableHead>Customer Name</TableHead>
-                      <TableHead>Plot No</TableHead>
-                      <TableHead>Project</TableHead>
-                      <TableHead>Total Amount</TableHead>
-                      <TableHead>Paid Amount</TableHead>
-                      <TableHead>Pending Amount</TableHead>
-                      <TableHead>Payment Plan</TableHead>
-                      <TableHead>Agreement Date</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>{t('forms.agreementNumber')}</TableHead>
+                      <TableHead>{t('forms.customerName')}</TableHead>
+                      <TableHead>{t('inventory.plotNo')}</TableHead>
+                      <TableHead>{t('inventory.project')}</TableHead>
+                      <TableHead>{t('payments.totalAmount')}</TableHead>
+                      <TableHead>{t('payments.paidAmount')}</TableHead>
+                      <TableHead>{t('payments.pendingAmount')}</TableHead>
+                      <TableHead>{t('payments.paymentPlan')}</TableHead>
+                      <TableHead>{t('payments.agreementDate')}</TableHead>
+                      <TableHead>{t('common.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -164,8 +165,8 @@ const PendingPayments = () => {
                           </TableCell>
                           <TableCell>
                             {agreement.installmentMonths === 0 
-                              ? "Full Payment" 
-                              : `${agreement.installmentMonths} Months`}
+                              ? t('payments.fullPayment')
+                              : `${agreement.installmentMonths} ${t('payments.months')}`}
                           </TableCell>
                           <TableCell>{formatDate(agreement.agreementDate)}</TableCell>
                           <TableCell>
@@ -174,7 +175,7 @@ const PendingPayments = () => {
                               size="sm"
                               onClick={() => navigate(`/payments/record?agreementId=${agreement.id}&plotId=${agreement.plotId}&customerId=${agreement.customerId}`)}
                             >
-                              Add Payment
+                              {t('payments.addPayment')}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -192,13 +193,13 @@ const PendingPayments = () => {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardContent className="pt-6">
-                <div className="text-sm font-medium text-muted-foreground">Total Agreements</div>
+                <div className="text-sm font-medium text-muted-foreground">{t('payments.totalAgreements')}</div>
                 <div className="text-2xl font-bold">{filteredAgreements.length}</div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="text-sm font-medium text-muted-foreground">Total Amount</div>
+                <div className="text-sm font-medium text-muted-foreground">{t('payments.totalAmount')}</div>
                 <div className="text-2xl font-bold">
                   {formatCurrency(filteredAgreements.reduce((sum: number, a: any) => sum + a.totalAmount, 0))}
                 </div>
@@ -206,7 +207,7 @@ const PendingPayments = () => {
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="text-sm font-medium text-muted-foreground">Pending Amount</div>
+                <div className="text-sm font-medium text-muted-foreground">{t('payments.pendingAmount')}</div>
                 <div className="text-2xl font-bold text-red-600">
                   {formatCurrency(filteredAgreements.reduce((sum: number, a: any) => sum + calculatePendingAmount(a), 0))}
                 </div>

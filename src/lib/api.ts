@@ -37,14 +37,36 @@ async function apiRequest<T>(
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    const data = await response.json();
+    
+    // Log response status for debugging
+    console.log('API Response:', endpoint, 'Status:', response.status);
+    
+    // Handle 401 Unauthorized - Token expired or invalid
+    if (response.status === 401) {
+      console.log('🔒 Token expired or invalid - logging out');
+      removeAuthToken();
+      // Redirect to login page
+      window.location.href = '/login';
+      throw new Error('Session expired. Please login again.');
+    }
+    
+    // Try to parse response as JSON
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse response as JSON:', parseError);
+      throw new Error(`Server returned ${response.status}: Unable to parse response`);
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || 'Something went wrong');
+      console.error('API Error:', data);
+      throw new Error(data.message || `Request failed with status ${response.status}`);
     }
 
     return data;
   } catch (error) {
+    console.error('API Request failed:', error);
     if (error instanceof Error) {
       throw error;
     }

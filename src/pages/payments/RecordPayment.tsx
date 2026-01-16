@@ -18,10 +18,13 @@ import { Receipt, Save, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI, customerAPI, formsAPI, voucherAPI } from "@/lib/api";
+import { useTranslation } from 'react-i18next';
 
 const paymentMethods = ["CASH", "BANK_TRANSFER", "CHEQUE", "ONLINE"];
 
 export default function RecordPayment() {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -81,18 +84,23 @@ export default function RecordPayment() {
         : agreement.totalAmount - (agreement.totalPaid || agreement.downPayment || 0);
       setPendingAmount(pending);
       
-      // Auto-fill customer if not already set
+      // Auto-fill customer from agreement only if not already set
       if (!formData.customerId && agreement.customerId) {
         setFormData(prev => ({ ...prev, customerId: agreement.customerId }));
       }
     }
-  }, [agreements]);
+  }, [agreements, formData.customerId]);
 
   // Load plot and customer details when IDs are set
   useEffect(() => {
     if (formData.plotId && plotsData) {
       const plot = plotsData.find((p: any) => p.id === formData.plotId);
       setSelectedPlot(plot);
+      
+      // Auto-fill customer from plot's current owner (buyer)
+      if (plot && plot.buyerId) {
+        setFormData(prev => ({ ...prev, customerId: plot.buyerId }));
+      }
     }
   }, [formData.plotId, plotsData]);
 
@@ -112,6 +120,7 @@ export default function RecordPayment() {
     onSuccess: (voucher) => {
       queryClient.invalidateQueries({ queryKey: ['activeAgreements'] });
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       toast({
         title: "Payment Recorded",
         description: "Payment has been recorded successfully. Opening receipt...",
@@ -140,10 +149,14 @@ export default function RecordPayment() {
       return;
     }
 
-    if (parseFloat(formData.amount) > pendingAmount) {
+    const paymentAmount = parseFloat(formData.amount);
+    
+    // Only validate against pending amount if it's greater than 0
+    // Add small tolerance for floating point precision (0.01)
+    if (pendingAmount > 0 && paymentAmount > (pendingAmount + 0.01)) {
       toast({
         title: "Error",
-        description: "Payment amount cannot exceed pending amount",
+        description: `Payment amount (${formatCurrency(paymentAmount)}) cannot exceed pending amount (${formatCurrency(pendingAmount)})`,
         variant: "destructive",
       });
       return;
@@ -152,7 +165,7 @@ export default function RecordPayment() {
     const paymentData = {
       customerId: formData.customerId,
       plotId: formData.plotId,
-      amount: parseFloat(formData.amount),
+      amount: paymentAmount,
       paymentMethod: formData.paymentMethod,
       chequeNumber: formData.chequeNumber || undefined,
       bankName: formData.bankName || undefined,
@@ -181,13 +194,11 @@ export default function RecordPayment() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in max-w-4xl">
+      <div className="space-y-6 animate-fade-in max-w-4xl" dir={isUrdu ? 'rtl' : 'ltr'}>
+
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Record Payment</h1>
-            <p className="text-muted-foreground">
-              Add installment or payment against a plot
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('payments.recordPayment')}</h1>
           </div>
         </div>
 
@@ -195,7 +206,7 @@ export default function RecordPayment() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Pending Amount: <strong>{formatCurrency(pendingAmount)}</strong>
+              {t('payments.pendingAmount')}: <strong>{formatCurrency(pendingAmount)}</strong>
             </AlertDescription>
           </Alert>
         )}
@@ -207,8 +218,7 @@ export default function RecordPayment() {
                 <Receipt className="h-6 w-6 text-success" />
               </div>
               <div>
-                <CardTitle>Payment Details</CardTitle>
-                <CardDescription>Enter payment information</CardDescription>
+                <CardTitle>{t('payments.paymentDetails')}</CardTitle>
               </div>
             </div>
           </CardHeader>
@@ -216,16 +226,16 @@ export default function RecordPayment() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Plot and Customer Selection */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Plot & Customer</h3>
+                <h3 className="text-lg font-semibold border-b pb-2">{t('payments.plotAndCustomer')}</h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="plotId">Select Plot *</Label>
+                    <Label htmlFor="plotId">{t('inventory.plotNo')} *</Label>
                     <Select
                       value={formData.plotId}
                       onValueChange={(value) => setFormData({ ...formData, plotId: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a plot" />
+                        <SelectValue placeholder={t('forms.selectPlot')} />
                       </SelectTrigger>
                       <SelectContent>
                         {plotsData?.map((plot: any) => (
@@ -236,29 +246,11 @@ export default function RecordPayment() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="customerId">Select Customer *</Label>
-                    <Select
-                      value={formData.customerId}
-                      onValueChange={(value) => setFormData({ ...formData, customerId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select customer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customersData?.map((customer: any) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name} - {customer.cnic}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
 
                 {/* Show selected plot and customer details */}
                 {(selectedPlot || selectedCustomer) && (
-                  <div className="grid gap-4 md:grid-cols-2 p-4 bg-muted rounded-lg">
+                  <div className="grid gap-4 md:grid-cols-2 p-4 bg-muted rounded-lg mt-4">
                     {selectedPlot && (
                       <div>
                         <Label className="text-muted-foreground">Plot Details</Label>
@@ -269,10 +261,11 @@ export default function RecordPayment() {
                     )}
                     {selectedCustomer && (
                       <div>
-                        <Label className="text-muted-foreground">Customer Details</Label>
+                        <Label className="text-muted-foreground">Owner Details</Label>
                         <p className="text-sm">
                           <strong>{selectedCustomer.name}</strong> - {selectedCustomer.cnic}
                         </p>
+                        <p className="text-xs text-muted-foreground mt-1">Phone: {selectedCustomer.phone}</p>
                       </div>
                     )}
                   </div>
@@ -281,33 +274,33 @@ export default function RecordPayment() {
 
               {/* Payment Details */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Payment Information</h3>
+                <h3 className="text-lg font-semibold border-b pb-2">{t('payments.paymentInformation')}</h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Payment Amount (PKR) *</Label>
+                    <Label htmlFor="amount">{t('payments.paymentAmount')} (PKR) *</Label>
                     <Input
                       id="amount"
                       type="number"
                       step="0.01"
-                      placeholder="Enter amount"
+                      placeholder={t('forms.enterAmount')}
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       required
                     />
                     {pendingAmount > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        Maximum: {formatCurrency(pendingAmount)}
+                        {t('payments.maximum')}: {formatCurrency(pendingAmount)}
                       </p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="paymentMethod">Payment Method *</Label>
+                    <Label htmlFor="paymentMethod">{t('payments.paymentMethod')} *</Label>
                     <Select
                       value={formData.paymentMethod}
                       onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select method" />
+                        <SelectValue placeholder={t('forms.selectOption')} />
                       </SelectTrigger>
                       <SelectContent>
                         {paymentMethods.map((method) => (
@@ -324,19 +317,19 @@ export default function RecordPayment() {
                 {formData.paymentMethod === 'CHEQUE' && (
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="chequeNumber">Cheque Number</Label>
+                      <Label htmlFor="chequeNumber">{t('forms.chequeNumber')}</Label>
                       <Input
                         id="chequeNumber"
-                        placeholder="Enter cheque number"
+                        placeholder={t('forms.enterCheque')}
                         value={formData.chequeNumber}
                         onChange={(e) => setFormData({ ...formData, chequeNumber: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="bankName">Bank Name</Label>
+                      <Label htmlFor="bankName">{t('forms.bankName')}</Label>
                       <Input
                         id="bankName"
-                        placeholder="Enter bank name"
+                        placeholder={t('forms.enterBank')}
                         value={formData.bankName}
                         onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                       />
@@ -346,10 +339,10 @@ export default function RecordPayment() {
 
                 {(formData.paymentMethod === 'BANK_TRANSFER' || formData.paymentMethod === 'ONLINE') && (
                   <div className="space-y-2">
-                    <Label htmlFor="transactionId">Transaction ID</Label>
+                    <Label htmlFor="transactionId">{t('forms.transactionId')}</Label>
                     <Input
                       id="transactionId"
-                      placeholder="Enter transaction ID"
+                      placeholder={t('forms.enterTransaction')}
                       value={formData.transactionId}
                       onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
                     />
@@ -357,7 +350,7 @@ export default function RecordPayment() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="date">Payment Date *</Label>
+                  <Label htmlFor="date">{t('payments.date')} *</Label>
                   <Input
                     id="date"
                     type="date"
@@ -368,10 +361,10 @@ export default function RecordPayment() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description/Remarks</Label>
+                  <Label htmlFor="description">{t('forms.description')}/{t('forms.remarks')}</Label>
                   <Textarea
                     id="description"
-                    placeholder="Add any notes or remarks..."
+                    placeholder={t('forms.enterRemarks')}
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
@@ -381,10 +374,10 @@ export default function RecordPayment() {
               <div className="flex gap-4 pt-4">
                 <Button type="submit" className="flex-1" disabled={createPaymentMutation.isPending}>
                   <Save className="mr-2 h-4 w-4" />
-                  {createPaymentMutation.isPending ? "Recording..." : "Record Payment"}
+                  {createPaymentMutation.isPending ? t('common.loading') : t('payments.recordPayment')}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => navigate('/payments/pending')}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </form>
