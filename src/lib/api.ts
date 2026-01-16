@@ -61,7 +61,11 @@ async function apiRequest<T>(
 
     if (!response.ok) {
       console.error('API Error:', data);
-      throw new Error(data.message || `Request failed with status ${response.status}`);
+      // Include validation errors if present
+      const errorMessage = data.errors 
+        ? `${data.message}: ${data.errors.map((e: any) => e.msg || e.message).join(', ')}`
+        : (data.message || `Request failed with status ${response.status}`);
+      throw new Error(errorMessage);
     }
 
     return data;
