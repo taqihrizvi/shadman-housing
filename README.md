@@ -32,9 +32,41 @@ cd <YOUR_PROJECT_NAME>
 # Step 3: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Step 4: Set up environment for local development
+# Copy the example environment file to create your local config
+Copy-Item .env.example .env.local
+# Edit .env.local to point to your local backend (default: http://localhost:5000/api)
+
+# Step 5: Start the development server with auto-reloading and an instant preview.
+npm run dev:local    # For local backend
+# OR
+npm run dev         # For production backend (testing)
 ```
+
+## 🌍 Environment Configuration
+
+This project supports multiple environments. See [ENV_SETUP.md](ENV_SETUP.md) for detailed configuration guide.
+
+### Quick Start for Local Development
+
+```powershell
+# 1. Create local environment file
+Copy-Item .env.example .env.local
+
+# 2. Edit .env.local (it should point to http://localhost:5000/api by default)
+
+# 3. Start development server
+npm run dev:local
+```
+
+### Available Scripts
+
+- `npm run dev:local` - Local development with local backend
+- `npm run dev` - Development with production backend
+- `npm run build` - Production build
+- `npm run preview` - Preview production build
+
+For more details, see [ENV_SETUP.md](ENV_SETUP.md).
 
 **Edit a file directly in GitHub**
 

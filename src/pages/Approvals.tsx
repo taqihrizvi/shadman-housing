@@ -664,18 +664,18 @@ export default function Approvals() {
                         <TableRow key={biyana.id}>
                           <TableCell>{biyana.formNumber}</TableCell>
                           <TableCell>
-                            <div>{biyana.customer.name}</div>
-                            <div className="text-xs text-muted-foreground">{biyana.customer.cnic}</div>
+                            <div>{biyana.customer?.name || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{biyana.customer?.cnic || '-'}</div>
                           </TableCell>
                           <TableCell>
-                            <div>{biyana.plot.plotNo}</div>
-                            <div className="text-xs text-muted-foreground">{formatProjectName(biyana.plot.project)}</div>
+                            <div>{biyana.plot?.plotNo || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{biyana.plot?.project ? formatProjectName(biyana.plot.project) : '-'}</div>
                           </TableCell>
                           <TableCell>{formatCurrency(biyana.biyanaAmount)}</TableCell>
                           <TableCell>{formatEnum(biyana.paymentMethod)}</TableCell>
                           <TableCell>
-                            <div>{biyana.createdBy.name}</div>
-                            <div className="text-xs text-muted-foreground">{biyana.createdBy.email}</div>
+                            <div>{biyana.createdBy?.name || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{biyana.createdBy?.email || '-'}</div>
                           </TableCell>
                           <TableCell>{formatDate(biyana.date)}</TableCell>
                           <TableCell>
@@ -738,12 +738,12 @@ export default function Approvals() {
                         <TableRow key={agreement.id}>
                           <TableCell>{agreement.agreementNumber}</TableCell>
                           <TableCell>
-                            <div>{agreement.customer.name}</div>
-                            <div className="text-xs text-muted-foreground">{agreement.customer.cnic}</div>
+                            <div>{agreement.customer?.name || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{agreement.customer?.cnic || '-'}</div>
                           </TableCell>
                           <TableCell>
-                            <div>{agreement.plot.plotNo}</div>
-                            <div className="text-xs text-muted-foreground">{formatProjectName(agreement.plot.project)} - Block {agreement.plot.block}</div>
+                            <div>{agreement.plot?.plotNo || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{agreement.plot?.project ? `${formatProjectName(agreement.plot.project)} - Block ${agreement.plot.block}` : '-'}</div>
                           </TableCell>
                           <TableCell>{formatCurrency(agreement.totalAmount)}</TableCell>
                           <TableCell>{formatCurrency(agreement.downPayment)}</TableCell>
@@ -758,8 +758,8 @@ export default function Approvals() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <div>{agreement.createdBy.name}</div>
-                            <div className="text-xs text-muted-foreground">{agreement.createdBy.email}</div>
+                            <div>{agreement.createdBy?.name || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{agreement.createdBy?.email || '-'}</div>
                           </TableCell>
                           <TableCell>{formatDate(agreement.agreementDate)}</TableCell>
                           <TableCell>
@@ -823,22 +823,22 @@ export default function Approvals() {
                           <TableRow key={transfer.id}>
                             <TableCell>{transfer.transferNumber}</TableCell>
                             <TableCell>
-                              <div>{transfer.fromCustomer.name}</div>
-                              <div className="text-xs text-muted-foreground">{transfer.fromCustomer.cnic}</div>
+                              <div>{transfer.fromCustomer?.name || '-'}</div>
+                              <div className="text-xs text-muted-foreground">{transfer.fromCustomer?.cnic || '-'}</div>
                             </TableCell>
                             <TableCell>
-                              <div>{transfer.toCustomer.name}</div>
-                              <div className="text-xs text-muted-foreground">{transfer.toCustomer.cnic}</div>
+                              <div>{transfer.toCustomer?.name || '-'}</div>
+                              <div className="text-xs text-muted-foreground">{transfer.toCustomer?.cnic || '-'}</div>
                             </TableCell>
                             <TableCell>
-                              <div>{transfer.plot.plotNo}</div>
-                              <div className="text-xs text-muted-foreground">{formatProjectName(transfer.plot.project)}</div>
+                              <div>{transfer.plot?.plotNo || '-'}</div>
+                              <div className="text-xs text-muted-foreground">{transfer.plot?.project ? formatProjectName(transfer.plot.project) : '-'}</div>
                             </TableCell>
                             <TableCell>{formatCurrency(transfer.transferFee)}</TableCell>
                             <TableCell>{transfer.transferReason}</TableCell>
                             <TableCell>
-                              <div>{transfer.createdBy.name}</div>
-                              <div className="text-xs text-muted-foreground">{transfer.createdBy.email}</div>
+                              <div>{transfer.createdBy?.name || '-'}</div>
+                              <div className="text-xs text-muted-foreground">{transfer.createdBy?.email || '-'}</div>
                             </TableCell>
                             <TableCell>{formatDate(transfer.transferDate)}</TableCell>
                             <TableCell>
@@ -903,8 +903,8 @@ export default function Approvals() {
                           <TableCell>{payment.voucherNo}</TableCell>
                           <TableCell>{formatEnum(payment.type)}</TableCell>
                           <TableCell>
-                            <div>{payment.customer.name}</div>
-                            <div className="text-xs text-muted-foreground">{payment.customer.cnic}</div>
+                            <div>{payment.customer?.name || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{payment.customer?.cnic || '-'}</div>
                           </TableCell>
                           <TableCell>
                             {payment.plot ? (
@@ -919,8 +919,8 @@ export default function Approvals() {
                           <TableCell>{formatCurrency(payment.amount)}</TableCell>
                           <TableCell>{formatEnum(payment.paymentMethod)}</TableCell>
                           <TableCell>
-                            <div>{payment.createdBy.name}</div>
-                            <div className="text-xs text-muted-foreground">{payment.createdBy.email}</div>
+                            <div>{payment.createdBy?.name || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{payment.createdBy?.email || '-'}</div>
                           </TableCell>
                           <TableCell>{formatDate(payment.date)}</TableCell>
                           <TableCell>
@@ -965,10 +965,12 @@ export default function Approvals() {
                   <div className="text-sm font-medium">{approvalType === 'biyana' ? t('forms.formNumber') : t('vouchers.voucherNo')}</div>
                   <div className="text-sm text-muted-foreground">{approvalType === 'biyana' ? selectedItem.formNumber : selectedItem.voucherNo}</div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium">{t('forms.customer')}</div>
-                  <div className="text-sm text-muted-foreground">{selectedItem.customer.name}</div>
-                </div>
+                {selectedItem.customer && (
+                  <div>
+                    <div className="text-sm font-medium">{t('forms.customer')}</div>
+                    <div className="text-sm text-muted-foreground">{selectedItem.customer?.name}</div>
+                  </div>
+                )}
                 <div>
                   <div className="text-sm font-medium">{t('payments.amount')}</div>
                   <div className="text-sm text-muted-foreground">{formatCurrency(approvalType === 'biyana' ? selectedItem.biyanaAmount : selectedItem.amount)}</div>

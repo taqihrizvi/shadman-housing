@@ -1,0 +1,106 @@
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│  🚀 SHADMAN HOUSING FRONTEND - QUICK REFERENCE                     │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  📋 ENVIRONMENT FILES                                               │
+└─────────────────────────────────────────────────────────────────────┘
+
+  .env                 → Production config (✅ in git)
+  .env.local           → Your local dev (❌ not in git)
+  .env.production      → Production explicit (✅ in git)
+  .env.example         → Template (✅ in git)
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  ⚡ COMMANDS                                                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+  SETUP:
+  .\setup-local.ps1         Interactive local setup
+  .\verify-env.ps1          Check environment config
+  npm install               Install dependencies
+
+  DEVELOPMENT:
+  npm run dev:local         Local backend (port 8080)
+  npm run dev               Production backend (port 8080)
+
+  BUILD:
+  npm run build             Production build
+  npm run build:local       Local build
+  npm run preview           Preview build
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  🌍 API ENDPOINTS                                                   │
+└─────────────────────────────────────────────────────────────────────┘
+
+  LOCAL:       http://localhost:5000/api
+  PRODUCTION:  https://shadman-housing-backend-3.onrender.com/api
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  🎯 TYPICAL WORKFLOW                                                │
+└─────────────────────────────────────────────────────────────────────┘
+
+  1. First time setup:
+     .\setup-local.ps1
+
+  2. Start backend (in separate terminal):
+     cd ../backend
+     npm run dev
+
+  3. Start frontend:
+     npm run dev:local
+
+  4. Open browser:
+     http://localhost:8080
+
+  5. Check console for:
+     🌍 Environment: local
+     🔗 API URL: http://localhost:5000/api
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  ⚠️  COMMON ISSUES                                                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+  ❌ API calls failing
+     → Check backend is running
+     → Verify .env.local has correct URL
+
+  ❌ .env.local changes not working
+     → Restart dev server
+
+  ❌ Production build using local API
+     → Use 'npm run build' not 'npm run build:local'
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  📚 DOCUMENTATION                                                   │
+└─────────────────────────────────────────────────────────────────────┘
+
+  LOCAL_SETUP_SUMMARY.md    Complete setup summary
+  ENV_SETUP.md              Detailed environment guide
+  README.md                 Main project documentation
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  ✅ CHECKLIST                                                       │
+└─────────────────────────────────────────────────────────────────────┘
+
+  □ .env.local exists
+  □ Backend running on localhost:5000
+  □ Frontend running on localhost:8080
+  □ No errors in browser console
+  □ Can login successfully
+  □ API requests working
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  🔒 SECURITY REMINDERS                                              │
+└─────────────────────────────────────────────────────────────────────┘
+
+  ✓ .env.local is gitignored (never commit)
+  ✓ No secrets in environment files
+  ✓ Production uses separate config
+  ✓ Local changes won't affect production
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  Need help? See ENV_SETUP.md or LOCAL_SETUP_SUMMARY.md            │
+└─────────────────────────────────────────────────────────────────────┘

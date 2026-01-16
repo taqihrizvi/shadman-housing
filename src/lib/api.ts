@@ -1,5 +1,12 @@
 // API Configuration and Helper Functions
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const APP_ENV = import.meta.env.VITE_ENV || import.meta.env.MODE || 'development';
+
+// Log environment configuration on module load (only in development)
+if (import.meta.env.DEV) {
+  console.log('🌍 Environment:', APP_ENV);
+  console.log('🔗 API URL:', API_BASE_URL);
+}
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {
