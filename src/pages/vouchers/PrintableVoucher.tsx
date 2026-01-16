@@ -7,6 +7,8 @@ import { Printer, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
 export default function PrintableVoucher() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -194,13 +196,13 @@ export default function PrintableVoucher() {
               <div className="flex flex-col items-center">
                 <div className="w-full border-b-2 border-gray-800 h-16 mb-2 flex items-center justify-center">
                   <img 
-                    src={voucher.approvedBy?.signature ? `http://localhost:5000${voucher.approvedBy.signature}` : 'http://localhost:5000/signatures/admin-signature.png'}
+                    src={voucher.approvedBy?.signature ? `${API_BASE_URL}${voucher.approvedBy.signature}` : `${API_BASE_URL}/signatures/admin-signature.png`}
                     alt="Authorized Signature" 
                     className="max-h-12 object-contain"
                     onLoad={() => console.log('✅ Signature loaded')}
                     onError={(e) => {
                       console.error('❌ Signature failed to load');
-                      e.currentTarget.src = 'http://localhost:5000/signatures/admin-signature.png';
+                      e.currentTarget.src = `${API_BASE_URL}/signatures/admin-signature.png`;
                     }}
                   />
                 </div>

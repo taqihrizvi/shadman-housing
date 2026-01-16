@@ -13,7 +13,7 @@ import { CheckCircle, XCircle, Clock, FileCheck, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-PK', {

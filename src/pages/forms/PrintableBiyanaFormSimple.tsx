@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
 interface PrintableBiyanaFormProps {
   data: {
     formNumber?: string;
@@ -351,8 +353,8 @@ export default function PrintableBiyanaForm({ data, onClose }: PrintableBiyanaFo
                         src={data.approvedBy?.signature 
                           ? (data.approvedBy.signature.startsWith('http') 
                             ? data.approvedBy.signature 
-                            : `http://localhost:5000${data.approvedBy.signature.startsWith('/') ? '' : '/'}${data.approvedBy.signature}`)
-                          : 'http://localhost:5000/signatures/admin-signature.png'
+                            : `${API_BASE_URL}${data.approvedBy.signature.startsWith('/') ? '' : '/'}${data.approvedBy.signature}`)
+                          : `${API_BASE_URL}/signatures/admin-signature.png`
                         } 
                         alt={t('printableForms.salesManagerSignature')} 
                         className="max-h-12 print:max-h-8 max-w-[120px] print:max-w-[100px] object-contain"

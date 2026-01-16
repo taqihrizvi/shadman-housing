@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
 interface PrintableSaleAgreementFormProps {
   data: {
     customer: {
