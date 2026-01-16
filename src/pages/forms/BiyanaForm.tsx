@@ -132,9 +132,11 @@ export default function BiyanaForm() {
       navigate('/inventory/unsold');
     },
     onError: (error: any) => {
+      console.error("Biyana submission error details:", error);
+      const errorMessage = error.message || "Failed to submit Biyana form";
       toast({
         title: "Error",
-        description: error.response?.data?.message || error.message || "Failed to submit Biyana form",
+        description: errorMessage,
         variant: "destructive",
       });
     },
