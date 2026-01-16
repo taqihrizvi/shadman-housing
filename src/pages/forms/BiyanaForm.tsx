@@ -61,6 +61,23 @@ export default function BiyanaForm() {
   });
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
 
+  // Auto-calculate monthly installment amount when relevant fields change
+  useEffect(() => {
+    const remaining = parseFloat(formData.totalRemaining) || 0;
+    const months = parseInt(formData.monthlyInstallments) || 0;
+    
+    if (remaining > 0 && months > 0 && formData.installmentType === "MONTHLY_ONLY") {
+      const monthlyAmount = (remaining / months).toFixed(2);
+      // Only update if different to avoid infinite loop
+      if (formData.monthlyInstallmentAmount !== monthlyAmount) {
+        setFormData(prev => ({
+          ...prev,
+          monthlyInstallmentAmount: monthlyAmount,
+        }));
+      }
+    }
+  }, [formData.totalRemaining, formData.monthlyInstallments, formData.installmentType]);
+
   // Fetch available plots
   const { data: availablePlots, isLoading: plotsLoading } = useQuery({
     queryKey: ['availablePlots'],
