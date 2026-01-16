@@ -469,13 +469,13 @@ export default function PrintableSaleAgreementForm({ data, onClose }: PrintableS
                   <div className="flex flex-col items-center">
                     <div className="w-full border-b-2 border-black h-16 print:h-12 mb-2 print:mb-1 flex items-center justify-center">
                       <img 
-                        src={data.createdBy?.signature ? `http://localhost:5000${data.createdBy.signature}` : 'http://localhost:5000/signatures/admin-signature.png'} 
+                        src={data.createdBy?.signature ? `${API_BASE_URL}${data.createdBy.signature}` : `${API_BASE_URL}/signatures/admin-signature.png`} 
                         alt={t('printableForms.firstParty')} 
                         className="max-h-12 print:max-h-8 max-w-[120px] print:max-w-[100px] object-contain"
                         onLoad={() => console.log('✅ Signature loaded')}
                         onError={(e) => {
                           console.error('❌ Signature failed to load');
-                          e.currentTarget.src = 'http://localhost:5000/signatures/admin-signature.png';
+                          e.currentTarget.src = `${API_BASE_URL}/signatures/admin-signature.png`;
                         }}
                       />
                     </div>
