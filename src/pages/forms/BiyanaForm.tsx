@@ -98,7 +98,7 @@ export default function BiyanaForm() {
       }
 
       // Create biyana form
-      const biyanaData = {
+      const biyanaData: any = {
         customerId,
         plotId: data.plotId,
         biyanaAmount: parseFloat(data.biyanaAmount),
@@ -110,13 +110,21 @@ export default function BiyanaForm() {
         totalRemaining: parseFloat(data.totalRemaining) || 0,
 
         lastInstallmentDate: data.lastInstallmentDate || null,
-        monthlyInstallments: parseInt(data.monthlyInstallments) || 0,
-        quarterlyInstallments: parseInt(data.quarterlyInstallments) || 0,
         agreementDuration: data.agreementDuration || "",
-        monthlyInstallmentAmount: parseFloat(data.monthlyInstallmentAmount) || 0,
-        quarterlyInstallmentAmount: parseFloat(data.quarterlyInstallmentAmount) || 0,
         installmentType: data.installmentType || "MONTHLY_ONLY",
       };
+
+      // Add monthly installment fields if monthly installments are used
+      if (data.installmentType === "MONTHLY_ONLY" || data.installmentType === "MONTHLY_AND_QUARTERLY") {
+        biyanaData.monthlyInstallments = parseInt(data.monthlyInstallments) || 0;
+        biyanaData.monthlyInstallmentAmount = parseFloat(data.monthlyInstallmentAmount) || 0;
+      }
+
+      // Add quarterly installment fields only if quarterly installments are used
+      if (data.installmentType === "MONTHLY_AND_QUARTERLY") {
+        biyanaData.quarterlyInstallments = parseInt(data.quarterlyInstallments) || 0;
+        biyanaData.quarterlyInstallmentAmount = parseFloat(data.quarterlyInstallmentAmount) || 0;
+      }
 
       const response = await formsAPI.createBiyana(biyanaData);
       return response.data;
