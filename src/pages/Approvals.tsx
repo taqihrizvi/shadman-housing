@@ -903,8 +903,8 @@ export default function Approvals() {
                           <TableCell>{payment.voucherNo}</TableCell>
                           <TableCell>{formatEnum(payment.type)}</TableCell>
                           <TableCell>
-                            <div>{payment.customer?.name || '-'}</div>
-                            <div className="text-xs text-muted-foreground">{payment.customer?.cnic || '-'}</div>
+                            <div>{payment.plot?.customer?.name || payment.customer?.name || '-'}</div>
+                            <div className="text-xs text-muted-foreground">{payment.plot?.customer?.cnic || payment.customer?.cnic || '-'}</div>
                           </TableCell>
                           <TableCell>
                             {payment.plot ? (

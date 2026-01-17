@@ -297,10 +297,13 @@ const Index = () => {
         data = (saleAgreements || [])
           .filter((agreement: any) => agreement.status === 'APPROVED')
           .map((agreement: any) => {
-            const totalPaid = agreement.totalPaid || agreement.downPayment || 0;
+            // Use totalPaid if available, otherwise calculate from downPayment
+            const totalPaid = agreement.totalPaid || 0;
             const pending = agreement.totalAmount - totalPaid;
+            // Show current plot owner (in case of transfer) - use currentOwner field from backend
+            const ownerName = agreement.currentOwner?.name || agreement.customer?.name || 'N/A';
             return {
-              customer: agreement.customer?.name || 'N/A',
+              customer: ownerName,
               plotNo: agreement.plot?.plotNo || 'N/A',
               dueAmount: formatCurrency(pending > 0 ? pending : 0),
               dueDate: 'As per schedule',
