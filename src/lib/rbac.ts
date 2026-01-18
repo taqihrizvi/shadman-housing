@@ -57,7 +57,6 @@ export const ROUTE_PERMISSIONS = {
   '/submitted-forms/transfer': ['ADMIN', 'MANAGER'],
   
   // Payments
-  '/payments/pending': ['ADMIN'],
   '/payments/record': ['ADMIN', 'MANAGER'],
   
   // Reports

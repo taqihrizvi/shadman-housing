@@ -61,12 +61,39 @@ export default function SaleAgreementForm() {
   const [biyanaAmount, setBiyanaAmount] = useState<number>(0);
   const [duePayment, setDuePayment] = useState<number>(0);
   const [monthlyInstallment, setMonthlyInstallment] = useState<number>(0);
+  const [isTransferredPlot, setIsTransferredPlot] = useState<boolean>(false);
+  const [oldSaleAgreement, setOldSaleAgreement] = useState<any>(null);
 
-  // Fetch reserved plots
-  const { data: reservedPlots, isLoading: plotsLoading } = useQuery({
-    queryKey: ['reservedPlots'],
+  // Fetch reserved and transferred plots
+  const { data: availablePlots, isLoading: plotsLoading } = useQuery({
+    queryKey: ['availablePlots'],
     queryFn: async () => {
-      const response = await inventoryAPI.getAll({ status: 'RESERVED' });
+      // Fetch both RESERVED and TRANSFERRED plots
+      const [reservedResponse, transferredResponse] = await Promise.all([
+        inventoryAPI.getAll({ status: 'RESERVED' }),
+        inventoryAPI.getAll({ status: 'TRANSFERRED' })
+      ]);
+      
+      // Combine both results
+      return [...reservedResponse.data, ...transferredResponse.data];
+    },
+  });
+
+  // Fetch all transfers to get new owner info for transferred plots
+  const { data: transfersData } = useQuery({
+    queryKey: ['transfers'],
+    queryFn: async () => {
+      const response = await formsAPI.getTransferForms();
+      return response.data;
+    },
+  });
+
+  // Fetch all sale agreements to get old agreement for transferred plots
+  const { data: saleAgreementsData } = useQuery({
+    queryKey: ['saleAgreements'],
+    queryFn: async () => {
+      const response = await formsAPI.getSaleAgreements();
+      console.log('Fetched Sale Agreements:', response.data);
       return response.data;
     },
   });
@@ -115,9 +142,11 @@ export default function SaleAgreementForm() {
         title: "Sale Agreement Created",
         description: "Sale agreement created successfully. Plot status updated to Sold.",
       });
-      queryClient.invalidateQueries({ queryKey: ['reservedPlots'] });
+      queryClient.invalidateQueries({ queryKey: ['availablePlots'] });
       queryClient.invalidateQueries({ queryKey: ['unsoldInventory'] });
       queryClient.invalidateQueries({ queryKey: ['soldInventory'] });
+      queryClient.invalidateQueries({ queryKey: ['saleAgreements'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       navigate('/inventory/sold');
     },
     onError: (error: any) => {
@@ -130,34 +159,106 @@ export default function SaleAgreementForm() {
   });
 
   const handlePlotSelect = (plotId: string) => {
-    const plot = reservedPlots?.find((p: any) => p.id === plotId);
+    const plot = availablePlots?.find((p: any) => p.id === plotId);
     setSelectedPlot(plot);
-    const biyanaForm = plot?.biyanaForms?.[0];
-    const biyana = biyanaForm?.biyanaAmount || 0;
-    const customer = biyanaForm?.customer;
-    setBiyanaAmount(biyana);
     
-    console.log('Biyana Form Data:', biyanaForm);
-    console.log('Monthly Installments:', biyanaForm?.monthlyInstallments);
-    
-    // Get payment plan display text from biyana's agreement duration
+    // Check if this is a transferred plot
+    const isTransferred = plot?.status === 'TRANSFERRED';
+    setIsTransferredPlot(isTransferred);
+    let customer;
+    let biyana = 0;
     let paymentPlanDisplay = "Full Payment";
     let paymentPlanEnum = "FULL_PAYMENT";
-    if (biyanaForm?.monthlyInstallments) {
-      const months = biyanaForm.monthlyInstallments;
-      paymentPlanDisplay = `${months} Months Installment`;
-      if (months === 12) paymentPlanEnum = "INSTALLMENT_12";
-      else if (months === 24) paymentPlanEnum = "INSTALLMENT_24";
-      else if (months === 36) paymentPlanEnum = "INSTALLMENT_36";
+    let totalPrice = plot?.price || 0; // Always use plot price for total amount
+    let downPayment = 0;
+    
+    if (isTransferred) {
+      // For transferred plots, get buyer info from transfer form (new owner)
+      const transfer = transfersData?.find((t: any) => t.plotId === plotId && t.status === 'APPROVED');
+      console.log('Transfer Data for plot:', transfer);
+      console.log('All Sale Agreements:', saleAgreementsData);
+      
+      if (transfer) {
+        customer = transfer.toCustomer; // New owner from transfer
+        
+        // Find the old sale agreement for this plot
+        // First, try to find any agreement for this plot
+        const plotAgreements = saleAgreementsData?.filter((a: any) => a.plotId === plotId);
+        console.log('All agreements for this plot:', plotAgreements);
+        
+        // Try multiple search strategies
+        let oldAgreement = saleAgreementsData?.find((a: any) => 
+          a.plotId === plotId && a.isArchived === true && a.transferId === transfer.id
+        );
+        console.log('Search 1 (isArchived + transferId):', oldAgreement);
+        
+        // If not found by transferId, try finding by plotId and isArchived
+        if (!oldAgreement) {
+          oldAgreement = saleAgreementsData?.find((a: any) => 
+            a.plotId === plotId && a.isArchived === true
+          );
+          console.log('Search 2 (isArchived only):', oldAgreement);
+        }
+        
+        // If still not found, try finding any locked agreement for this plot
+        if (!oldAgreement) {
+          oldAgreement = saleAgreementsData?.find((a: any) => 
+            a.plotId === plotId && a.isLocked === true
+          );
+          console.log('Search 3 (isLocked):', oldAgreement);
+        }
+        
+        // If still not found, just use the first agreement for this plot
+        if (!oldAgreement && plotAgreements && plotAgreements.length > 0) {
+          oldAgreement = plotAgreements[0];
+          console.log('Search 4 (first agreement for plot):', oldAgreement);
+        }
+        
+        if (oldAgreement) {
+          downPayment = oldAgreement.downPayment || 0;
+          setOldSaleAgreement(oldAgreement);
+          console.log('✅ Found Old Sale Agreement:', oldAgreement);
+          console.log('✅ Down Payment from Old Agreement:', downPayment);
+          console.log('✅ Down Payment field value type:', typeof downPayment);
+        } else {
+          console.log('❌ No old sale agreement found for transferred plot');
+        }
+        
+        console.log('Transfer Form Data:', transfer);
+        console.log('New Owner (toCustomer):', customer);
+      }
+    } else {
+      // For reserved plots, get buyer info from biyana form (original reservation)
+      const biyanaForm = plot?.biyanaForms?.[0];
+      biyana = biyanaForm?.biyanaAmount || 0;
+      customer = biyanaForm?.customer;
+      
+      console.log('Biyana Form Data:', biyanaForm);
+      console.log('Monthly Installments:', biyanaForm?.monthlyInstallments);
+      
+      // Get payment plan from biyana's agreement duration
+      if (biyanaForm?.monthlyInstallments) {
+        const months = biyanaForm.monthlyInstallments;
+        paymentPlanDisplay = `${months} Months Installment`;
+        if (months === 12) paymentPlanEnum = "INSTALLMENT_12";
+        else if (months === 24) paymentPlanEnum = "INSTALLMENT_24";
+        else if (months === 36) paymentPlanEnum = "INSTALLMENT_36";
+      }
+      
+      console.log('Payment Plan Display:', paymentPlanDisplay);
+      totalPrice = biyanaForm?.totalAmount || plot?.price || 0;
     }
     
-    console.log('Payment Plan Display:', paymentPlanDisplay);
+    setBiyanaAmount(biyana);
     
-    // Auto-populate buyer information and payment details from Biyana form
+    console.log('Setting form data with downPayment:', downPayment);
+    
+    // Auto-populate buyer information and payment details
     setFormData({ 
       ...formData, 
       plotId, 
-      totalPrice: (biyanaForm?.totalAmount || plot?.price)?.toString() || "",
+      totalPrice: totalPrice?.toString() || "",
+      downPayment: downPayment?.toString() || "",
       paymentPlan: paymentPlanEnum,
       paymentPlanDisplay: paymentPlanDisplay,
       customerName: customer?.name || "",
@@ -211,7 +312,9 @@ export default function SaleAgreementForm() {
             </svg>
           </div>
           <p className="text-sm">
-            {isUrdu ? 'فارم جمع کروانے سے پہلے تمام معلومات کی درستگی کی تصدیق یقینی بنائیں' : 'Please ensure to verify all information before submitting the form'}
+            {isUrdu 
+              ? 'فارم جمع کروانے سے پہلے تمام معلومات کی درستگی کی تصدیق یقینی بنائیں۔ منتقل شدہ پلاٹ کے لیے نئے مالک کے لیے فروخت کا معاہدہ بنائیں۔' 
+              : 'Please ensure to verify all information before submitting the form. For TRANSFERRED plots, create a sale agreement for the new owner to complete the transfer.'}
           </p>
         </div>
         
@@ -247,14 +350,17 @@ export default function SaleAgreementForm() {
                         <SelectValue placeholder={plotsLoading ? t('common.loading') : t('forms.selectOption')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {reservedPlots && reservedPlots.length > 0 ? (
-                          reservedPlots.map((plot: any) => (
-                            <SelectItem key={plot.id} value={plot.id}>
-                              {plot.plotNo} - {formatEnum(plot.project)} ({formatSize(plot.size)})
-                            </SelectItem>
-                          ))
+                        {availablePlots && availablePlots.length > 0 ? (
+                          availablePlots.map((plot: any) => {
+                            const status = plot.status === 'TRANSFERRED' ? ' [TRANSFERRED]' : '';
+                            return (
+                              <SelectItem key={plot.id} value={plot.id}>
+                                {plot.plotNo} - {formatEnum(plot.project)} ({formatSize(plot.size)}){status}
+                              </SelectItem>
+                            );
+                          })
                         ) : (
-                          <SelectItem value="no-plots" disabled>No reserved plots available</SelectItem>
+                          <SelectItem value="no-plots" disabled>No available plots</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
@@ -293,6 +399,13 @@ export default function SaleAgreementForm() {
               {/* Buyer Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">Buyer Information</h3>
+                {isTransferredPlot && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>ℹ️ Transferred Plot:</strong> Buyer information is pre-filled from the transfer form and cannot be edited.
+                    </p>
+                  </div>
+                )}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="customerName">Buyer Name *</Label>
@@ -301,6 +414,7 @@ export default function SaleAgreementForm() {
                       placeholder="Full legal name"
                       value={formData.customerName}
                       onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      disabled={isTransferredPlot}
                       required
                     />
                   </div>
@@ -311,6 +425,7 @@ export default function SaleAgreementForm() {
                       placeholder={t('forms.fatherName')}
                       value={formData.fatherName}
                       onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
+                      disabled={isTransferredPlot}
                       required
                     />
                   </div>
@@ -321,6 +436,7 @@ export default function SaleAgreementForm() {
                       placeholder="00000-0000000-0"
                       value={formData.cnic}
                       onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                      disabled={isTransferredPlot}
                       required
                     />
                   </div>
@@ -331,6 +447,7 @@ export default function SaleAgreementForm() {
                       placeholder="+92 300 0000000"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      disabled={isTransferredPlot}
                       required
                     />
                   </div>
@@ -341,6 +458,7 @@ export default function SaleAgreementForm() {
                       placeholder={t('forms.address')}
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      disabled={isTransferredPlot}
                       required
                     />
                   </div>
@@ -365,7 +483,12 @@ export default function SaleAgreementForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="downPayment">Down Payment (PKR) *</Label>
+                    <Label htmlFor="downPayment">
+                      Down Payment (PKR) *
+                      {isTransferredPlot && (
+                        <span className="ml-2 text-xs text-blue-600">(From old agreement)</span>
+                      )}
+                    </Label>
                     <Input
                       id="downPayment"
                       type="number"
@@ -373,6 +496,8 @@ export default function SaleAgreementForm() {
                       value={formData.downPayment}
                       onChange={(e) => setFormData({ ...formData, downPayment: e.target.value })}
                       required
+                      disabled={isTransferredPlot}
+                      className={isTransferredPlot ? "bg-blue-50 cursor-not-allowed font-semibold" : ""}
                     />
                   </div>
                   <div className="space-y-2">

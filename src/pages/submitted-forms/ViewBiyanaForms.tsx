@@ -95,6 +95,11 @@ const ViewBiyanaForms = () => {
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const formatPaymentMethod = (method: string) => {
+    if (!method) return "";
+    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
+  };
+
   const formatSize = (value: string) => {
     if (!value) return "";
     const sizeMap: { [key: string]: string } = {
@@ -317,7 +322,7 @@ const ViewBiyanaForms = () => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">{t('forms.paymentMethod')}</label>
-                        <p className="text-base">{formatEnum(selectedForm.paymentMethod || '')}</p>
+                        <p className="text-base">{formatPaymentMethod(selectedForm.paymentMethod || '')}</p>
                       </div>
                     </div>
                   </div>

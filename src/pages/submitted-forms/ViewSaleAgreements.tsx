@@ -72,7 +72,7 @@ const ViewSaleAgreements = () => {
   };
 
   const formatPaymentPlan = (installmentMonths: number) => {
-    if (installmentMonths === 0) return "Full Payment";
+    if (installmentMonths === 0) return t('payments.fullPayment');
     return `${installmentMonths} Months Installment`;
   };
 
@@ -217,7 +217,7 @@ const ViewSaleAgreements = () => {
                 <div className="grid gap-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Agreement Number</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t('payments.agreementNumber')}</label>
                       <p className="text-base font-semibold">{selectedForm.agreementNumber}</p>
                     </div>
                     <div>
@@ -278,7 +278,7 @@ const ViewSaleAgreements = () => {
                     <h3 className="font-semibold mb-3">Payment Information</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Total Amount</label>
+                        <label className="text-sm font-medium text-muted-foreground">{t('payments.totalAmount')}</label>
                         <p className="text-base font-semibold">{formatCurrency(selectedForm.totalAmount)}</p>
                       </div>
                       <div>

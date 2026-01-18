@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronRight,
   Calculator,
+  Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -158,21 +159,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       ],
     },
     {
-      titleKey: "nav.vouchers",
-      href: "/vouchers",
-      icon: <Receipt className="h-5 w-5" />,
-      roles: ['ADMIN', 'MANAGER'],
-    },
-    {
       titleKey: "payments.title",
       href: "/payments",
       icon: <DollarSign className="h-5 w-5" />,
       roles: ['ADMIN', 'MANAGER'],
       children: [
         {
-          titleKey: "payments.pendingPayments",
-          href: "/payments/pending",
-          icon: <Clock className="h-4 w-4" />,
+          titleKey: "nav.vouchers",
+          href: "/vouchers",
+          icon: <Receipt className="h-4 w-4" />,
         },
         {
           titleKey: "payments.recordPayment",
@@ -192,6 +187,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/approvals",
       icon: <ClipboardCheck className="h-5 w-5" />,
       roles: ['ADMIN'],
+    },
+    {
+      titleKey: "nav.archive",
+      href: "/archive",
+      icon: <Archive className="h-5 w-5" />,
+      roles: ['ADMIN', 'MANAGER'],
     },
     {
       titleKey: "nav.calculator",

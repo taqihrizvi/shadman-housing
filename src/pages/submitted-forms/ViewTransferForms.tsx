@@ -36,6 +36,33 @@ const ViewTransferForms = () => {
     }
     return value;
   };
+
+  // Helper function to get status display and styling
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return {
+          label: t('status.approved'),
+          className: "bg-blue-50 text-blue-700 border-blue-200"
+        };
+      case 'COMPLETED':
+        return {
+          label: t('status.completed') || 'Completed',
+          className: "bg-green-50 text-green-700 border-green-200"
+        };
+      case 'REJECTED':
+        return {
+          label: t('status.rejected') || 'Rejected',
+          className: "bg-red-50 text-red-700 border-red-200"
+        };
+      case 'PENDING':
+      default:
+        return {
+          label: t('status.pending'),
+          className: "bg-yellow-50 text-yellow-700 border-yellow-200"
+        };
+    }
+  };
   const { data: forms, isLoading } = useQuery({
     queryKey: ['transferForms'],
     queryFn: async () => {
@@ -148,13 +175,9 @@ const ViewTransferForms = () => {
                         <TableCell>
                           <Badge 
                             variant="outline" 
-                            className={
-                              form.status === 'APPROVED'
-                                ? "bg-green-50 text-green-700 border-green-200"
-                                : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                            }
+                            className={getStatusInfo(form.status).className}
                           >
-                            {form.status === 'APPROVED' ? t('status.approved') : t('status.pending')}
+                            {getStatusInfo(form.status).label}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -281,13 +304,9 @@ const ViewTransferForms = () => {
                         <label className="text-sm font-medium text-muted-foreground">{t('forms.status')}</label>
                         <Badge 
                           variant="outline" 
-                          className={
-                            selectedForm.status === 'APPROVED'
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                          }
+                          className={getStatusInfo(selectedForm.status).className}
                         >
-                          {selectedForm.status === 'APPROVED' ? t('status.approved') : t('status.pending')}
+                          {getStatusInfo(selectedForm.status).label}
                         </Badge>
                       </div>
                     </div>

@@ -49,6 +49,11 @@ export default function PrintableVoucher() {
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const formatPaymentMethod = (method: string) => {
+    if (!method) return "";
+    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -96,19 +101,19 @@ export default function PrintableVoucher() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-600">{t('vouchers.name')}</p>
-              <p className="font-semibold text-gray-800">{voucher.customer?.name || 'N/A'}</p>
+              <p className="font-semibold text-gray-800">{voucher.customer?.name || t('payments.notAvailable')}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">{t('vouchers.cnic')}</p>
-              <p className="font-semibold text-gray-800">{voucher.customer?.cnic || 'N/A'}</p>
+              <p className="font-semibold text-gray-800">{voucher.customer?.cnic || t('payments.notAvailable')}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">{t('vouchers.phone')}</p>
-              <p className="font-semibold text-gray-800">{voucher.customer?.phone || 'N/A'}</p>
+              <p className="font-semibold text-gray-800">{voucher.customer?.phone || t('payments.notAvailable')}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">{t('vouchers.address')}</p>
-              <p className="font-semibold text-gray-800">{voucher.customer?.address || 'N/A'}</p>
+              <p className="font-semibold text-gray-800">{voucher.customer?.address || t('payments.notAvailable')}</p>
             </div>
           </div>
         </div>
@@ -144,7 +149,7 @@ export default function PrintableVoucher() {
             </div>
             <div>
               <p className="text-sm text-gray-600">{t('vouchers.paymentMethod')}</p>
-              <p className="font-semibold text-gray-800">{formatEnum(voucher.paymentMethod)}</p>
+              <p className="font-semibold text-gray-800">{formatPaymentMethod(voucher.paymentMethod)}</p>
             </div>
           </div>
 
@@ -265,7 +270,7 @@ export default function PrintableVoucher() {
       {/* Print Controls - Hidden when printing */}
       <div className="print:hidden bg-gray-100 p-4 sticky top-0 z-10 border-b">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <Button variant="outline" onClick={() => navigate('/payments/pending')}>
+          <Button variant="outline" onClick={() => navigate('/vouchers')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             {t('vouchers.backToPayments')}
           </Button>

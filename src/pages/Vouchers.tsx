@@ -48,6 +48,11 @@ export default function Vouchers() {
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const formatPaymentMethod = (method: string) => {
+    if (!method) return "";
+    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-PK", {
       year: "numeric",
@@ -104,7 +109,7 @@ export default function Vouchers() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Amount</p>
+                  <p className="text-sm text-muted-foreground">{t('payments.totalAmount')}</p>
                   <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
                 </div>
               </div>
@@ -170,15 +175,15 @@ export default function Vouchers() {
                   {filteredVouchers.map((voucher: any) => (
                     <TableRow key={voucher.id}>
                       <TableCell className="font-medium">{voucher.voucherNo}</TableCell>
-                      <TableCell>{voucher.customer?.name || 'N/A'}</TableCell>
-                      <TableCell>{voucher.plot?.plotNo || 'N/A'}</TableCell>
+                      <TableCell>{voucher.customer?.name || t('payments.notAvailable')}</TableCell>
+                      <TableCell>{voucher.plot?.plotNo || t('payments.notAvailable')}</TableCell>
                       <TableCell className="font-semibold">
                         {formatCurrency(voucher.amount)}
                       </TableCell>
                       <TableCell>{formatDate(voucher.date)}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">
-                          {formatEnum(voucher.paymentMethod)}
+                          {formatPaymentMethod(voucher.paymentMethod)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">

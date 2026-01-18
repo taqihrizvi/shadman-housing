@@ -105,7 +105,7 @@ export function NotificationBell({ sidebarOpen = true }: NotificationBellProps) 
       } else if (notification.relatedType === 'SALE_AGREEMENT') {
         navigate('/submitted-forms/sale-agreement');
       } else if (notification.relatedType === 'PAYMENT') {
-        navigate('/payments/pending');
+        navigate('/vouchers');
       } else if (notification.relatedType === 'TRANSFER') {
         navigate('/submitted-forms/transfer');
       }

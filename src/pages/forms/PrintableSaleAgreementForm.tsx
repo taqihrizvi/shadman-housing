@@ -354,7 +354,7 @@ export default function PrintableSaleAgreementForm({ data, onClose }: PrintableS
                         </tr>
                         <tr className={installmentType === 'MONTHLY_AND_QUARTERLY' && quarterlyInstallments > 0 ? "border-b border-black" : ""}>
                           <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.monthlyInstallment')}</td>
-                          <td className="p-2 print:p-1.5">{monthlyAmount > 0 ? formatCurrency(monthlyAmount) : 'N/A'}</td>
+                          <td className="p-2 print:p-1.5">{monthlyAmount > 0 ? formatCurrency(monthlyAmount) : t('payments.notAvailable')}</td>
                         </tr>
                         {installmentType === 'MONTHLY_AND_QUARTERLY' && quarterlyInstallments > 0 && (
                           <>

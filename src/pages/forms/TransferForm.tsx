@@ -17,6 +17,7 @@ import { FileOutput, Save, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
+import { voucherAPI } from "@/lib/api";
 import { useTranslation } from 'react-i18next';
 
 const transferReasons = ["Sale to Third Party", "Inheritance", "Gift", "Court Order", "Other"];
@@ -28,6 +29,7 @@ export default function TransferForm() {
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
   const [fromCustomerId, setFromCustomerId] = useState("");
   const [toCustomerId, setToCustomerId] = useState("");
+  const [totalPaidAmount, setTotalPaidAmount] = useState<number>(0);
   
   const [formData, setFormData] = useState({
     // Property
@@ -58,6 +60,35 @@ export default function TransferForm() {
     },
   });
 
+  // Fetch vouchers for selected plot
+  const { data: vouchersData } = useQuery({
+    queryKey: ['vouchers', selectedPlot?.id],
+    queryFn: async () => {
+      if (!selectedPlot?.id) return [];
+      const response = await voucherAPI.getAll({ plotId: selectedPlot.id });
+      return response.data;
+    },
+    enabled: !!selectedPlot?.id,
+  });
+
+  // Fetch biyana forms
+  const { data: biyanaForms } = useQuery({
+    queryKey: ['biyanaForms'],
+    queryFn: async () => {
+      const response = await formsAPI.getBiyanaForms();
+      return response.data;
+    },
+  });
+
+  // Fetch sale agreements to get down payment
+  const { data: saleAgreements } = useQuery({
+    queryKey: ['saleAgreements'],
+    queryFn: async () => {
+      const response = await formsAPI.getSaleAgreements();
+      return response.data;
+    },
+  });
+
   // Handle plot selection
   const handlePlotSelect = async (plotId: string) => {
     setFormData({ ...formData, plotId });
@@ -68,6 +99,33 @@ export default function TransferForm() {
     // Fetch current owner (buyer) details
     if (plot?.buyerId) {
       setFromCustomerId(plot.buyerId);
+    }
+
+    // Calculate total paid amount (vouchers + biyana + down payment)
+    if (plot) {
+      let totalPaid = 0;
+      
+      // Get vouchers for this plot
+      const plotVouchers = vouchersData || [];
+      const voucherTotal = plotVouchers.reduce((sum: number, v: any) => sum + (v.amount || 0), 0);
+      
+      // Get biyana for this plot
+      const plotBiyana = biyanaForms?.find((b: any) => b.plotId === plotId);
+      const biyanaAmount = plotBiyana?.biyanaAmount || 0;
+      
+      // Get sale agreement down payment
+      const plotAgreement = saleAgreements?.find((a: any) => a.plotId === plotId && a.isActive);
+      const downPayment = plotAgreement?.downPayment || 0;
+      
+      totalPaid = voucherTotal + biyanaAmount + downPayment;
+      setTotalPaidAmount(totalPaid);
+      
+      console.log('Total Paid Calculation:', {
+        vouchers: voucherTotal,
+        biyana: biyanaAmount,
+        downPayment: downPayment,
+        total: totalPaid
+      });
     }
   };
 
@@ -131,6 +189,17 @@ export default function TransferForm() {
       toast({
         title: "Error",
         description: "Please select a plot with a current owner",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate transfer amount >= total paid amount
+    const transferAmount = parseFloat(formData.transferAmount) || 0;
+    if (transferAmount < totalPaidAmount) {
+      toast({
+        title: "Invalid Transfer Amount",
+        description: `Transfer amount (Rs ${transferAmount.toLocaleString()}) cannot be less than the total paid amount (Rs ${totalPaidAmount.toLocaleString()}).`,
         variant: "destructive",
       });
       return;
@@ -282,6 +351,13 @@ export default function TransferForm() {
                         <Label className="text-muted-foreground">{t('forms.address')}</Label>
                         <p className="font-medium">{currentOwner.address}</p>
                       </div>
+                      {totalPaidAmount > 0 && (
+                        <div className="md:col-span-2 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <Label className="text-sm font-semibold text-blue-900">Total Amount Paid by Current Owner</Label>
+                          <p className="text-2xl font-bold text-blue-600 mt-1">Rs {totalPaidAmount.toLocaleString()}</p>
+                          <p className="text-xs text-blue-700 mt-1">Transfer amount must be at least this amount</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

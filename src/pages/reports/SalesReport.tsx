@@ -236,7 +236,7 @@ export default function SalesReport() {
                   <TableHead>Plot</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Agent</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>{t('payments.amount')}</TableHead>
                   <TableHead>Commission</TableHead>
                 </TableRow>
               </TableHeader>

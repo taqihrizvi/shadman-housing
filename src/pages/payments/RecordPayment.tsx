@@ -122,16 +122,16 @@ export default function RecordPayment() {
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       toast({
-        title: "Payment Recorded",
-        description: "Payment has been recorded successfully. Opening receipt...",
+        title: t('payments.recordPayment'),
+        description: t('payments.paymentRecorded'),
       });
       // Redirect to printable voucher
       navigate(`/vouchers/print/${voucher.id}`);
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to record payment",
+        title: t('common.error'),
+        description: error.response?.data?.message || t('payments.paymentFailed'),
         variant: "destructive",
       });
     },
@@ -142,8 +142,8 @@ export default function RecordPayment() {
     
     if (!formData.plotId || !formData.customerId) {
       toast({
-        title: "Error",
-        description: "Please select both plot and customer",
+        title: t('common.error'),
+        description: t('payments.selectPlotCustomer'),
         variant: "destructive",
       });
       return;
@@ -155,8 +155,8 @@ export default function RecordPayment() {
     // Add small tolerance for floating point precision (0.01)
     if (pendingAmount > 0 && paymentAmount > (pendingAmount + 0.01)) {
       toast({
-        title: "Error",
-        description: `Payment amount (${formatCurrency(paymentAmount)}) cannot exceed pending amount (${formatCurrency(pendingAmount)})`,
+        title: t('common.error'),
+        description: `${t('payments.amountExceedsLimit')} (${formatCurrency(paymentAmount)}) ${t('payments.cannotExceedPending')} (${formatCurrency(pendingAmount)})`,
         variant: "destructive",
       });
       return;
@@ -376,7 +376,7 @@ export default function RecordPayment() {
                   <Save className="mr-2 h-4 w-4" />
                   {createPaymentMutation.isPending ? t('common.loading') : t('payments.recordPayment')}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/payments/pending')}>
+                <Button type="button" variant="outline" onClick={() => navigate('/vouchers')}>
                   {t('common.cancel')}
                 </Button>
               </div>

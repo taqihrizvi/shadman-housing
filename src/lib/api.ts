@@ -222,20 +222,39 @@ export const formsAPI = {
   },
 
   // Transfer
-  getTransferForms: async () => {
-    return apiRequest<{ success: boolean; data: any[] }>('/forms/transfer');
+  getTransferForms: async (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiRequest<{ success: boolean; data: any[] }>(`/transfer${queryString}`);
+  },
+
+  getTransferById: async (id: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transfer/${id}`);
   },
 
   createTransfer: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/forms/transfer', {
+    return apiRequest<{ success: boolean; data: any }>('/transfer', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
   approveTransfer: async (id: string) => {
-    return apiRequest<{ success: boolean; data: any }>(`/forms/transfer/${id}/approve`, {
+    return apiRequest<{ success: boolean; data: any }>(`/transfer/${id}/approve`, {
       method: 'PUT',
+    });
+  },
+
+  rejectTransfer: async (id: string, reason?: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transfer/${id}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  completeTransfer: async (id: string, newSaleAgreementId: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transfer/${id}/complete`, {
+      method: 'PUT',
+      body: JSON.stringify({ newSaleAgreementId }),
     });
   },
 };

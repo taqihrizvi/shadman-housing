@@ -20,7 +20,6 @@ import TransferForm from "./pages/forms/TransferForm";
 import ViewBiyanaForms from "./pages/submitted-forms/ViewBiyanaForms";
 import ViewSaleAgreements from "./pages/submitted-forms/ViewSaleAgreements";
 import ViewTransferForms from "./pages/submitted-forms/ViewTransferForms";
-import PendingPayments from "./pages/payments/PendingPayments";
 import RecordPayment from "./pages/payments/RecordPayment";
 import PrintableVoucher from "./pages/vouchers/PrintableVoucher";
 import SalesReport from "./pages/reports/SalesReport";
@@ -29,6 +28,7 @@ import ComparisonReport from "./pages/reports/ComparisonReport";
 import Vouchers from "./pages/Vouchers";
 import Approvals from "./pages/Approvals";
 import AdminSettings from "./pages/AdminSettings";
+import Archive from "./pages/Archive";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -75,7 +75,6 @@ const App = () => {
           <Route path="/submitted-forms/biyana" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewBiyanaForms /></ProtectedRoute>} />
           <Route path="/submitted-forms/sale-agreement" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewSaleAgreements /></ProtectedRoute>} />
           <Route path="/submitted-forms/transfer" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewTransferForms /></ProtectedRoute>} />
-          <Route path="/payments/pending" element={<ProtectedRoute allowedRoles={['ADMIN']}><PendingPayments /></ProtectedRoute>} />
           <Route path="/payments/record" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><RecordPayment /></ProtectedRoute>} />
           <Route path="/vouchers/print/:id" element={<PrintableVoucher />} />
           <Route path="/reports/sales" element={<ProtectedRoute allowedRoles={['ADMIN']}><SalesReport /></ProtectedRoute>} />
@@ -83,6 +82,7 @@ const App = () => {
           <Route path="/reports/comparison" element={<ProtectedRoute allowedRoles={['ADMIN']}><ComparisonReport /></ProtectedRoute>} />
           <Route path="/vouchers" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Vouchers /></ProtectedRoute>} />
           <Route path="/approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><Approvals /></ProtectedRoute>} />
+          <Route path="/archive" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Archive /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

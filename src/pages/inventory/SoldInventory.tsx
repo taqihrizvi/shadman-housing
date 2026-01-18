@@ -27,39 +27,56 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Search, Filter, Download, Eye, FileText, Receipt, DollarSign, ChevronDown, ChevronUp, Printer } from "lucide-react";
+import { Search, Filter, Download, Eye, FileText, Receipt, DollarSign, ChevronDown, ChevronUp, Printer, ArrowRightLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { inventoryAPI, formsAPI, voucherAPI } from "@/lib/api";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import { useTranslation } from "react-i18next";
 
-const projects = ["All Projects", "GREEN_VALLEY", "LAKE_VIEW", "PALM_HEIGHTS", "SUNSET_GARDENS"];
+const statusOptions = ["All Status", "SOLD", "TRANSFERRED"];
+const sizeOptions = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
 
 export default function SoldInventory() {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProject, setSelectedProject] = useState("All Projects");
+  const [selectedStatus, setSelectedStatus] = useState("All Status");
+  const [selectedSize, setSelectedSize] = useState("All Sizes");
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [showBiyanaDetails, setShowBiyanaDetails] = useState(true);
   const [showSaleAgreementDetails, setShowSaleAgreementDetails] = useState(true);
   const [showPaymentDetails, setShowPaymentDetails] = useState(true);
+  const [showTransferDetails, setShowTransferDetails] = useState(true);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
 
   // Fetch sold inventory from API
+  // Fetch sold and transferred inventory from API
   const { data: inventoryData, isLoading } = useQuery({
-    queryKey: ['soldInventory', selectedProject, searchTerm],
+    queryKey: ['soldInventory', searchTerm],
     queryFn: async () => {
-      const params: any = { status: 'SOLD' };
-      if (selectedProject !== "All Projects") params.project = selectedProject;
-      if (searchTerm) params.search = searchTerm;
-      const response = await inventoryAPI.getAll(params);
-      return response.data;
+      // Fetch both SOLD and TRANSFERRED plots
+      const soldParams: any = { status: 'SOLD' };
+      const transferredParams: any = { status: 'TRANSFERRED' };
+      
+      if (searchTerm) {
+        soldParams.search = searchTerm;
+        transferredParams.search = searchTerm;
+      }
+      
+      const [soldResponse, transferredResponse] = await Promise.all([
+        inventoryAPI.getAll(soldParams),
+        inventoryAPI.getAll(transferredParams)
+      ]);
+      
+      // Combine both results
+      return [...soldResponse.data, ...transferredResponse.data];
     },
     staleTime: 0,
     gcTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // Fetch Biyana forms
@@ -91,6 +108,15 @@ export default function SoldInventory() {
     },
   });
 
+  // Fetch Transfer Forms
+  const { data: transfersData } = useQuery({
+    queryKey: ['transfers'],
+    queryFn: async () => {
+      const response = await formsAPI.getTransferForms();
+      return response.data;
+    },
+  });
+
   const handleViewDetails = (plot: any) => {
     setSelectedPlot(plot);
     setIsDetailOpen(true);
@@ -106,6 +132,27 @@ export default function SoldInventory() {
 
   const getPlotPayments = (plotId: string, customerId: string) => {
     return vouchersData?.filter((v: any) => v.plotId === plotId && v.customerId === customerId) || [];
+  };
+
+  const getPlotTransfer = (plotId: string) => {
+    // Get the most recent transfer for this plot (any status)
+    return transfersData?.filter((t: any) => t.plotId === plotId)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  };
+
+  // Get plot status (SOLD or TRANSFERRED)
+  const getPlotStatus = (plot: any) => {
+    if (plot.status === 'TRANSFERRED') {
+      return 'TRANSFERRED';
+    }
+    
+    // Check if this is a recently transferred plot that's now SOLD
+    const transfer = getPlotTransfer(plot.id);
+    if (transfer && transfer.status === 'COMPLETED') {
+      return 'SOLD (Transferred)';
+    }
+    
+    return 'SOLD';
   };
 
   const handlePrintBiyanaForm = (plot: any) => {
@@ -165,6 +212,11 @@ export default function SoldInventory() {
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const formatPaymentMethod = (method: string) => {
+    if (!method) return "";
+    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
+  };
+
   const formatSize = (value: string) => {
     if (!value) return "";
     const sizeMap: { [key: string]: string } = {
@@ -195,8 +247,8 @@ export default function SoldInventory() {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="relative">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="relative md:col-span-2 lg:col-span-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search by plot or buyer..."
@@ -205,14 +257,26 @@ export default function SoldInventory() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Select value={selectedProject} onValueChange={setSelectedProject}>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger>
-                  <SelectValue placeholder={t('inventory.project')} />
+                  <SelectValue placeholder="Filter by Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project} value={project}>
-                      {formatEnum(project)}
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status === "All Status" ? "All Status" : status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedSize} onValueChange={setSelectedSize}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by Size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sizeOptions.map((size) => (
+                    <SelectItem key={size} value={size}>
+                      {size === "All Sizes" ? "All Sizes" : formatSize(size)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -223,15 +287,32 @@ export default function SoldInventory() {
 
         {/* Table */}
         <Card variant="elevated">
-          <CardHeader>
-            <CardTitle>{t('inventory.soldInventory')}</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+              <div className="flex justify-center items-center py-12">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
             ) : !inventoryData || inventoryData.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">{t('inventory.noData')}</div>
-            ) : (
+              <div className="flex justify-center items-center py-12">
+                <p className="text-muted-foreground">No sold inventory found</p>
+              </div>
+            ) : (() => {
+              // Apply client-side filters
+              const filteredData = inventoryData.filter((item: any) => {
+                const matchesStatus = selectedStatus === "All Status" || item.status === selectedStatus;
+                const matchesSize = selectedSize === "All Sizes" || item.size === selectedSize;
+                return matchesStatus && matchesSize;
+              });
+
+              if (filteredData.length === 0) {
+                return (
+                  <div className="flex justify-center items-center py-12">
+                    <p className="text-muted-foreground">No inventory matches the selected filters</p>
+                  </div>
+                );
+              }
+
+              return (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -239,39 +320,55 @@ export default function SoldInventory() {
                     <TableHead>{t('inventory.project')}</TableHead>
                     <TableHead>{t('inventory.size')}</TableHead>
                     <TableHead>{t('customers.buyer')}</TableHead>
-                    <TableHead>{t('customers.agent')}</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>{t('inventory.soldDate')}</TableHead>
                     <TableHead>{t('inventory.price')}</TableHead>
                     <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {inventoryData.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.plotNo}</TableCell>
-                      <TableCell>{formatEnum(item.project)}</TableCell>
-                      <TableCell>{formatSize(item.size)}</TableCell>
-                      <TableCell>{item.buyer?.name || "N/A"}</TableCell>
-                      <TableCell>{item.agent?.name || "N/A"}</TableCell>
-                      <TableCell>{formatDate(item.soldDate)}</TableCell>
-                      <TableCell className="font-semibold">{formatCurrency(item.price)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                  {filteredData.map((item: any) => {
+                    const plotStatus = getPlotStatus(item);
+                    const isTransferred = item.status === 'TRANSFERRED';
+                    
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.plotNo}</TableCell>
+                        <TableCell>{formatEnum(item.project)}</TableCell>
+                        <TableCell>{formatSize(item.size)}</TableCell>
+                        <TableCell>{item.buyer?.name || "N/A"}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={isTransferred ? "secondary" : "default"}
+                            className={isTransferred ? "bg-purple-100 text-purple-800" : ""}
+                          >
+                            {plotStatus}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(item.soldDate)}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(item.price)}</TableCell>
+                        <TableCell className="text-right">
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => handleViewDetails(item)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewDetails(item);
+                            }}
                             title="View Details"
+                            className="cursor-pointer"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
-            )}
+              );
+            })()}
           </CardContent>
         </Card>
 
@@ -315,13 +412,112 @@ export default function SoldInventory() {
                       <p className="font-semibold">{selectedPlot.buyer?.name || "N/A"}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Sold Date</p>
-                      <p className="font-semibold">{formatDate(selectedPlot.soldDate)}</p>
+                      <p className="text-sm text-muted-foreground">Agent</p>
+                      <p className="font-semibold">{selectedPlot.agent?.name || "N/A"}</p>
                     </div>
                   </div>
                 </div>
 
                 <Separator />
+
+                {/* Transfer Details (if plot has been transferred) */}
+                {(() => {
+                  const transfer = getPlotTransfer(selectedPlot.id);
+                  const isTransferred = selectedPlot.status === 'TRANSFERRED';
+                  
+                  return transfer ? (
+                    <>
+                      <div>
+                        <div 
+                          className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
+                          onClick={() => setShowTransferDetails(!showTransferDetails)}
+                        >
+                          <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <ArrowRightLeft className="h-5 w-5 text-purple-600" />
+                            Plot Transfer
+                            <Badge variant={isTransferred ? "secondary" : "default"} 
+                              className={isTransferred ? "bg-purple-100 text-purple-800" : ""}>
+                              {isTransferred ? "TRANSFERRED" : "COMPLETED"}
+                            </Badge>
+                          </h3>
+                          {showTransferDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </div>
+                        {showTransferDetails && (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4 p-4 border border-purple-200 rounded-lg bg-purple-50/50">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Transfer Number</p>
+                                <p className="font-semibold">{transfer.transferNumber}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Transfer Date</p>
+                                <p className="font-semibold">{formatDate(transfer.transferDate)}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">From (Previous Owner)</p>
+                                <p className="font-semibold">{transfer.fromCustomer?.name || "N/A"}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">To (New Owner)</p>
+                                <p className="font-semibold text-green-600">{transfer.toCustomer?.name || "N/A"}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Transfer Amount</p>
+                                <p className="font-semibold text-blue-600">{formatCurrency(transfer.transferAmount)}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Transfer Fee</p>
+                                <p className="font-semibold">{formatCurrency(transfer.transferFee || 0)}</p>
+                              </div>
+                              {transfer.reason && (
+                                <div className="col-span-2">
+                                  <p className="text-sm text-muted-foreground">Reason</p>
+                                  <p className="text-sm">{transfer.reason}</p>
+                                </div>
+                              )}
+                              <div className="col-span-2">
+                                <p className="text-sm text-muted-foreground">Status</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant={transfer.status === 'COMPLETED' ? 'default' : 'secondary'}>
+                                    {transfer.status}
+                                  </Badge>
+                                  {transfer.approvedAt && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Approved on {formatDate(transfer.approvedAt)}
+                                    </p>
+                                  )}
+                                  {transfer.completedAt && (
+                                    <p className="text-xs text-muted-foreground">
+                                      • Completed on {formatDate(transfer.completedAt)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {isTransferred ? (
+                              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <p className="text-sm text-amber-800">
+                                  <strong>⚠️ Transfer In Progress:</strong> This plot has been transferred to {transfer.toCustomer?.name}. 
+                                  A new sale agreement must be created and approved for the new owner to complete the transfer and change status to SOLD.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <p className="text-sm text-green-800">
+                                  <strong>✓ Transfer Completed:</strong> This plot was transferred from {transfer.fromCustomer?.name} to {transfer.toCustomer?.name}. 
+                                  {t('payments.saleAgreementDetails')}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <Separator />
+                    </>
+                  ) : null;
+                })()}
 
                 {/* Biyana Form */}
                 {(() => {
@@ -362,7 +558,7 @@ export default function SoldInventory() {
                               <p className="font-semibold">{biyana.customer?.name || "N/A"}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-muted-foreground">Amount</p>
+                              <p className="text-sm text-muted-foreground">{t('payments.amount')}</p>
                               <p className="font-semibold text-green-600">{formatCurrency(biyana.biyanaAmount)}</p>
                             </div>
                             <div>
@@ -370,8 +566,8 @@ export default function SoldInventory() {
                               <p className="font-semibold">{formatDate(biyana.date)}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-muted-foreground">Payment Method</p>
-                              <p className="font-semibold">{formatEnum(biyana.paymentMethod)}</p>
+                              <p className="text-sm text-muted-foreground">{t('payments.paymentMethod')}</p>
+                              <p className="font-semibold">{formatPaymentMethod(biyana.paymentMethod)}</p>
                             </div>
                           {biyana.remarks && (
                             <div className="col-span-2">
@@ -418,7 +614,7 @@ export default function SoldInventory() {
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
                             <div>
-                              <p className="text-sm text-muted-foreground">Agreement Number</p>
+                              <p className="text-sm text-muted-foreground">{t('payments.agreementNumber')}</p>
                               <p className="font-semibold">{saleAgreement.agreementNumber}</p>
                             </div>
                             <div>
@@ -434,7 +630,7 @@ export default function SoldInventory() {
                               <p className="font-semibold text-green-600">{formatCurrency(saleAgreement.downPayment)}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-muted-foreground">Total Paid</p>
+                              <p className="text-sm text-muted-foreground">{t('payments.totalPaid')}</p>
                               <p className="font-semibold text-green-600">
                                 {formatCurrency(calculatedTotalPaid)}
                               </p>
@@ -452,7 +648,7 @@ export default function SoldInventory() {
                             <div>
                               <p className="text-sm text-muted-foreground">Payment Plan</p>
                               <p className="font-semibold">{saleAgreement.installmentMonths !== null ? 
-                                (saleAgreement.installmentMonths === 0 ? 'Full Payment' : 
+                                (saleAgreement.installmentMonths === 0 ? t('payments.fullPayment') : 
                                  `${saleAgreement.installmentMonths} Months Installment`) 
                                 : 'N/A'}</p>
                             </div>
@@ -485,7 +681,7 @@ export default function SoldInventory() {
                       >
                         <h3 className="text-lg font-semibold flex items-center gap-2">
                           <DollarSign className="h-5 w-5 text-green-600" />
-                          Payment History
+                          {t('payments.paymentHistory')}
                           <Badge variant="outline">{payments.length} payments</Badge>
                         </h3>
                         {showPaymentDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
@@ -494,16 +690,16 @@ export default function SoldInventory() {
                         payments.length > 0 ? (
                           <div className="space-y-3">
                           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <p className="text-sm text-green-700">Total Paid (Installments)</p>
+                            <p className="text-sm text-green-700">{t('payments.totalPaidInstallments')}</p>
                             <p className="text-2xl font-bold text-green-700">{formatCurrency(totalPaid)}</p>
                           </div>
                           <div className="border rounded-lg overflow-hidden">
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead>Voucher No</TableHead>
+                                  <TableHead>{t('vouchers.voucherNo')}</TableHead>
                                   <TableHead>Date</TableHead>
-                                  <TableHead>Amount</TableHead>
+                                  <TableHead>{t('payments.amount')}</TableHead>
                                   <TableHead>Method</TableHead>
                                   <TableHead>Description</TableHead>
                                 </TableRow>
@@ -517,7 +713,7 @@ export default function SoldInventory() {
                                       {formatCurrency(payment.amount)}
                                     </TableCell>
                                     <TableCell>
-                                      <Badge variant="outline">{formatEnum(payment.paymentMethod)}</Badge>
+                                      <Badge variant="outline">{formatPaymentMethod(payment.paymentMethod)}</Badge>
                                     </TableCell>
                                     <TableCell className="text-sm text-muted-foreground">
                                       {payment.description || "N/A"}
@@ -529,7 +725,7 @@ export default function SoldInventory() {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground p-4 border rounded-lg">No payments recorded</p>
+                        <p className="text-sm text-muted-foreground p-4 border rounded-lg">{t('payments.noPaymentsRecorded')}</p>
                       ))}
                     </div>
                   );
