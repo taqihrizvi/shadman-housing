@@ -131,7 +131,7 @@ export default function PrintableBiyanaForm({ data, onClose }: PrintableBiyanaFo
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Biyana Receipt - ${data.formNumber || data.plot.plotNo}</title>
+          <title>Biyana Form - ${data.formNumber || data.plot.plotNo}</title>
           <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
           <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap" rel="stylesheet">
           <style>
@@ -261,66 +261,73 @@ export default function PrintableBiyanaForm({ data, onClose }: PrintableBiyanaFo
                   </p>
                 </div>
 
-                {/* Plot Details & Payment Table */}
-                <h2 className="text-3xl print:text-2xl font-bold mb-4 print:mb-2" style={{ textAlign: 'center', fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>{t('printableForms.plotAndPaymentDetails')}</h2>
+                {/* Plot Details & Payment Details */}
+                <h2 className="text-xl print:text-lg font-bold mb-2 print:mb-1.5" style={{ textAlign: 'center', fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>
+                  {isUrdu ? 'پلاٹ اور ادائیگی کی تفصیلات' : 'Plot & Payment Details'}
+                </h2>
 
-                <div className="grid grid-cols-2 gap-4 mb-6 print:mb-3">
-                  {/* Left Column */}
-                  <div className="border-2 border-black">
+                <div className="grid grid-cols-2 gap-4 print:gap-3 mb-4 print:mb-3 items-start">
+                  {/* Plot Details Column */}
+                  <div className="border-2 border-black h-fit">
+                    <div className="bg-gray-100 border-b-2 border-black p-2 print:p-1.5 text-center font-bold text-sm print:text-xs" style={{ fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>
+                      {t('printableForms.plotDetails')}
+                    </div>
                     <table className="w-full text-sm print:text-xs">
                       <tbody>
-                        <tr className="border-b-2 border-black">
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold w-1/2">{t('printableForms.plotNumber')}</td>
-                          <td className="p-3 print:p-2">{data.plot.plotNo}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.plotNumber')}</td>
+                          <td className="p-2 print:p-1.5">{data.plot.plotNo}</td>
                         </tr>
-                        <tr className="border-b-2 border-black">
-
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.marla')}</td>
-                          <td className="p-3 print:p-2">{data.plot.size}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.marla')}</td>
+                          <td className="p-2 print:p-1.5">{data.plot.size}</td>
                         </tr>
-                        <tr className="border-b-2 border-black">
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.ratePerMarla')}</td>
-                          <td className="p-3 print:p-2">{data.pricePerMarla ? formatCurrency(data.pricePerMarla) : 'Rs 50,000'}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.ratePerMarla')}</td>
+                          <td className="p-2 print:p-1.5">{data.pricePerMarla ? formatCurrency(data.pricePerMarla) : formatCurrency(500000)}</td>
                         </tr>
-                        <tr className="border-b-2 border-black">
-                          <td className="border-r-2 border-black p-3 print:p-2 font-bold">{t('printableForms.totalAmount')}</td>
-                          <td className="p-3 print:p-2 font-bold">{formatCurrency(data.totalAmount || data.plot.price)}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-bold bg-gray-100">{t('printableForms.totalAmount')}</td>
+                          <td className="p-2 print:p-1.5 font-bold">{formatCurrency(data.totalAmount || data.plot.price)}</td>
                         </tr>
                         <tr>
-                          <td className="border-r-2 border-black p-3 print:p-2 font-bold">{t('printableForms.downPayment')}</td>
-                          <td className="p-3 print:p-2 font-bold">{formatCurrency(data.biyanaAmount)}</td>
+                          <td className="border-r border-black p-2 print:p-1.5 font-bold bg-gray-100">{t('printableForms.downPayment')}</td>
+                          <td className="p-2 print:p-1.5 font-bold">{formatCurrency(data.biyanaAmount)}</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
 
-                  {/* Right Column */}
-                  <div className="border-2 border-black">
+                  {/* Payment Details Column */}
+                  <div className="border-2 border-black h-fit">
+                    <div className="bg-gray-100 border-b-2 border-black p-2 print:p-1.5 text-center font-bold text-sm print:text-xs" style={{ fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>
+                      {t('printableForms.paymentDetails')}
+                    </div>
                     <table className="w-full text-sm print:text-xs">
                       <tbody>
-                        <tr className="border-b-2 border-black">
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold w-1/2">{t('printableForms.downPaymentDate')}</td>
-                          <td className="p-3 print:p-2">{formatDate(data.date)}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.downPaymentDate')}</td>
+                          <td className="p-2 print:p-1.5">{formatDate(data.date)}</td>
                         </tr>
-                        <tr className="border-b-2 border-black">
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.remainingInstallments')}</td>
-                          <td className="p-3 print:p-2">{formatCurrency(data.totalRemaining || ((data.totalAmount || data.plot.price) - data.biyanaAmount))}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.remainingInstallments')}</td>
+                          <td className="p-2 print:p-1.5">{formatCurrency(data.totalRemaining || ((data.totalAmount || data.plot.price) - data.biyanaAmount))}</td>
                         </tr>
-                        <tr className="border-b-2 border-black">
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.agreementDuration')}</td>
-                          <td className="p-3 print:p-2">{translateDuration(data.agreementDuration || '12')}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.agreementDuration')}</td>
+                          <td className="p-2 print:p-1.5">{translateDuration(data.agreementDuration || '1 year')}</td>
                         </tr>
-                        <tr className="border-b-2 border-black">
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.monthlyInstallments')}</td>
-                          <td className="p-3 print:p-2">{data.monthlyInstallments || '12'}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.monthlyInstallments')}</td>
+                          <td className="p-2 print:p-1.5">{data.monthlyInstallments || '12'}</td>
                         </tr>
-                        <tr className="border-b-2 border-black">
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.monthlyInstallment')}</td>
-                          <td className="p-3 print:p-2">{data.monthlyInstallmentAmount ? formatCurrency(data.monthlyInstallmentAmount) : '50000'}</td>
+                        <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.monthlyInstallment')}</td>
+                          <td className="p-2 print:p-1.5">{data.monthlyInstallmentAmount ? formatCurrency(data.monthlyInstallmentAmount) : formatCurrency(204166.67)}</td>
                         </tr>
                         <tr>
-                          <td className="border-r-2 border-black p-3 print:p-2 font-semibold">{t('printableForms.quarterlyInstallment')}</td>
-                          <td className="p-3 print:p-2">{data.quarterlyInstallmentAmount ? formatCurrency(data.quarterlyInstallmentAmount) : 'Rs 0'}</td>
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.quarterlyInstallment')}</td>
+                          <td className="p-2 print:p-1.5">{data.quarterlyInstallmentAmount ? formatCurrency(data.quarterlyInstallmentAmount) : 'Rs 0'}</td>
                         </tr>
                       </tbody>
                     </table>

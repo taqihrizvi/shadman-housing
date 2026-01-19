@@ -244,10 +244,7 @@ const resources = {
         saleAgreementInformation: 'Sale Agreement Information',
         biyanaDetails: 'Biyana Details',
         dateOfPayment: 'Date of Payment',
-        paymentHistory: 'Payment History',
         monthlyInstallment: 'Monthly Installment',
-        fullPayment: 'Full Payment',
-        cash: 'Cash',
         notAvailable: 'N/A',
         agreementNumber: 'Agreement Number',
         paymentMethods: {
@@ -270,7 +267,6 @@ const resources = {
         voucher: 'Voucher',
         noPaymentsReceived: 'No payments received yet',
         completePaymentHistory: 'Complete payment history including Biyana and Sale Agreement payments',
-        agreementNumber: 'Agreement Number',
         installmentPlan: 'Installment Plan',
         monthlyInstallmentAmount: 'Monthly Installment Amount',
         quarterlyInstallmentAmount: 'Quarterly Installment Amount',
@@ -454,7 +450,7 @@ const resources = {
       // Printable Forms
       printableForms: {
         // Biyana Form
-        biyanaReceipt: 'Biyana Receipt',
+        biyanaReceipt: 'Biyana Form',
         tokenAdvanceReceipt: 'Token/Advance Payment Receipt',
         receiptNo: 'Receipt No',
         customerDetails: 'Customer Details',
@@ -939,11 +935,7 @@ const resources = {
         saleAgreementInformation: 'فروخت معاہدے کی معلومات',
         biyanaDetails: 'بیعانہ کی تفصیلات',
         dateOfPayment: 'ادائیگی کی تاریخ',
-        paymentHistory: 'ادائیگی کی تاریخ',
         monthlyInstallment: 'ماہانہ قسط',
-        fullPayment: 'مکمل ادائیگی',
-        cash: 'نقد',
-        notAvailable: 'نامعلوم',
         agreementNumber: 'معاہدہ نمبر',
         paymentMethods: {
           CASH: 'نقد',
@@ -965,7 +957,6 @@ const resources = {
         voucher: 'واؤچر',
         noPaymentsReceived: 'ابھی تک کوئی ادائیگی موصول نہیں ہوئی',
         completePaymentHistory: 'بیعانہ اور فروخت معاہدے کی ادائیگیوں سمیت مکمل ادائیگی کی تاریخ',
-        agreementNumber: 'معاہدہ نمبر',
         installmentPlan: 'قسطوں کا منصوبہ',
         monthlyInstallmentAmount: 'ماہانہ قسط کی رقم',
         quarterlyInstallmentAmount: 'سہ ماہی قسط کی رقم',

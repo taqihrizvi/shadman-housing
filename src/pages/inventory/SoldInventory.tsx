@@ -31,6 +31,7 @@ import { Search, Filter, Download, Eye, FileText, Receipt, DollarSign, ChevronDo
 import { useQuery } from "@tanstack/react-query";
 import { inventoryAPI, formsAPI, voucherAPI } from "@/lib/api";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
+import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import { useTranslation } from "react-i18next";
 
 const statusOptions = ["All Status", "SOLD", "TRANSFERRED"];
@@ -50,6 +51,7 @@ export default function SoldInventory() {
   const [showTransferDetails, setShowTransferDetails] = useState(true);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
+  const [formType, setFormType] = useState<'biyana' | 'saleAgreement' | 'transfer'>('biyana');
 
   // Fetch sold inventory from API
   // Fetch sold and transferred inventory from API
@@ -191,6 +193,89 @@ export default function SoldInventory() {
       approvedBy: biyana.approvedBy,
     };
     setPrintData(data);
+    setFormType('biyana');
+    setIsPrintOpen(true);
+  };
+
+  const handleViewSaleAgreement = (plot: any) => {
+    const saleAgreement = getPlotSaleAgreement(plot.id, plot.buyerId);
+    if (!saleAgreement) {
+      alert("No Sale Agreement found for this plot");
+      return;
+    }
+    
+    const biyana = getPlotBiyana(plot.id);
+    const data = {
+      customer: {
+        name: plot.buyer?.name || "",
+        fatherName: saleAgreement.customer?.fatherName || plot.buyer?.fatherName || "",
+        cnic: plot.buyer?.cnic || "",
+        phone: plot.buyer?.phone || "",
+        address: plot.buyer?.address || "",
+      },
+      plot: {
+        plotNo: plot.plotNo || "",
+        project: plot.project || "",
+        size: formatSize(plot.size || ""),
+        block: plot.block || "",
+        price: plot.price || 0,
+      },
+      totalAmount: saleAgreement.totalAmount,
+      downPayment: saleAgreement.downPayment,
+      installmentMonths: saleAgreement.installmentMonths,
+      monthlyAmount: saleAgreement.monthlyAmount,
+      agreementDate: saleAgreement.agreementDate,
+      possessionDate: saleAgreement.possessionDate,
+      agreementNumber: saleAgreement.agreementNumber,
+      status: saleAgreement.status,
+      createdBy: saleAgreement.createdBy,
+      witnesses: saleAgreement.witnesses,
+      terms: saleAgreement.terms,
+      biyana: biyana ? {
+        totalAmount: biyana.totalAmount,
+        pricePerMarla: biyana.pricePerMarla,
+        totalRemaining: biyana.totalRemaining,
+        monthlyInstallments: biyana.monthlyInstallments,
+        quarterlyInstallments: biyana.quarterlyInstallments,
+        monthlyInstallmentAmount: biyana.monthlyInstallmentAmount,
+        quarterlyInstallmentAmount: biyana.quarterlyInstallmentAmount,
+        agreementDuration: biyana.agreementDuration,
+        lastInstallmentDate: biyana.lastInstallmentDate,
+      } : undefined,
+    };
+    setPrintData(data);
+    setFormType('saleAgreement');
+    setIsPrintOpen(true);
+  };
+
+  const handleViewTransfer = (plot: any) => {
+    const transfer = getPlotTransfer(plot.id);
+    if (!transfer) {
+      alert("No Transfer form found for this plot");
+      return;
+    }
+    
+    const data = {
+      transferNumber: transfer.transferNumber,
+      transferDate: transfer.transferDate,
+      fromCustomer: transfer.fromCustomer,
+      toCustomer: transfer.toCustomer,
+      plot: {
+        plotNo: plot.plotNo || "",
+        project: plot.project || "",
+        size: formatSize(plot.size || ""),
+        block: plot.block || "",
+        price: plot.price || 0,
+      },
+      transferAmount: transfer.transferAmount,
+      remarks: transfer.remarks,
+      status: transfer.status,
+      approvedBy: transfer.approvedBy,
+      approvedAt: transfer.approvedAt,
+      completedAt: transfer.completedAt,
+    };
+    setPrintData(data);
+    setFormType('transfer');
     setIsPrintOpen(true);
   };
 
@@ -536,15 +621,15 @@ export default function SoldInventory() {
                         <div className="flex items-center gap-2">
                           {biyana && (
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handlePrintBiyanaForm(selectedPlot);
                               }}
                             >
-                              <Printer className="h-4 w-4 mr-2" />
-                              Print
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </Button>
                           )}
                           {showBiyanaDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
@@ -607,7 +692,22 @@ export default function SoldInventory() {
                           Sale Agreement
                           {saleAgreement && <Badge variant={saleAgreement.status === 'APPROVED' ? 'default' : 'secondary'}>{saleAgreement.status}</Badge>}
                         </h3>
-                        {showSaleAgreementDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        <div className="flex items-center gap-2">
+                          {saleAgreement && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewSaleAgreement(selectedPlot);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          )}
+                          {showSaleAgreementDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </div>
                       </div>
                       {showSaleAgreementDetails && (
                         saleAgreement ? (
@@ -739,11 +839,54 @@ export default function SoldInventory() {
         {isPrintOpen && printData && (
           <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
             <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
-              <DialogTitle className="sr-only">Print Biyana Form</DialogTitle>
-              <PrintableBiyanaFormSimple 
-                data={printData} 
-                onClose={() => setIsPrintOpen(false)}
-              />
+              <DialogTitle className="sr-only">
+                {formType === 'biyana' ? 'Print Biyana Form' : 
+                 formType === 'saleAgreement' ? 'Print Sale Agreement' : 
+                 'Print Transfer Form'}
+              </DialogTitle>
+              {formType === 'biyana' && (
+                <PrintableBiyanaFormSimple 
+                  data={printData} 
+                  onClose={() => setIsPrintOpen(false)}
+                />
+              )}
+              {formType === 'saleAgreement' && (
+                <PrintableSaleAgreementForm 
+                  data={printData} 
+                  onClose={() => setIsPrintOpen(false)}
+                />
+              )}
+              {formType === 'transfer' && (
+                <div className="p-8">
+                  <h2 className="text-2xl font-bold mb-4">Transfer Form</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Transfer Number</p>
+                      <p className="font-semibold">{printData.transferNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">From Customer</p>
+                      <p className="font-semibold">{printData.fromCustomer?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">To Customer</p>
+                      <p className="font-semibold">{printData.toCustomer?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Plot</p>
+                      <p className="font-semibold">{printData.plot?.plotNo}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Transfer Amount</p>
+                      <p className="font-semibold">{printData.transferAmount?.toLocaleString('en-PK', { style: 'currency', currency: 'PKR' })}</p>
+                    </div>
+                  </div>
+                  <Button onClick={() => window.print()} className="mt-6">
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                  </Button>
+                </div>
+              )}
             </DialogContent>
           </Dialog>
         )}

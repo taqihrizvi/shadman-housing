@@ -69,6 +69,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
+import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import html2pdf from "html2pdf.js";
 
 const Index = () => {
@@ -86,6 +87,7 @@ const Index = () => {
   const [showTransferDetails, setShowTransferDetails] = useState(true);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
+  const [formType, setFormType] = useState<'biyana' | 'saleAgreement' | 'transfer'>('biyana');
   const [soldSearchTerm, setSoldSearchTerm] = useState("");
   const [soldStatusFilter, setSoldStatusFilter] = useState("All Status");
   const [selectedPaymentPlot, setSelectedPaymentPlot] = useState<any>(null);
@@ -263,14 +265,349 @@ const Index = () => {
       approvedBy: biyana.approvedBy,
     };
     setPrintData(data);
+    setFormType('biyana');
     setIsPrintOpen(true);
+  };
+
+  const handleViewSaleAgreement = (plot: any) => {
+    const saleAgreement = getPlotSaleAgreement(plot.id, plot.buyerId);
+    if (!saleAgreement) {
+      alert("No Sale Agreement found for this plot");
+      return;
+    }
+    
+    const biyana = getPlotBiyana(plot.id);
+    const data = {
+      customer: {
+        name: plot.buyer?.name || "",
+        fatherName: saleAgreement.customer?.fatherName || plot.buyer?.fatherName || "",
+        cnic: plot.buyer?.cnic || "",
+        phone: plot.buyer?.phone || "",
+        address: plot.buyer?.address || "",
+      },
+      plot: {
+        plotNo: plot.plotNo || "",
+        project: plot.project || "",
+        size: formatSize(plot.size || ""),
+        block: plot.block || "",
+        price: plot.price || 0,
+      },
+      totalAmount: saleAgreement.totalAmount,
+      downPayment: saleAgreement.downPayment,
+      installmentMonths: saleAgreement.installmentMonths,
+      monthlyAmount: saleAgreement.monthlyAmount,
+      agreementDate: saleAgreement.agreementDate,
+      possessionDate: saleAgreement.possessionDate,
+      agreementNumber: saleAgreement.agreementNumber,
+      status: saleAgreement.status,
+      createdBy: saleAgreement.createdBy,
+      witnesses: saleAgreement.witnesses,
+      terms: saleAgreement.terms,
+      biyana: biyana ? {
+        totalAmount: biyana.totalAmount,
+        pricePerMarla: biyana.pricePerMarla,
+        totalRemaining: biyana.totalRemaining,
+        monthlyInstallments: biyana.monthlyInstallments,
+        quarterlyInstallments: biyana.quarterlyInstallments,
+        monthlyInstallmentAmount: biyana.monthlyInstallmentAmount,
+        quarterlyInstallmentAmount: biyana.quarterlyInstallmentAmount,
+        agreementDuration: biyana.agreementDuration,
+        lastInstallmentDate: biyana.lastInstallmentDate,
+      } : undefined,
+    };
+    setPrintData(data);
+    setFormType('saleAgreement');
+    setIsPrintOpen(true);
+  };
+
+  const handleViewTransfer = (plot: any) => {
+    const transfer = getPlotTransfer(plot.id);
+    if (!transfer) {
+      alert("No Transfer form found for this plot");
+      return;
+    }
+    
+    const data = {
+      transferNumber: transfer.transferNumber,
+      transferDate: transfer.transferDate,
+      fromCustomer: transfer.fromCustomer,
+      toCustomer: transfer.toCustomer,
+      plot: {
+        plotNo: plot.plotNo || "",
+        project: plot.project || "",
+        size: formatSize(plot.size || ""),
+        block: plot.block || "",
+        price: plot.price || 0,
+      },
+      transferAmount: transfer.transferAmount,
+      remarks: transfer.remarks,
+      status: transfer.status,
+      approvedBy: transfer.approvedBy,
+      approvedAt: transfer.approvedAt,
+      completedAt: transfer.completedAt,
+    };
+    setPrintData(data);
+    setFormType('transfer');
+    setIsPrintOpen(true);
+  };
+
+  const generateAvailablePlotsTable = () => {
+    const availablePlots = inventoryData?.filter((plot: any) => plot.status === 'AVAILABLE') || [];
+    return `
+      <div style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 20px; border-bottom: 4px solid #154238;">
+          <h3 style="color: white; margin: 0; font-size: 20px; font-weight: 700; text-align: left; letter-spacing: 0.5px;">📋 Available Plots</h3>
+          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 13px;">Currently available plots ready for sale</p>
+        </div>
+        <div style="padding: 20px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #e8f3ef; border-bottom: 2px solid #1a5a4a;">
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Plot No</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Project</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Size</th>
+                <th style="padding: 14px 12px; text-align: right; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${availablePlots.map((plot: any, index: number) => `
+                <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 12px; font-weight: 600; color: #1a5a4a; font-size: 14px;">${plot.plotNo}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatEnum(plot.project)}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size)}</td>
+                  <td style="padding: 12px; text-align: right; font-weight: 600; color: #1a5a4a; font-size: 14px;">${formatCurrency(plot.price)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); padding: 15px 20px; border-top: 1px solid #c4dfd1;">
+          <p style="margin: 0; font-size: 14px; color: #1a5a4a; text-align: center; font-weight: 600;">Total Available Plots: <span style="color: #1a5a4a; font-weight: 700; font-size: 16px;">${availablePlots.length}</span></p>
+        </div>
+      </div>
+    `;
+  };
+
+  const generateReservedPlotsTable = () => {
+    const reservedPlots = inventoryData?.filter((plot: any) => plot.status === 'RESERVED') || [];
+    return `
+      <div style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 20px; border-bottom: 4px solid #154238;">
+          <h3 style="color: white; margin: 0; font-size: 20px; font-weight: 700; text-align: left; letter-spacing: 0.5px;">⏳ Reserved Plots</h3>
+          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 13px;">Plots reserved with Biyana payment</p>
+        </div>
+        <div style="padding: 20px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #e8f3ef; border-bottom: 2px solid #1a5a4a;">
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Plot No</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Customer</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Project</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Size</th>
+                <th style="padding: 14px 12px; text-align: right; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reservedPlots.map((plot: any, index: number) => `
+                <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 12px; font-weight: 600; color: #1a5a4a; font-size: 14px;">${plot.plotNo}</td>
+                  <td style="padding: 12px; color: #1a5a4a; font-weight: 600; font-size: 14px;">${plot.customer?.name || 'N/A'}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatEnum(plot.project)}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size)}</td>
+                  <td style="padding: 12px; text-align: right; font-weight: 600; color: #1a5a4a; font-size: 14px;">${formatCurrency(plot.price)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); padding: 15px 20px; border-top: 1px solid #c4dfd1;">
+          <p style="margin: 0; font-size: 14px; color: #1a5a4a; text-align: center; font-weight: 600;">Total Reserved Plots: <span style="color: #1a5a4a; font-weight: 700; font-size: 16px;">${reservedPlots.length}</span></p>
+        </div>
+      </div>
+    `;
+  };
+
+  const generateSoldPlotsTable = () => {
+    const soldPlots = (inventoryData || [])
+      .filter((plot: any) => plot.status === 'SOLD' || plot.status === 'TRANSFERRED') || [];
+    return `
+      <div style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 20px; border-bottom: 4px solid #154238;">
+          <h3 style="color: white; margin: 0; font-size: 20px; font-weight: 700; text-align: left; letter-spacing: 0.5px;">✅ Sold Plots</h3>
+          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 13px;">Successfully sold and transferred plots</p>
+        </div>
+        <div style="padding: 20px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #e8f3ef; border-bottom: 2px solid #1a5a4a;">
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Plot No</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Buyer</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Project</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Size</th>
+                <th style="padding: 14px 12px; text-align: left; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Status</th>
+                <th style="padding: 14px 12px; text-align: right; font-weight: 600; font-size: 13px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.5px;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${soldPlots.map((plot: any, index: number) => `
+                <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 12px; font-weight: 600; color: #1a5a4a; font-size: 14px;">${plot.plotNo}</td>
+                  <td style="padding: 12px; color: #1a5a4a; font-weight: 600; font-size: 14px;">${plot.buyer?.name || 'N/A'}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatEnum(plot.project)}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size)}</td>
+                  <td style="padding: 12px; font-size: 14px;">
+                    <span style="background: ${plot.status === 'TRANSFERRED' ? '#fef3c7' : '#d4e9e0'}; color: ${plot.status === 'TRANSFERRED' ? '#d97706' : '#1a5a4a'}; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">${getPlotStatus(plot)}</span>
+                  </td>
+                  <td style="padding: 12px; text-align: right; font-weight: 600; color: #1a5a4a; font-size: 14px;">${formatCurrency(plot.price)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); padding: 15px 20px; border-top: 1px solid #c4dfd1;">
+          <p style="margin: 0; font-size: 14px; color: #1a5a4a; text-align: center; font-weight: 600;">Total Sold Plots: <span style="color: #1a5a4a; font-weight: 700; font-size: 16px;">${soldPlots.length}</span></p>
+        </div>
+      </div>
+    `;
+  };
+
+  const generateSalesMonthTable = () => {
+    return `
+      <div style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 20px; border-bottom: 4px solid #154238;">
+          <h3 style="color: white; margin: 0; font-size: 20px; font-weight: 700; text-align: left; letter-spacing: 0.5px;">📈 Sales This Month</h3>
+          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 13px;">Current month sales performance metrics</p>
+        </div>
+        <div style="padding: 25px 20px;">
+          <div style="margin-bottom: 20px; padding: 18px; background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-left: 4px solid #1a5a4a; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Monthly Sales Revenue</p>
+                <span style="color: #1a5a4a; font-weight: 800; font-size: 24px;">${formatCurrency(dashboardStats?.revenue?.monthly || 0)}</span>
+              </div>
+              <div style="background: white; padding: 12px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <span style="font-size: 24px;">💰</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-bottom: 20px; padding: 18px; background: white; border: 2px solid #e5e7eb; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Growth Rate</p>
+                <span style="color: ${(dashboardStats?.revenue?.growth || 0) >= 0 ? '#1a5a4a' : '#dc2626'}; font-weight: 800; font-size: 24px;">
+                  ${(dashboardStats?.revenue?.growth || 0) >= 0 ? '+' : ''}${dashboardStats?.revenue?.growth || 0}%
+                </span>
+              </div>
+              <div style="background: #e8f3ef; padding: 12px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <span style="font-size: 24px;">📊</span>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 18px; background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-left: 4px solid #1a5a4a; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Plots Sold This Month</p>
+                <span style="color: #1a5a4a; font-weight: 800; font-size: 24px;">${dashboardStats?.sales?.thisMonth || 0}</span>
+              </div>
+              <div style="background: white; padding: 12px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <span style="font-size: 24px;">🏠</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const generatePaymentsTable = () => {
+    // Get all approved sale agreements with payment details - same logic as the UI
+    const activeAgreements = (saleAgreements || [])
+      .filter((agreement: any) => agreement.status === 'APPROVED' && !agreement.isArchived)
+      .reduce((acc: any, agreement: any) => {
+        if (!acc[agreement.plotId] || new Date(agreement.createdAt) > new Date(acc[agreement.plotId].createdAt)) {
+          acc[agreement.plotId] = agreement;
+        }
+        return acc;
+      }, {});
+    
+    const paymentData = Object.values(activeAgreements)
+      .map((agreement: any) => {
+        // Get voucher payments for this plot
+        const plotPayments = (vouchersData || [])
+          .filter((v: any) => v.plotId === agreement.plotId)
+          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        // Get biyana for this plot
+        const plotBiyana = biyanaForms?.find((b: any) => b.plotId === agreement.plotId);
+        
+        // Calculate total received including biyana and down payment
+        let totalReceived = plotPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        if (plotBiyana && plotBiyana.biyanaAmount) {
+          totalReceived += plotBiyana.biyanaAmount;
+        }
+        if (agreement.downPayment) {
+          totalReceived += agreement.downPayment;
+        }
+        
+        const totalReceivable = agreement.totalAmount || 0;
+        const agreementDate = agreement.agreementDate ? new Date(agreement.agreementDate).toLocaleDateString('en-GB') : 'N/A';
+        
+        return {
+          plotNo: agreement.plot?.plotNo || 'N/A',
+          customerName: agreement.customer?.name || 'N/A',
+          agreementDate: agreementDate,
+          totalReceived: totalReceived,
+          totalReceivable: totalReceivable,
+        };
+      });
+    
+    return `
+      <div style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 20px; border-bottom: 4px solid #154238;">
+          <h3 style="color: white; margin: 0; font-size: 20px; font-weight: 700; text-align: left; letter-spacing: 0.5px;">💳 Payment Details</h3>
+          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 13px;">Detailed payment records for all sold plots</p>
+        </div>
+        <div style="padding: 25px 20px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-bottom: 3px solid #1a5a4a;">
+                <th style="padding: 12px; text-align: left; font-weight: 700; color: #1a5a4a; border-right: 1px solid #c4dfd1;">Agreement Date</th>
+                <th style="padding: 12px; text-align: left; font-weight: 700; color: #1a5a4a; border-right: 1px solid #c4dfd1;">Plot No</th>
+                <th style="padding: 12px; text-align: left; font-weight: 700; color: #1a5a4a; border-right: 1px solid #c4dfd1;">Customer Name</th>
+                <th style="padding: 12px; text-align: right; font-weight: 700; color: #1a5a4a; border-right: 1px solid #c4dfd1;">Total Received</th>
+                <th style="padding: 12px; text-align: right; font-weight: 700; color: #1a5a4a;">Total Receivable</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${paymentData.map((payment: any, index: number) => {
+                return `
+                  <tr style="background-color: ${index % 2 === 0 ? 'white' : '#f9fafb'}; border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px; color: #374151; border-right: 1px solid #e5e7eb;">${payment.agreementDate}</td>
+                    <td style="padding: 12px; font-weight: 600; color: #1a5a4a; border-right: 1px solid #e5e7eb;">${payment.plotNo}</td>
+                    <td style="padding: 12px; color: #374151; border-right: 1px solid #e5e7eb;">${payment.customerName}</td>
+                    <td style="padding: 12px; text-align: right; font-weight: 600; color: #059669; border-right: 1px solid #e5e7eb;">${formatCurrency(payment.totalReceived)}</td>
+                    <td style="padding: 12px; text-align: right; font-weight: 600; color: #1a5a4a;">${formatCurrency(payment.totalReceivable)}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          ${paymentData.length === 0 ? `
+            <div style="text-align: center; padding: 40px; color: #6b7280;">
+              <p style="font-size: 16px; margin: 0;">No payment records found</p>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
   };
 
   const handleExportPDF = () => {
     const element = document.createElement('div');
     element.style.padding = '40px';
-    element.style.backgroundColor = 'white';
-    element.style.fontFamily = 'Arial, sans-serif';
+    element.style.backgroundColor = '#fafafa';
+    element.style.fontFamily = "'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+    element.style.lineHeight = '1.6';
 
     const today = new Date().toLocaleDateString("en-PK", { 
       year: 'numeric', 
@@ -278,95 +615,230 @@ const Index = () => {
       day: 'numeric' 
     });
 
+    let fileName = 'dashboard-report';
+    let reportTitle = 'Dashboard Report';
+    let reportIcon = '📊';
+    let reportContent = '';
+
+    // If a card is selected, export only that card's data
+    if (selectedCard) {
+      switch (selectedCard) {
+        case 'available':
+          fileName = 'available-plots-report';
+          reportTitle = 'Available Plots Report';
+          reportIcon = '📋';
+          reportContent = generateAvailablePlotsTable();
+          break;
+        case 'reserved':
+          fileName = 'reserved-plots-report';
+          reportTitle = 'Reserved Plots Report';
+          reportIcon = '⏳';
+          reportContent = generateReservedPlotsTable();
+          break;
+        case 'sold':
+          fileName = 'sold-plots-report';
+          reportTitle = 'Sold Plots Report';
+          reportIcon = '✅';
+          reportContent = generateSoldPlotsTable();
+          break;
+        case 'salesMonth':
+          fileName = 'sales-this-month-report';
+          reportTitle = 'Sales This Month Report';
+          reportIcon = '📈';
+          reportContent = generateSalesMonthTable();
+          break;
+        case 'payments':
+          fileName = 'payment-details-report';
+          reportTitle = 'Payment Details Report';
+          reportIcon = '💳';
+          reportContent = generatePaymentsTable();
+          break;
+      }
+    } else {
+      // Export full dashboard report with compact styling for single page
+      reportContent = `
+        <div style="margin-bottom: 15px;">
+          <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 12px 15px; border-radius: 8px; margin-bottom: 0; border-bottom: 3px solid #154238;">
+            <h2 style="color: white; margin: 0; font-size: 16px; font-weight: 700; text-align: left; letter-spacing: 0.3px;">📊 Inventory Summary</h2>
+          </div>
+          <div style="background: white; border-radius: 0 0 8px 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); overflow: hidden; margin-top: -1px;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; padding: 12px;">
+              <div style="padding: 12px; border-right: 1px solid #e5e7eb;">
+                <div style="text-align: center;">
+                  <div style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-radius: 8px; padding: 10px; margin-bottom: 6px;">
+                    <div style="color: #1a5a4a; font-size: 24px; font-weight: 800; margin: 0;">${dashboardStats?.inventory?.available || 0}</div>
+                  </div>
+                  <div style="color: #6b7280; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px;">📋 Available</div>
+                </div>
+              </div>
+              <div style="padding: 12px; border-right: 1px solid #e5e7eb;">
+                <div style="text-align: center;">
+                  <div style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-radius: 8px; padding: 10px; margin-bottom: 6px;">
+                    <div style="color: #1a5a4a; font-size: 24px; font-weight: 800; margin: 0;">${dashboardStats?.inventory?.reserved || 0}</div>
+                  </div>
+                  <div style="color: #6b7280; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px;">🔒 Reserved</div>
+                </div>
+              </div>
+              <div style="padding: 12px; border-right: 1px solid #e5e7eb;">
+                <div style="text-align: center;">
+                  <div style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-radius: 8px; padding: 10px; margin-bottom: 6px;">
+                    <div style="color: #1a5a4a; font-size: 24px; font-weight: 800; margin: 0;">${dashboardStats?.inventory?.sold || 0}</div>
+                  </div>
+                  <div style="color: #6b7280; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px;">✅ Sold</div>
+                </div>
+              </div>
+              <div style="padding: 12px;">
+                <div style="text-align: center;">
+                  <div style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-radius: 8px; padding: 10px; margin-bottom: 6px;">
+                    <div style="color: #1a5a4a; font-size: 24px; font-weight: 800; margin: 0;">${(dashboardStats?.inventory?.available || 0) + (dashboardStats?.inventory?.reserved || 0) + (dashboardStats?.inventory?.sold || 0)}</div>
+                  </div>
+                  <div style="color: #6b7280; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px;">📈 Total</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 12px 15px; border-radius: 8px; margin-bottom: 0; border-bottom: 3px solid #154238;">
+            <h2 style="color: white; margin: 0; font-size: 16px; font-weight: 700; text-align: left; letter-spacing: 0.3px;">💰 Financial Overview</h2>
+          </div>
+          <div style="background: white; border-radius: 0 0 8px 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); overflow: hidden; margin-top: -1px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px;">
+              <div style="padding: 10px; background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-radius: 8px; border-left: 3px solid #1a5a4a;">
+                <div style="text-align: center;">
+                  <span style="color: #6b7280; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; display: block; margin-bottom: 4px;">Sales This Month</span>
+                  <span style="color: #1a5a4a; font-weight: 800; font-size: 16px;">${formatCurrency(dashboardStats?.revenue?.monthly || 0)}</span>
+                </div>
+              </div>
+              <div style="padding: 10px; background: white; border-radius: 8px; border: 2px solid #e5e7eb;">
+                <div style="text-align: center;">
+                  <span style="color: #6b7280; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; display: block; margin-bottom: 4px;">Revenue Growth</span>
+                  <span style="color: ${(dashboardStats?.revenue?.growth || 0) >= 0 ? '#1a5a4a' : '#dc2626'}; font-weight: 800; font-size: 16px;">
+                    ${(dashboardStats?.revenue?.growth || 0) >= 0 ? '+' : ''}${dashboardStats?.revenue?.growth || 0}%
+                  </span>
+                </div>
+              </div>
+              <div style="padding: 10px; background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); border-radius: 8px; border-left: 3px solid #1a5a4a;">
+                <div style="text-align: center;">
+                  <span style="color: #6b7280; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; display: block; margin-bottom: 4px;">Total Revenue</span>
+                  <span style="color: #1a5a4a; font-weight: 800; font-size: 16px;">${formatCurrency((dashboardStats?.revenue?.monthly || 0) + (dashboardStats?.revenue?.yearly || 0))}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 12px 15px; border-radius: 8px; margin-bottom: 0; border-bottom: 3px solid #154238;">
+            <h2 style="color: white; margin: 0; font-size: 16px; font-weight: 700; text-align: left; letter-spacing: 0.3px;">📈 Inventory Distribution</h2>
+          </div>
+          <div style="background: white; border-radius: 0 0 8px 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); overflow: hidden; margin-top: -1px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #e8f3ef; border-bottom: 2px solid #1a5a4a;">
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; font-size: 10px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.3px;">Status</th>
+                  <th style="padding: 10px 12px; text-align: center; font-weight: 600; font-size: 10px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.3px;">Count</th>
+                  <th style="padding: 10px 12px; text-align: center; font-weight: 600; font-size: 10px; color: #1a5a4a; text-transform: uppercase; letter-spacing: 0.3px;">Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${pieChartData.map((item: any, index: number) => `
+                  <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 8px 12px;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="display: inline-block; width: 12px; height: 12px; background-color: ${item.color}; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.1);"></span>
+                        <span style="font-weight: 600; color: #374151; font-size: 12px;">${item.name}</span>
+                      </div>
+                    </td>
+                    <td style="padding: 8px 12px; text-align: center; font-weight: 700; font-size: 14px; color: #1a5a4a;">${item.value}</td>
+                    <td style="padding: 8px 12px; text-align: center; font-weight: 600; font-size: 12px; color: #6b7280;">
+                      ${((item.value / ((dashboardStats?.inventory?.available || 0) + (dashboardStats?.inventory?.reserved || 0) + (dashboardStats?.inventory?.sold || 0))) * 100).toFixed(1)}%
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
     element.innerHTML = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #1e293b; margin-bottom: 10px;">Dashboard Report</h1>
-        <p style="color: #64748b; font-size: 14px;">Generated on ${today}</p>
-      </div>
+      <div style="background: white; margin: 0; padding: 0;">
+        ${!selectedCard ? `
+        <!-- Compact Header for Full Dashboard -->
+        <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #154238;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="${window.location.origin}/Logo.png" alt="Logo" style="height: 35px; width: auto;" />
+            <div>
+              <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">Dashboard Report</h1>
+              <p style="color: rgba(255,255,255,0.9); font-size: 11px; margin: 0; font-weight: 500;">Shadman Housing Management System</p>
+            </div>
+          </div>
+          <div style="background: rgba(255,255,255,0.2); border-radius: 15px; padding: 6px 14px; backdrop-filter: blur(10px);">
+            <p style="color: white; font-size: 11px; margin: 0; font-weight: 600;">📅 ${today}</p>
+          </div>
+        </div>
+        ` : `
+        <!-- Compact Header for Individual Card Reports -->
+        <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 20px 25px; text-align: center; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: -30px; right: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%;"></div>
+          <div style="position: absolute; bottom: -20px; left: -20px; width: 70px; height: 70px; background: rgba(255,255,255,0.08); border-radius: 50%;"></div>
+          <div style="position: relative; z-index: 1;">
+            <div style="margin-bottom: 10px;">
+              <img src="${window.location.origin}/Logo.png" alt="Logo" style="height: 40px; width: auto; margin: 0 auto; display: block;" />
+            </div>
+            <h1 style="color: white; margin: 0 0 5px 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">${reportTitle}</h1>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0 0 10px 0; font-weight: 500;">Shadman Housing Management System</p>
+            <div style="background: rgba(255,255,255,0.2); border-radius: 15px; padding: 5px 12px; display: inline-block; backdrop-filter: blur(10px);">
+              <p style="color: white; font-size: 10px; margin: 0; font-weight: 600; letter-spacing: 0.3px;">📅 ${today}</p>
+            </div>
+          </div>
+        </div>
+        `}
 
-      <div style="margin-bottom: 30px;">
-        <h2 style="color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">Inventory Summary</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 12px; background-color: #f1f5f9; border: 1px solid #e2e8f0; font-weight: bold;">Available Plots</td>
-            <td style="padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0;">${dashboardStats?.inventory?.available || 0}</td>
-          </tr>
-          <tr>
-            <td style="padding: 12px; background-color: #f1f5f9; border: 1px solid #e2e8f0; font-weight: bold;">Reserved Plots</td>
-            <td style="padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0;">${dashboardStats?.inventory?.reserved || 0}</td>
-          </tr>
-          <tr>
-            <td style="padding: 12px; background-color: #f1f5f9; border: 1px solid #e2e8f0; font-weight: bold;">Sold Plots</td>
-            <td style="padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0;">${dashboardStats?.inventory?.sold || 0}</td>
-          </tr>
-          <tr>
-            <td style="padding: 12px; background-color: #f1f5f9; border: 1px solid #e2e8f0; font-weight: bold;">Total Inventory</td>
-            <td style="padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; font-weight: bold;">${(dashboardStats?.inventory?.available || 0) + (dashboardStats?.inventory?.reserved || 0) + (dashboardStats?.inventory?.sold || 0)}</td>
-          </tr>
-        </table>
-      </div>
+        <div style="padding: ${!selectedCard ? '15px' : '20px'}; margin: 0;">
+          ${reportContent}
+        </div>
 
-      <div style="margin-bottom: 30px;">
-        <h2 style="color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">Financial Overview</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 12px; background-color: #f1f5f9; border: 1px solid #e2e8f0; font-weight: bold;">Sales This Month</td>
-            <td style="padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0;">${formatCurrency(dashboardStats?.revenue?.monthly || 0)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 12px; background-color: #f1f5f9; border: 1px solid #e2e8f0; font-weight: bold;">Revenue Growth</td>
-            <td style="padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0;">${dashboardStats?.revenue?.growth || 0}%</td>
-          </tr>
-          <tr>
-            <td style="padding: 12px; background-color: #f1f5f9; border: 1px solid #e2e8f0; font-weight: bold;">Pending Payments</td>
-            <td style="padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0;">${formatCurrency(dashboardStats?.pendingPayments?.amount || 0)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 12px; background-color: #f1f5f9; border: 1px solid #e2e8f0; font-weight: bold;">Customers with Pending Payments</td>
-            <td style="padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0;">${dashboardStats?.pendingPayments?.customers || 0}</td>
-          </tr>
-        </table>
-      </div>
-
-      <div style="margin-bottom: 30px;">
-        <h2 style="color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">Inventory Distribution</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background-color: #1e293b; color: white;">
-              <th style="padding: 12px; text-align: left; border: 1px solid #e2e8f0;">Status</th>
-              <th style="padding: 12px; text-align: right; border: 1px solid #e2e8f0;">Count</th>
-              <th style="padding: 12px; text-align: right; border: 1px solid #e2e8f0;">Percentage</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${pieChartData.map((item: any, index: number) => `
-              <tr style="background-color: ${index % 2 === 0 ? '#f8fafc' : 'white'};">
-                <td style="padding: 12px; border: 1px solid #e2e8f0;">
-                  <span style="display: inline-block; width: 12px; height: 12px; background-color: ${item.color}; border-radius: 50%; margin-right: 8px;"></span>
-                  ${item.name}
-                </td>
-                <td style="padding: 12px; text-align: right; border: 1px solid #e2e8f0;">${item.value}</td>
-                <td style="padding: 12px; text-align: right; border: 1px solid #e2e8f0;">
-                  ${((item.value / ((dashboardStats?.inventory?.available || 0) + (dashboardStats?.inventory?.reserved || 0) + (dashboardStats?.inventory?.sold || 0))) * 100).toFixed(1)}%
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-
-      <div style="margin-top: 50px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #64748b; font-size: 12px;">
-        <p>This report was automatically generated by Shadman Housing Management System</p>
-        <p>© ${new Date().getFullYear()} All rights reserved</p>
-      </div>
-    `;
+        ${!selectedCard ? `
+        <!-- Minimal Footer for Full Dashboard -->
+        <div style="background: #1a5a4a; padding: 10px 20px; text-align: center; border-top: 2px solid #154238; margin: 0;">
+          <p style="margin: 0; font-size: 10px; color: rgba(255,255,255,0.9); font-weight: 500;">© ${new Date().getFullYear()} Shadman Housing - All rights reserved</p>
+        </div>` : `
+        <!-- Compact Footer for Individual Card Reports -->
+        <div style="background: linear-gradient(135deg, #e8f3ef 0%, #d4e9e0 100%); padding: 15px; text-align: center; border-top: 2px solid #1a5a4a; margin: 0;">
+          <div style="margin-bottom: 10px;">
+            <div style="width: 40px; height: 2px; background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); margin: 0 auto 12px; border-radius: 2px;"></div>
+            <p style="margin: 0 0 3px 0; color: #6b7280; font-size: 10px; font-weight: 500;">Powered by</p>
+            <p style="margin: 0; font-size: 14px; font-weight: 800; color: #1a5a4a; letter-spacing: -0.3px;">🏢 Shadman Housing</p>
+          </div>
+          <div style="border-top: 1px solid #c4dfd1; padding-top: 10px; margin-top: 10px;">
+            <p style="margin: 0; font-size: 9px; color: #6b7280; font-weight: 500;">© ${new Date().getFullYear()} All rights reserved | Confidential Document</p>
+          </div>
+        </div>`}
+      </div>`.trim();
 
     const opt = {
-      margin: 10,
-      filename: `dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      margin: [0, 0, 0, 0] as [number, number, number, number],
+      filename: `${fileName}-${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        letterRendering: true,
+        allowTaint: false
+      },
+      jsPDF: { 
+        unit: 'mm' as const, 
+        format: !selectedCard ? [297, 215] : 'a4' as any,
+        orientation: (selectedCard ? 'portrait' : 'landscape') as 'portrait' | 'landscape',
+        compress: true,
+        hotfixes: ['px_scaling']
+      },
+      pagebreak: { mode: 'avoid-all' as any },
+      enableLinks: false
     };
 
     html2pdf().set(opt).from(element).save();
@@ -392,7 +864,6 @@ const Index = () => {
               <Download className="mr-2 h-4 w-4" />
               {t('reports.exportPDF')}
             </Button>
-            <Button onClick={() => navigate('/inventory/add')}>{t('inventory.addInventory')}</Button>
           </div>
         </div>
 
@@ -654,15 +1125,15 @@ const Index = () => {
                         <div className="flex items-center gap-2">
                           {biyana && (
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handlePrintBiyanaForm(selectedPlot);
                               }}
                             >
-                              <Printer className="h-4 w-4 mr-2" />
-                              Print
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </Button>
                           )}
                           {showBiyanaDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
@@ -725,7 +1196,22 @@ const Index = () => {
                           Sale Agreement
                           {saleAgreement && <Badge variant={saleAgreement.status === 'APPROVED' ? 'default' : 'secondary'}>{saleAgreement.status}</Badge>}
                         </h3>
-                        {showSaleAgreementDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        <div className="flex items-center gap-2">
+                          {saleAgreement && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewSaleAgreement(selectedPlot);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          )}
+                          {showSaleAgreementDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </div>
                       </div>
                       {showSaleAgreementDetails && (
                         saleAgreement ? (
@@ -857,11 +1343,54 @@ const Index = () => {
         {isPrintOpen && printData && (
           <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
             <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
-              <DialogTitle className="sr-only">Print Biyana Form</DialogTitle>
-              <PrintableBiyanaFormSimple 
-                data={printData} 
-                onClose={() => setIsPrintOpen(false)}
-              />
+              <DialogTitle className="sr-only">
+                {formType === 'biyana' ? 'Print Biyana Form' : 
+                 formType === 'saleAgreement' ? 'Print Sale Agreement' : 
+                 'Print Transfer Form'}
+              </DialogTitle>
+              {formType === 'biyana' && (
+                <PrintableBiyanaFormSimple 
+                  data={printData} 
+                  onClose={() => setIsPrintOpen(false)}
+                />
+              )}
+              {formType === 'saleAgreement' && (
+                <PrintableSaleAgreementForm 
+                  data={printData} 
+                  onClose={() => setIsPrintOpen(false)}
+                />
+              )}
+              {formType === 'transfer' && (
+                <div className="p-8">
+                  <h2 className="text-2xl font-bold mb-4">Transfer Form</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Transfer Number</p>
+                      <p className="font-semibold">{printData.transferNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">From Customer</p>
+                      <p className="font-semibold">{printData.fromCustomer?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">To Customer</p>
+                      <p className="font-semibold">{printData.toCustomer?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Plot</p>
+                      <p className="font-semibold">{printData.plot?.plotNo}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Transfer Amount</p>
+                      <p className="font-semibold">{printData.transferAmount?.toLocaleString('en-PK', { style: 'currency', currency: 'PKR' })}</p>
+                    </div>
+                  </div>
+                  <Button onClick={() => window.print()} className="mt-6">
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                  </Button>
+                </div>
+              )}
             </DialogContent>
           </Dialog>
         )}
@@ -1206,7 +1735,6 @@ const Index = () => {
           .map((plot: any) => ({
             plotNo: plot.plotNo,
             phase: formatEnum(plot.project),
-            block: plot.block,
             size: formatEnum(plot.size),
             price: formatCurrency(plot.price),
           }));
@@ -1395,7 +1923,7 @@ const Index = () => {
   function getTableHeaders(cardType: string) {
     switch (cardType) {
       case 'available':
-        return [t('inventory.plotNo'), t('inventory.phase'), t('inventory.block'), t('inventory.size'), t('inventory.price')];
+        return [t('inventory.plotNo'), t('inventory.phase'), t('inventory.size'), t('inventory.price')];
       case 'reserved':
         return [t('inventory.plotNo'), t('customers.customer'), t('payments.biyanaAmount'), t('payments.date')];
       case 'salesMonth':
