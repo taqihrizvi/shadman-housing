@@ -87,11 +87,11 @@ const Archive = () => {
   const formatSize = (value: string) => {
     if (!value) return "";
     const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': '5 Marla',
-      'SEVEN_MARLA': '7 Marla',
-      'TEN_MARLA': '10 Marla',
-      'ONE_KANAL': '1 Kanal',
-      'TWO_KANAL': '2 Kanal',
+      'FIVE_MARLA': t('plotSizes.fiveMarla'),
+      'SEVEN_MARLA': t('plotSizes.sevenMarla'),
+      'TEN_MARLA': t('plotSizes.tenMarla'),
+      'ONE_KANAL': t('plotSizes.oneKanal'),
+      'TWO_KANAL': t('plotSizes.twoKanal'),
     };
     return sizeMap[value] || formatEnum(value);
   };

@@ -439,6 +439,15 @@ const resources = {
         shadmanGreens: 'Shadman Greens',
       },
       
+      // Plot Sizes
+      plotSizes: {
+        fiveMarla: '5 Marla',
+        sevenMarla: '7 Marla',
+        tenMarla: '10 Marla',
+        oneKanal: '1 Kanal',
+        twoKanal: '2 Kanal',
+      },
+      
       // Payment Methods
       paymentMethod: {
         cash: 'Cash',
@@ -575,7 +584,7 @@ const resources = {
         pendingPayments: 'بقایاجات',
         salesThisMonth: 'اس ماہ کی فروخت',
         salesThisYear: 'اس سال کی فروخت',
-        inventoryStatus: 'انوینٹری کی حالت',
+        inventoryStatus: 'انوینٹری کی صورتِ حال',
         detailedView: 'تفصیلی منظر',
         currentDistribution: 'موجودہ تقسیم',
         backToGraph: 'گراف پر واپس',
@@ -977,6 +986,15 @@ const resources = {
         totalReceived: 'کل وصول شدہ',
         totalReceivable: 'کل وصولی',
         noRecordsFound: 'کوئی ادائیگی ریکارڈ نہیں ملا',
+      },
+      
+      // Plot Sizes
+      plotSizes: {
+        fiveMarla: '5 مرلہ',
+        sevenMarla: '7 مرلہ',
+        tenMarla: '10 مرلہ',
+        oneKanal: '1 کنال',
+        twoKanal: '2 کنال',
       },
       
       // Payment Methods

@@ -161,17 +161,18 @@ const Index = () => {
 
   const formatEnum = (value: string) => {
     if (!value) return "";
+    if (value === 'SHADMAN_GREENS') return t('projects.shadmanGreens');
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatSize = (value: string) => {
     if (!value) return "";
     const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': '5 Marla',
-      'SEVEN_MARLA': '7 Marla',
-      'TEN_MARLA': '10 Marla',
-      'ONE_KANAL': '1 Kanal',
-      'TWO_KANAL': '2 Kanal',
+      'FIVE_MARLA': t('plotSizes.fiveMarla'),
+      'SEVEN_MARLA': t('plotSizes.sevenMarla'),
+      'TEN_MARLA': t('plotSizes.tenMarla'),
+      'ONE_KANAL': t('plotSizes.oneKanal'),
+      'TWO_KANAL': t('plotSizes.twoKanal'),
     };
     return sizeMap[value] || formatEnum(value);
   };
@@ -1735,7 +1736,7 @@ const Index = () => {
           .map((plot: any) => ({
             plotNo: plot.plotNo,
             phase: formatEnum(plot.project),
-            size: formatEnum(plot.size),
+            size: formatSize(plot.size),
             price: formatCurrency(plot.price),
           }));
         break;
@@ -1923,7 +1924,7 @@ const Index = () => {
   function getTableHeaders(cardType: string) {
     switch (cardType) {
       case 'available':
-        return [t('inventory.plotNo'), t('inventory.phase'), t('inventory.size'), t('inventory.price')];
+        return [t('inventory.plotNo'), t('inventory.project'), t('inventory.size'), t('inventory.price')];
       case 'reserved':
         return [t('inventory.plotNo'), t('customers.customer'), t('payments.biyanaAmount'), t('payments.date')];
       case 'salesMonth':

@@ -304,7 +304,7 @@ export default function TransferForm() {
                       <SelectContent>
                         {plotsData?.map((plot: any) => (
                           <SelectItem key={plot.id} value={plot.id}>
-                            {plot.plotNo} - {formatEnum(plot.project)} - {formatEnum(plot.size)}
+                            {plot.plotNo} - {formatEnum(plot.project)} - {formatSize(plot.size)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -318,7 +318,7 @@ export default function TransferForm() {
                         <div><span className="text-muted-foreground">{t('inventory.plotNo')}:</span> {selectedPlot.plotNo}</div>
                         <div><span className="text-muted-foreground">{t('inventory.project')}:</span> {formatEnum(selectedPlot.project)}</div>
                         <div><span className="text-muted-foreground">{t('inventory.block')}:</span> {selectedPlot.block}</div>
-                        <div><span className="text-muted-foreground">{t('inventory.size')}:</span> {formatEnum(selectedPlot.size)}</div>
+                        <div><span className="text-muted-foreground">{t('inventory.size')}:</span> {formatSize(selectedPlot.size)}</div>
                       </div>
                     </div>
                   )}
