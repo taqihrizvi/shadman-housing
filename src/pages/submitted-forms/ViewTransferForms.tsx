@@ -20,14 +20,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { FileOutput, Loader2, Eye } from "lucide-react";
+import { FileOutput, Loader2, Eye, Printer } from "lucide-react";
 import { useTranslation } from 'react-i18next';
+import PrintableTransferForm from "../forms/PrintableTransferForm";
 
 const ViewTransferForms = () => {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isPrintView, setIsPrintView] = useState(false);
 
   // Helper function to format project names
   const formatProjectName = (value: string) => {
@@ -181,13 +183,25 @@ const ViewTransferForms = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetails(form)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewDetails(form)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedForm(form);
+                                setIsPrintView(true);
+                              }}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -323,6 +337,48 @@ const ViewTransferForms = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Printable View */}
+        {isPrintView && selectedForm && (
+          <div className="fixed inset-0 z-50 bg-white overflow-auto">
+            <PrintableTransferForm
+              data={{
+                transferNumber: selectedForm.transferNumber,
+                transferType: selectedForm.transferType || 'GENERAL',
+                plot: {
+                  plotNo: selectedForm.plot?.plotNo || '',
+                  project: selectedForm.plot?.project || '',
+                  size: selectedForm.plot?.size || '',
+                  block: selectedForm.plot?.block || '',
+                  price: selectedForm.plot?.price || 0,
+                },
+                fromCustomer: {
+                  name: selectedForm.fromCustomer?.name || '',
+                  fatherName: selectedForm.fromCustomer?.fatherName || '',
+                  cnic: selectedForm.fromCustomer?.cnic || '',
+                  phone: selectedForm.fromCustomer?.phone || '',
+                  address: selectedForm.fromCustomer?.address || '',
+                },
+                toCustomer: {
+                  name: selectedForm.toCustomer?.name || '',
+                  fatherName: selectedForm.toCustomer?.fatherName || '',
+                  cnic: selectedForm.toCustomer?.cnic || '',
+                  phone: selectedForm.toCustomer?.phone || '',
+                  address: selectedForm.toCustomer?.address || '',
+                },
+                transferAmount: selectedForm.transferAmount || 0,
+                transferFee: selectedForm.transferFee || 0,
+                transferDate: selectedForm.transferDate || selectedForm.date,
+                remarks: selectedForm.remarks,
+                status: selectedForm.status,
+                createdBy: selectedForm.createdBy,
+                approvedBy: selectedForm.approvedBy,
+                approvedAt: selectedForm.approvedAt,
+              }}
+              onClose={() => setIsPrintView(false)}
+            />
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

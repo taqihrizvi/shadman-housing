@@ -35,6 +35,7 @@ export default function TransferForm() {
     // Property
     plotId: "",
     // Transfer Details
+    transferType: "GENERAL",
     transferReason: "",
     transferAmount: "",
     transferFee: "",
@@ -156,6 +157,7 @@ export default function TransferForm() {
       // Reset form
       setFormData({
         plotId: "",
+        transferType: "GENERAL",
         transferReason: "",
         transferAmount: "",
         transferFee: "",
@@ -228,6 +230,7 @@ export default function TransferForm() {
         plotId: formData.plotId,
         fromCustomerId: fromCustomerId,
         toCustomerId: newOwnerId,
+        transferType: formData.transferType,
         transferAmount: parseFloat(formData.transferAmount) || 0,
         transferFee: parseFloat(formData.transferFee) || 0,
         date: formData.date,
@@ -247,6 +250,18 @@ export default function TransferForm() {
   const formatEnum = (value: string) => {
     if (!value) return "";
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatSize = (size: string) => {
+    if (!size) return "";
+    const sizeMap: Record<string, string> = {
+      FIVE_MARLA: "5 Marla",
+      SEVEN_MARLA: "7 Marla",
+      TEN_MARLA: "10 Marla",
+      ONE_KANAL: "1 Kanal",
+      TWO_KANAL: "2 Kanal",
+    };
+    return sizeMap[size] || formatEnum(size);
   };
 
   return (
@@ -424,6 +439,21 @@ export default function TransferForm() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">{t('forms.transferDetails')}</h3>
                 <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="transferType">{t('forms.transferType')} *</Label>
+                    <Select
+                      value={formData.transferType}
+                      onValueChange={(value) => setFormData({ ...formData, transferType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('forms.selectTransferType')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="GENERAL">General Transfer</SelectItem>
+                        <SelectItem value="DEATH">Death Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="transferAmount">{t('forms.transferAmount')} (PKR) *</Label>
                     <Input

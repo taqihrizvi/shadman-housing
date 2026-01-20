@@ -32,6 +32,7 @@ import { useQuery } from "@tanstack/react-query";
 import { inventoryAPI, formsAPI, voucherAPI } from "@/lib/api";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
+import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
 import { useTranslation } from "react-i18next";
 
 const statusOptions = ["All Status", "SOLD", "TRANSFERRED"];
@@ -258,16 +259,18 @@ export default function SoldInventory() {
     const data = {
       transferNumber: transfer.transferNumber,
       transferDate: transfer.transferDate,
+      transferType: transfer.transferType || 'GENERAL',
       fromCustomer: transfer.fromCustomer,
       toCustomer: transfer.toCustomer,
       plot: {
         plotNo: plot.plotNo || "",
         project: plot.project || "",
-        size: formatSize(plot.size || ""),
+        size: plot.size || "",
         block: plot.block || "",
         price: plot.price || 0,
       },
       transferAmount: transfer.transferAmount,
+      transferFee: transfer.transferFee || 0,
       remarks: transfer.remarks,
       status: transfer.status,
       approvedBy: transfer.approvedBy,
@@ -525,7 +528,20 @@ export default function SoldInventory() {
                               {isTransferred ? "TRANSFERRED" : "COMPLETED"}
                             </Badge>
                           </h3>
-                          {showTransferDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewTransfer(selectedPlot);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            {showTransferDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                          </div>
                         </div>
                         {showTransferDetails && (
                           <div className="space-y-4">
@@ -838,7 +854,7 @@ export default function SoldInventory() {
         {/* Print Dialog */}
         {isPrintOpen && printData && (
           <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
-            <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
+            <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-y-auto">
               <DialogTitle className="sr-only">
                 {formType === 'biyana' ? 'Print Biyana Form' : 
                  formType === 'saleAgreement' ? 'Print Sale Agreement' : 
@@ -857,35 +873,10 @@ export default function SoldInventory() {
                 />
               )}
               {formType === 'transfer' && (
-                <div className="p-8">
-                  <h2 className="text-2xl font-bold mb-4">Transfer Form</h2>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Transfer Number</p>
-                      <p className="font-semibold">{printData.transferNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">From Customer</p>
-                      <p className="font-semibold">{printData.fromCustomer?.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">To Customer</p>
-                      <p className="font-semibold">{printData.toCustomer?.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Plot</p>
-                      <p className="font-semibold">{printData.plot?.plotNo}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Transfer Amount</p>
-                      <p className="font-semibold">{printData.transferAmount?.toLocaleString('en-PK', { style: 'currency', currency: 'PKR' })}</p>
-                    </div>
-                  </div>
-                  <Button onClick={() => window.print()} className="mt-6">
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print
-                  </Button>
-                </div>
+                <PrintableTransferForm 
+                  data={printData} 
+                  onClose={() => setIsPrintOpen(false)}
+                />
               )}
             </DialogContent>
           </Dialog>

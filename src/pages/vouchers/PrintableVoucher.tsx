@@ -54,6 +54,17 @@ export default function PrintableVoucher() {
     return t(`payments.paymentMethods.${method}`) || formatEnum(method);
   };
 
+  const formatPaymentType = (type: string) => {
+    if (!type) return "";
+    const types: Record<string, string> = {
+      INSTALLMENT: "Monthly Installment",
+      QUARTERLY: "Quarterly Payment",
+      BIYANA: "Biyana Payment",
+      SALES_AGREEMENT: "Sales Agreement Down Payment"
+    };
+    return types[type] || formatEnum(type);
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -152,6 +163,14 @@ export default function PrintableVoucher() {
               <p className="font-semibold text-gray-800">{formatPaymentMethod(voucher.paymentMethod)}</p>
             </div>
           </div>
+          
+          {/* Payment Type */}
+          {voucher.formType && (
+            <div className="mb-4 pt-3 border-t border-gray-300">
+              <p className="text-sm text-gray-600">{t('vouchers.paymentType')}</p>
+              <p className="font-semibold text-gray-800">{formatPaymentType(voucher.formType)}</p>
+            </div>
+          )}
 
           {/* Additional Payment Details */}
           {(voucher.chequeNumber || voucher.bankName || voucher.transactionId) && (

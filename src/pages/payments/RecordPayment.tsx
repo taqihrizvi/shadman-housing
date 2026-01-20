@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,13 +14,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Receipt, Save, AlertCircle } from "lucide-react";
+import { Receipt, Save, AlertCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI, customerAPI, formsAPI, voucherAPI } from "@/lib/api";
 import { useTranslation } from 'react-i18next';
 
 const paymentMethods = ["CASH", "BANK_TRANSFER", "CHEQUE", "ONLINE"];
+const paymentTypes = ["INSTALLMENT", "QUARTERLY", "BIYANA", "SALES_AGREEMENT"];
 
 export default function RecordPayment() {
   const { t, i18n } = useTranslation();
@@ -32,6 +33,7 @@ export default function RecordPayment() {
   const [formData, setFormData] = useState({
     plotId: searchParams.get('plotId') || "",
     customerId: searchParams.get('customerId') || "",
+    paymentType: "INSTALLMENT",
     amount: "",
     paymentMethod: "",
     chequeNumber: "",
@@ -44,6 +46,7 @@ export default function RecordPayment() {
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [pendingAmount, setPendingAmount] = useState(0);
+  const [autoFilledAmount, setAutoFilledAmount] = useState<number | null>(null);
 
   // Fetch sold plots
   const { data: plotsData } = useQuery({
@@ -63,7 +66,7 @@ export default function RecordPayment() {
     },
   });
 
-  // Fetch sale agreement for selected plot to calculate pending amount
+  // Fetch sale agreement for selected plot
   const { data: agreements } = useQuery({
     queryKey: ['saleAgreements', formData.plotId],
     queryFn: async () => {
@@ -74,22 +77,73 @@ export default function RecordPayment() {
     enabled: !!formData.plotId,
   });
 
-  // Calculate pending amount when agreement is loaded
+  // Fetch Biyana forms for selected plot
+  const { data: biyanaForms } = useQuery({
+    queryKey: ['biyanaForms', formData.plotId],
+    queryFn: async () => {
+      if (!formData.plotId) return null;
+      const response = await formsAPI.getBiyanaForms();
+      return response.data.filter((b: any) => b.plotId === formData.plotId && b.status === 'APPROVED');
+    },
+    enabled: !!formData.plotId && (formData.paymentType === 'BIYANA'),
+  });
+
+  // Calculate pending amount and handle auto-fill based on payment type
   useEffect(() => {
     if (agreements && agreements.length > 0) {
-      const agreement = agreements[0];
-      // Use backend-calculated pending amount if available
+      const agreement = agreements[0]; // Latest active agreement
+      
+      // Calculate pending amount
       const pending = agreement.pendingAmount !== undefined 
         ? agreement.pendingAmount 
         : agreement.totalAmount - (agreement.totalPaid || agreement.downPayment || 0);
       setPendingAmount(pending);
       
-      // Auto-fill customer from agreement only if not already set
+      // Auto-fill customer from agreement
       if (!formData.customerId && agreement.customerId) {
         setFormData(prev => ({ ...prev, customerId: agreement.customerId }));
       }
+
+      // Auto-fill amount based on payment type
+      if (formData.paymentType === 'SALES_AGREEMENT') {
+        const downPaymentAmount = agreement.downPayment || 0;
+        setAutoFilledAmount(downPaymentAmount);
+        setFormData(prev => ({ 
+          ...prev, 
+          amount: downPaymentAmount.toString(),
+          description: `Sales Agreement Down Payment - ${agreement.agreementNumber}`
+        }));
+      }
     }
-  }, [agreements, formData.customerId]);
+  }, [agreements, formData.paymentType]);
+
+  // Handle Biyana payment type
+  useEffect(() => {
+    if (formData.paymentType === 'BIYANA' && biyanaForms && biyanaForms.length > 0) {
+      // Get the latest biyana form
+      const latestBiyana = biyanaForms.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+      
+      const biyanaAmount = latestBiyana.biyanaAmount || 0;
+      setAutoFilledAmount(biyanaAmount);
+      setFormData(prev => ({ 
+        ...prev, 
+        amount: biyanaAmount.toString(),
+        description: `Biyana Payment - ${latestBiyana.formNumber}`
+      }));
+    }
+  }, [biyanaForms, formData.paymentType]);
+
+  // Reset amount when payment type changes to manual entry types
+  useEffect(() => {
+    if (formData.paymentType === 'INSTALLMENT' || formData.paymentType === 'QUARTERLY') {
+      setAutoFilledAmount(null);
+      if (formData.amount && (formData.description?.includes('Biyana Payment') || formData.description?.includes('Sales Agreement'))) {
+        setFormData(prev => ({ ...prev, amount: "", description: "" }));
+      }
+    }
+  }, [formData.paymentType]);
 
   // Load plot and customer details when IDs are set
   useEffect(() => {
@@ -121,6 +175,8 @@ export default function RecordPayment() {
       queryClient.invalidateQueries({ queryKey: ['activeAgreements'] });
       queryClient.invalidateQueries({ queryKey: ['vouchers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      queryClient.invalidateQueries({ queryKey: ['saleAgreements'] });
+      queryClient.invalidateQueries({ queryKey: ['biyanaForms'] });
       toast({
         title: t('payments.recordPayment'),
         description: t('payments.paymentRecorded'),
@@ -149,11 +205,20 @@ export default function RecordPayment() {
       return;
     }
 
+    if (!formData.paymentType) {
+      toast({
+        title: t('common.error'),
+        description: "Please select a payment type",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const paymentAmount = parseFloat(formData.amount);
-    
-    // Only validate against pending amount if it's greater than 0
-    // Add small tolerance for floating point precision (0.01)
-    if (pendingAmount > 0 && paymentAmount > (pendingAmount + 0.01)) {
+
+    // Validation for INSTALLMENT and QUARTERLY payments against pending amount
+    if ((formData.paymentType === 'INSTALLMENT' || formData.paymentType === 'QUARTERLY') && 
+        pendingAmount > 0 && paymentAmount > (pendingAmount + 0.01)) {
       toast({
         title: t('common.error'),
         description: `${t('payments.amountExceedsLimit')} (${formatCurrency(paymentAmount)}) ${t('payments.cannotExceedPending')} (${formatCurrency(pendingAmount)})`,
@@ -173,7 +238,7 @@ export default function RecordPayment() {
       date: new Date(formData.date).toISOString(),
       description: formData.description,
       type: 'RECEIPT',
-      formType: 'INSTALLMENT',
+      formType: formData.paymentType,
     };
 
     createPaymentMutation.mutate(paymentData);
@@ -192,6 +257,18 @@ export default function RecordPayment() {
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const getPaymentTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      INSTALLMENT: "Monthly Installment",
+      QUARTERLY: "Quarterly Payment",
+      BIYANA: "Biyana Payment",
+      SALES_AGREEMENT: "Sales Agreement Down Payment"
+    };
+    return labels[type] || type;
+  };
+
+  const isAmountReadOnly = formData.paymentType === 'BIYANA' || formData.paymentType === 'SALES_AGREEMENT';
+
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in max-w-4xl" dir={isUrdu ? 'rtl' : 'ltr'}>
@@ -202,11 +279,20 @@ export default function RecordPayment() {
           </div>
         </div>
 
-        {pendingAmount > 0 && (
+        {pendingAmount > 0 && (formData.paymentType === 'INSTALLMENT' || formData.paymentType === 'QUARTERLY') && (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               {t('payments.pendingAmount')}: <strong>{formatCurrency(pendingAmount)}</strong>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {autoFilledAmount !== null && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Amount auto-filled from {formData.paymentType === 'BIYANA' ? 'Biyana Form' : 'Sales Agreement'}: <strong>{formatCurrency(autoFilledAmount)}</strong>
             </AlertDescription>
           </Alert>
         )}
@@ -224,6 +310,35 @@ export default function RecordPayment() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Payment Type Selection */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Payment Type</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="paymentType">Select Payment Type *</Label>
+                  <Select
+                    value={formData.paymentType}
+                    onValueChange={(value) => setFormData({ ...formData, paymentType: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {paymentTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {getPaymentTypeLabel(type)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {formData.paymentType === 'INSTALLMENT' && "Record a monthly installment payment"}
+                    {formData.paymentType === 'QUARTERLY' && "Record a quarterly payment (recurring every 3 months)"}
+                    {formData.paymentType === 'BIYANA' && "Auto-fetches amount from approved Biyana form"}
+                    {formData.paymentType === 'SALES_AGREEMENT' && "Auto-fetches down payment from active Sales Agreement"}
+                  </p>
+                </div>
+              </div>
+
               {/* Plot and Customer Selection */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">{t('payments.plotAndCustomer')}</h3>
@@ -286,10 +401,18 @@ export default function RecordPayment() {
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       required
+                      readOnly={isAmountReadOnly}
+                      disabled={isAmountReadOnly}
+                      className={isAmountReadOnly ? "bg-muted cursor-not-allowed" : ""}
                     />
-                    {pendingAmount > 0 && (
+                    {pendingAmount > 0 && (formData.paymentType === 'INSTALLMENT' || formData.paymentType === 'QUARTERLY') && (
                       <p className="text-xs text-muted-foreground">
                         {t('payments.maximum')}: {formatCurrency(pendingAmount)}
+                      </p>
+                    )}
+                    {isAmountReadOnly && (
+                      <p className="text-xs text-amber-600">
+                        Amount is auto-filled and cannot be modified
                       </p>
                     )}
                   </div>
@@ -361,7 +484,7 @@ export default function RecordPayment() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">{t('forms.description')}/{t('forms.remarks')}</Label>
+                  <Label htmlFor="description">{t('forms.remarks')}</Label>
                   <Textarea
                     id="description"
                     placeholder={t('forms.enterRemarks')}
