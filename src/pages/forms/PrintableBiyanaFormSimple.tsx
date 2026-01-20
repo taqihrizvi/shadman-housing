@@ -16,7 +16,6 @@ interface PrintableBiyanaFormProps {
       plotNo: string;
       project: string;
       size: string;
-      block: string;
       price: number;
     };
     pricePerMarla?: number;

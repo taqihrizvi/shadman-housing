@@ -20,8 +20,6 @@ import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
 import { voucherAPI } from "@/lib/api";
 import { useTranslation } from 'react-i18next';
 
-const transferReasons = ["Sale to Third Party", "Inheritance", "Gift", "Court Order", "Other"];
-
 export default function TransferForm() {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
@@ -449,8 +447,8 @@ export default function TransferForm() {
                         <SelectValue placeholder={t('forms.selectTransferType')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="GENERAL">General Transfer</SelectItem>
-                        <SelectItem value="DEATH">Death Transfer</SelectItem>
+                        <SelectItem value="GENERAL">{t('forms.generalTransfer')}</SelectItem>
+                        <SelectItem value="DEATH">{t('forms.deathTransfer')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

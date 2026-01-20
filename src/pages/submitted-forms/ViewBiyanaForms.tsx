@@ -277,10 +277,7 @@ const ViewBiyanaForms = () => {
                         <p className="text-base">{formatEnum(selectedForm.plot?.project || '')}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">{t('inventory.block')}</label>
-                        <p className="text-base">{selectedForm.plot?.block || 'N/A'}</p>
-                      </div>
-                      <div>
+
                         <label className="text-sm font-medium text-muted-foreground">{t('inventory.size')}</label>
                         <p className="text-base">{formatSize(selectedForm.plot?.size || '')}</p>
                       </div>

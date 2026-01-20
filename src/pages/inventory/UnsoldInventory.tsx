@@ -37,7 +37,6 @@ import { useTranslation } from "react-i18next";
 
 const projects = ["All Projects", "GREEN_VALLEY", "LAKE_VIEW", "PALM_HEIGHTS", "SUNSET_GARDENS"];
 const sizes = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
-const blocks = ["Block A", "Block B", "Block C", "Block D"];
 
 export default function UnsoldInventory() {
   const { t, i18n } = useTranslation();

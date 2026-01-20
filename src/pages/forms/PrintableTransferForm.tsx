@@ -13,7 +13,6 @@ interface PrintableTransferFormProps {
       plotNo: string;
       project: string;
       size: string;
-      block: string;
       price: number;
     };
     fromCustomer: {
@@ -270,10 +269,6 @@ export default function PrintableTransferForm({ data, onClose }: PrintableTransf
             <div>
               <span className="text-gray-600">Project:</span>
               <span className="font-semibold ml-2">{formatProjectName(data.plot.project)}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Block:</span>
-              <span className="font-semibold ml-2">{data.plot.block}</span>
             </div>
             <div>
               <span className="text-gray-600">Size:</span>

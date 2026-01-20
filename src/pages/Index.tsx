@@ -247,7 +247,6 @@ const Index = () => {
         plotNo: plot.plotNo || "",
         project: plot.project || "",
         size: formatSize(plot.size || ""),
-        block: plot.block || "",
         price: plot.price || 0,
       },
       pricePerMarla: biyana.pricePerMarla,
@@ -291,7 +290,6 @@ const Index = () => {
         plotNo: plot.plotNo || "",
         project: plot.project || "",
         size: formatSize(plot.size || ""),
-        block: plot.block || "",
         price: plot.price || 0,
       },
       totalAmount: saleAgreement.totalAmount,
@@ -339,7 +337,6 @@ const Index = () => {
         plotNo: plot.plotNo || "",
         project: plot.project || "",
         size: plot.size || "",
-        block: plot.block || "",
         price: plot.price || 0,
       },
       transferAmount: transfer.transferAmount,
@@ -544,12 +541,20 @@ const Index = () => {
         // Get biyana for this plot
         const plotBiyana = biyanaForms?.find((b: any) => b.plotId === agreement.plotId);
         
-        // Calculate total received including biyana and down payment
+        // Check if vouchers already exist for BIYANA and SALES_AGREEMENT
+        const hasBiyanaVoucher = plotPayments.some((p: any) => p.formType === 'BIYANA');
+        const hasSalesVoucher = plotPayments.some((p: any) => p.formType === 'SALES_AGREEMENT');
+        
+        // Calculate total received from vouchers only
         let totalReceived = plotPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-        if (plotBiyana && plotBiyana.biyanaAmount) {
+        
+        // Add biyana amount only if no biyana voucher exists
+        if (!hasBiyanaVoucher && plotBiyana && plotBiyana.biyanaAmount) {
           totalReceived += plotBiyana.biyanaAmount;
         }
-        if (agreement.downPayment) {
+        
+        // Add down payment only if no sales agreement voucher exists
+        if (!hasSalesVoucher && agreement.downPayment) {
           totalReceived += agreement.downPayment;
         }
         
@@ -1406,8 +1411,14 @@ const Index = () => {
               // Combine all payments: vouchers + biyana payment + down payment
               let allPayments = [...(selectedPaymentPlot.payments || [])];
               
-              // Add down payment if it exists from sale agreement
-              if (agreement && agreement.downPayment) {
+              // Check if a SALES_AGREEMENT voucher already exists
+              const hasSalesAgreementVoucher = allPayments.some((p: any) => p.formType === 'SALES_AGREEMENT');
+              
+              // Check if a BIYANA voucher already exists
+              const hasBiyanaVoucher = allPayments.some((p: any) => p.formType === 'BIYANA');
+              
+              // Add down payment if it exists from sale agreement and no voucher exists
+              if (agreement && agreement.downPayment && !hasSalesAgreementVoucher) {
                 allPayments.push({
                   id: `downpayment-${agreement.id}`,
                   date: agreement.agreementDate,
@@ -1420,8 +1431,8 @@ const Index = () => {
                 });
               }
               
-              // Add biyana payment if it exists
-              if (biyana && biyana.biyanaAmount) {
+              // Add biyana payment if it exists and no voucher exists
+              if (biyana && biyana.biyanaAmount && !hasBiyanaVoucher) {
                 allPayments.push({
                   id: `biyana-${biyana.id}`,
                   date: biyana.date || biyana.createdAt,
@@ -1537,31 +1548,56 @@ const Index = () => {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {allPayments.map((payment: any) => (
-                              <TableRow key={payment.id} className={payment.type === 'BIYANA' ? 'bg-blue-50' : payment.type === 'DOWN_PAYMENT' ? 'bg-green-50' : ''}>
-                                <TableCell>{formatDate(payment.date)}</TableCell>
-                                <TableCell>
-                                  <div>
-                                    {payment.type === 'BIYANA' ? (
-                                      <Badge variant="default" className="bg-blue-600">{t('payments.biyana')}</Badge>
-                                    ) : payment.type === 'DOWN_PAYMENT' ? (
-                                      <Badge variant="default" className="bg-green-600">{t('payments.downPayment')}</Badge>
-                                    ) : (
-                                      payment.description || t('payments.installment')
-                                    )}
-                                    {(payment.voucherNo || payment.voucherNumber) && (
-                                      <div className="text-xs text-muted-foreground mt-1">
-                                        {t('payments.voucher')}: {payment.voucherNo || payment.voucherNumber}
-                                      </div>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{formatEnum(payment.paymentMethod)}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right font-semibold">{formatCurrency(payment.amount)}</TableCell>
-                              </TableRow>
-                            ))}
+                            {allPayments.map((payment: any) => {
+                              // Determine payment type and styling
+                              const isBiyana = payment.type === 'BIYANA' || payment.formType === 'BIYANA';
+                              const isSalesAgreement = payment.type === 'DOWN_PAYMENT' || payment.formType === 'SALES_AGREEMENT';
+                              const rowClass = isBiyana ? 'bg-blue-50' : isSalesAgreement ? 'bg-green-50' : '';
+                              
+                              return (
+                                <TableRow key={payment.id} className={rowClass}>
+                                  <TableCell>{formatDate(payment.date)}</TableCell>
+                                  <TableCell>
+                                    <div>
+                                      {isBiyana ? (
+                                        <>
+                                          <Badge variant="default" className="bg-blue-600">Biyana</Badge>
+                                          {payment.description && 
+                                           payment.description !== 'Biyana Payment' &&
+                                           !payment.description.includes('BF-') && (
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                              {payment.description.replace(/Biyana Payment - /g, '')}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : isSalesAgreement ? (
+                                        <>
+                                          <Badge variant="default" className="bg-green-600">Down Payment</Badge>
+                                          {payment.description && 
+                                           payment.description !== 'Down Payment' &&
+                                           !payment.description.includes('SA-') && (
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                              {payment.description.replace(/Sales Agreement Down Payment - /g, '')}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        payment.description || t('payments.installment')
+                                      )}
+                                      {(payment.voucherNo || payment.voucherNumber) && (
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                          {t('payments.voucher')}: {payment.voucherNo || payment.voucherNumber}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline">{formatEnum(payment.paymentMethod)}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right font-semibold">{formatCurrency(payment.amount)}</TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>
@@ -1797,7 +1833,7 @@ const Index = () => {
         
         const paymentData = Object.values(activeAgreements)
           .map((agreement: any) => {
-            // Get voucher payments for this plot
+            // Get voucher payments for this plot with formType included
             const plotPayments = (vouchersData || [])
               .filter((v: any) => v.plotId === agreement.plotId)
               .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -1805,12 +1841,20 @@ const Index = () => {
             // Get biyana for this plot
             const plotBiyana = biyanaForms?.find((b: any) => b.plotId === agreement.plotId);
             
-            // Calculate total received including biyana and down payment
+            // Check if vouchers already exist for BIYANA and SALES_AGREEMENT
+            const hasBiyanaVoucher = plotPayments.some((p: any) => p.formType === 'BIYANA');
+            const hasSalesVoucher = plotPayments.some((p: any) => p.formType === 'SALES_AGREEMENT');
+            
+            // Calculate total received from vouchers only
             let totalReceived = plotPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-            if (plotBiyana && plotBiyana.biyanaAmount) {
+            
+            // Add biyana amount only if no biyana voucher exists
+            if (!hasBiyanaVoucher && plotBiyana && plotBiyana.biyanaAmount) {
               totalReceived += plotBiyana.biyanaAmount;
             }
-            if (agreement.downPayment) {
+            
+            // Add down payment only if no sales agreement voucher exists
+            if (!hasSalesVoucher && agreement.downPayment) {
               totalReceived += agreement.downPayment;
             }
             

@@ -18,7 +18,6 @@ interface PrintableSaleAgreementFormProps {
       plotNo: string;
       project: string;
       size: string;
-      block: string;
       price: number;
     };
     totalAmount: number;

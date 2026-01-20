@@ -280,10 +280,6 @@ const Archive = () => {
                       <p className="text-sm text-muted-foreground">Size</p>
                       <p className="font-semibold">{formatSize(selectedForm.plot?.size)}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Block</p>
-                      <p className="font-semibold">{selectedForm.plot?.block || t('payments.notAvailable')}</p>
-                    </div>
                   </div>
                 </div>
 

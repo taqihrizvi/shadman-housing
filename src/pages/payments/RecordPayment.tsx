@@ -47,6 +47,7 @@ export default function RecordPayment() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [pendingAmount, setPendingAmount] = useState(0);
   const [autoFilledAmount, setAutoFilledAmount] = useState<number | null>(null);
+  const [duplicateVoucherWarning, setDuplicateVoucherWarning] = useState<string | null>(null);
 
   // Fetch sold plots
   const { data: plotsData } = useQuery({
@@ -55,6 +56,31 @@ export default function RecordPayment() {
       const response = await inventoryAPI.getAll({ status: 'SOLD' });
       return response.data;
     },
+  });
+
+  // Fetch all sale agreements to filter completed plots
+  const { data: allAgreementsData } = useQuery({
+    queryKey: ['allSaleAgreements'],
+    queryFn: async () => {
+      const response = await formsAPI.getSaleAgreements();
+      return response.data;
+    },
+  });
+
+  // Filter out plots with completed payments
+  const availablePlots = plotsData?.filter((plot: any) => {
+    const agreement = allAgreementsData?.find((a: any) => 
+      a.plotId === plot.id && a.status === 'ACTIVE'
+    );
+    
+    if (!agreement) return true; // Include plots without agreements
+    
+    // Check if payment is completed (pendingAmount <= 0)
+    const pendingAmount = agreement.pendingAmount !== undefined 
+      ? agreement.pendingAmount 
+      : 0;
+    
+    return pendingAmount > 0; // Only include plots with pending payments
   });
 
   // Fetch customers
@@ -67,12 +93,18 @@ export default function RecordPayment() {
   });
 
   // Fetch sale agreement for selected plot
-  const { data: agreements } = useQuery({
+  const { data: agreements, isLoading: agreementsLoading } = useQuery({
     queryKey: ['saleAgreements', formData.plotId],
     queryFn: async () => {
       if (!formData.plotId) return null;
       const response = await formsAPI.getSaleAgreements();
-      return response.data.filter((a: any) => a.plotId === formData.plotId && a.status === 'ACTIVE');
+      console.log('All agreements from API:', response.data);
+      const filtered = response.data.filter((a: any) => {
+        console.log('Checking agreement:', a.plotId, '===', formData.plotId, 'status:', a.status, 'isActive:', a.isActive);
+        return a.plotId === formData.plotId && a.status === 'APPROVED' && a.isActive === true;
+      });
+      console.log('Agreements fetched for plot:', formData.plotId, 'Count:', filtered.length, 'Data:', filtered);
+      return filtered;
     },
     enabled: !!formData.plotId,
   });
@@ -88,10 +120,45 @@ export default function RecordPayment() {
     enabled: !!formData.plotId && (formData.paymentType === 'BIYANA'),
   });
 
+  // Check for existing vouchers to prevent duplicates
+  const { data: existingVouchers } = useQuery({
+    queryKey: ['existingVouchers', formData.plotId, formData.paymentType],
+    queryFn: async () => {
+      if (!formData.plotId || (formData.paymentType !== 'BIYANA' && formData.paymentType !== 'SALES_AGREEMENT')) {
+        return null;
+      }
+      const response = await voucherAPI.getAll();
+      return response.data.filter((v: any) => 
+        v.plotId === formData.plotId && 
+        v.formType === formData.paymentType &&
+        (v.status === 'PENDING' || v.status === 'APPROVED')
+      );
+    },
+    enabled: !!formData.plotId && (formData.paymentType === 'BIYANA' || formData.paymentType === 'SALES_AGREEMENT'),
+  });
+
+  // Update duplicate warning based on existing vouchers
+  useEffect(() => {
+    if (existingVouchers && existingVouchers.length > 0) {
+      const voucherType = formData.paymentType === 'BIYANA' ? 'Biyana' : 'Sales Agreement';
+      setDuplicateVoucherWarning(`${voucherType} voucher for this plot already exists (${existingVouchers[0].voucherNo})`);
+    } else {
+      setDuplicateVoucherWarning(null);
+    }
+  }, [existingVouchers, formData.paymentType]);
+
   // Calculate pending amount and handle auto-fill based on payment type
   useEffect(() => {
+    console.log('useEffect triggered - agreements:', agreements, 'paymentType:', formData.paymentType, 'agreementsLoading:', agreementsLoading);
+    
+    if (agreementsLoading) {
+      console.log('Agreements still loading...');
+      return;
+    }
+    
     if (agreements && agreements.length > 0) {
       const agreement = agreements[0]; // Latest active agreement
+      console.log('Agreement found:', agreement);
       
       // Calculate pending amount
       const pending = agreement.pendingAmount !== undefined 
@@ -107,15 +174,23 @@ export default function RecordPayment() {
       // Auto-fill amount based on payment type
       if (formData.paymentType === 'SALES_AGREEMENT') {
         const downPaymentAmount = agreement.downPayment || 0;
+        console.log('Setting Sales Agreement amount:', downPaymentAmount, typeof downPaymentAmount);
         setAutoFilledAmount(downPaymentAmount);
-        setFormData(prev => ({ 
-          ...prev, 
-          amount: downPaymentAmount.toString(),
-          description: `Sales Agreement Down Payment - ${agreement.agreementNumber}`
-        }));
+        if (downPaymentAmount > 0) {
+          setFormData(prev => ({ 
+            ...prev, 
+            amount: String(downPaymentAmount),
+            description: `Sales Agreement Down Payment - ${agreement.agreementNumber}`
+          }));
+        }
       }
+    } else if (formData.paymentType === 'SALES_AGREEMENT') {
+      // Reset if no agreement found
+      console.log('No agreement found for SALES_AGREEMENT');
+      setAutoFilledAmount(null);
+      setFormData(prev => ({ ...prev, amount: "", description: "" }));
     }
-  }, [agreements, formData.paymentType]);
+  }, [agreements, formData.paymentType, formData.plotId, agreementsLoading]);
 
   // Handle Biyana payment type
   useEffect(() => {
@@ -147,8 +222,8 @@ export default function RecordPayment() {
 
   // Load plot and customer details when IDs are set
   useEffect(() => {
-    if (formData.plotId && plotsData) {
-      const plot = plotsData.find((p: any) => p.id === formData.plotId);
+    if (formData.plotId && availablePlots) {
+      const plot = availablePlots.find((p: any) => p.id === formData.plotId);
       setSelectedPlot(plot);
       
       // Auto-fill customer from plot's current owner (buyer)
@@ -156,7 +231,7 @@ export default function RecordPayment() {
         setFormData(prev => ({ ...prev, customerId: plot.buyerId }));
       }
     }
-  }, [formData.plotId, plotsData]);
+  }, [formData.plotId, availablePlots]);
 
   useEffect(() => {
     if (formData.customerId && customersData) {
@@ -216,6 +291,16 @@ export default function RecordPayment() {
 
     const paymentAmount = parseFloat(formData.amount);
 
+    // Validate amount is a valid number
+    if (!formData.amount || isNaN(paymentAmount) || paymentAmount <= 0) {
+      toast({
+        title: t('common.error'),
+        description: "Please enter a valid payment amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validation for INSTALLMENT and QUARTERLY payments against pending amount
     if ((formData.paymentType === 'INSTALLMENT' || formData.paymentType === 'QUARTERLY') && 
         pendingAmount > 0 && paymentAmount > (pendingAmount + 0.01)) {
@@ -258,13 +343,8 @@ export default function RecordPayment() {
   };
 
   const getPaymentTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      INSTALLMENT: "Monthly Installment",
-      QUARTERLY: "Quarterly Payment",
-      BIYANA: "Biyana Payment",
-      SALES_AGREEMENT: "Sales Agreement Down Payment"
-    };
-    return labels[type] || type;
+    const key = `payments.paymentTypes.${type}` as const;
+    return t(key, type);
   };
 
   const isAmountReadOnly = formData.paymentType === 'BIYANA' || formData.paymentType === 'SALES_AGREEMENT';
@@ -288,11 +368,20 @@ export default function RecordPayment() {
           </Alert>
         )}
 
+        {duplicateVoucherWarning && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>{t('payments.duplicateWarning')}:</strong> {duplicateVoucherWarning}. {t('payments.cannotCreateDuplicate')}.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {autoFilledAmount !== null && (
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Amount auto-filled from {formData.paymentType === 'BIYANA' ? 'Biyana Form' : 'Sales Agreement'}: <strong>{formatCurrency(autoFilledAmount)}</strong>
+              {t('payments.autoFilledFrom')} {formData.paymentType === 'BIYANA' ? t('payments.biyanaForm') : t('payments.salesAgreement')}: <strong>{formatCurrency(autoFilledAmount)}</strong>
             </AlertDescription>
           </Alert>
         )}
@@ -331,10 +420,7 @@ export default function RecordPayment() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {formData.paymentType === 'INSTALLMENT' && "Record a monthly installment payment"}
-                    {formData.paymentType === 'QUARTERLY' && "Record a quarterly payment (recurring every 3 months)"}
-                    {formData.paymentType === 'BIYANA' && "Auto-fetches amount from approved Biyana form"}
-                    {formData.paymentType === 'SALES_AGREEMENT' && "Auto-fetches down payment from active Sales Agreement"}
+                    {formData.paymentType && t(`payments.paymentTypeHelp.${formData.paymentType}`, '')}
                   </p>
                 </div>
               </div>
@@ -353,7 +439,7 @@ export default function RecordPayment() {
                         <SelectValue placeholder={t('forms.selectPlot')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {plotsData?.map((plot: any) => (
+                        {availablePlots?.map((plot: any) => (
                           <SelectItem key={plot.id} value={plot.id}>
                             {plot.plotNo} - {formatEnum(plot.project)}
                           </SelectItem>
@@ -370,7 +456,7 @@ export default function RecordPayment() {
                       <div>
                         <Label className="text-muted-foreground">Plot Details</Label>
                         <p className="text-sm">
-                          <strong>{selectedPlot.plotNo}</strong> - {formatEnum(selectedPlot.project)}, Block {selectedPlot.block}
+                          <strong>{selectedPlot.plotNo}</strong> - {formatEnum(selectedPlot.project)}
                         </p>
                       </div>
                     )}
@@ -495,7 +581,11 @@ export default function RecordPayment() {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <Button type="submit" className="flex-1" disabled={createPaymentMutation.isPending}>
+                <Button 
+                  type="submit" 
+                  className="flex-1" 
+                  disabled={createPaymentMutation.isPending || !!duplicateVoucherWarning}
+                >
                   <Save className="mr-2 h-4 w-4" />
                   {createPaymentMutation.isPending ? t('common.loading') : t('payments.recordPayment')}
                 </Button>

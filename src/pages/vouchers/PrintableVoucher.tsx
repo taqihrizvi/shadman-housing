@@ -56,13 +56,7 @@ export default function PrintableVoucher() {
 
   const formatPaymentType = (type: string) => {
     if (!type) return "";
-    const types: Record<string, string> = {
-      INSTALLMENT: "Monthly Installment",
-      QUARTERLY: "Quarterly Payment",
-      BIYANA: "Biyana Payment",
-      SALES_AGREEMENT: "Sales Agreement Down Payment"
-    };
-    return types[type] || formatEnum(type);
+    return t(`payments.paymentTypes.${type}`) || formatEnum(type);
   };
 
   const handlePrint = () => {

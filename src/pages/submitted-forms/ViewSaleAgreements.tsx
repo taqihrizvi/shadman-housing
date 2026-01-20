@@ -238,10 +238,7 @@ const ViewSaleAgreements = () => {
                         <p className="text-base">{formatProjectName(selectedForm.plot?.project || '')}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Block</label>
-                        <p className="text-base">{selectedForm.plot?.block || 'N/A'}</p>
-                      </div>
-                      <div>
+
                         <label className="text-sm font-medium text-muted-foreground">Size</label>
                         <p className="text-base">{formatSize(selectedForm.plot?.size || '')}</p>
                       </div>
