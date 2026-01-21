@@ -23,6 +23,7 @@ import { formsAPI } from "@/lib/api";
 import { FileSignature, Loader2, Eye, Printer } from "lucide-react";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import { useTranslation } from 'react-i18next';
+import { toTitleCase } from "@/lib/utils";
 
 const ViewSaleAgreements = () => {
   const { t, i18n } = useTranslation();
@@ -50,7 +51,8 @@ const ViewSaleAgreements = () => {
     queryKey: ['saleAgreements'],
     queryFn: async () => {
       const response = await formsAPI.getSaleAgreements();
-      return response.data;
+      // Filter out archived agreements
+      return response.data.filter((agreement: any) => !agreement.isArchived);
     },
   });
 
@@ -156,7 +158,7 @@ const ViewSaleAgreements = () => {
                     {forms.map((form: any) => (
                       <TableRow key={form.id}>
                         <TableCell className="font-medium">{form.agreementNumber}</TableCell>
-                        <TableCell>{form.customer?.name || 'N/A'}</TableCell>
+                        <TableCell>{toTitleCase(form.customer?.name || 'N/A')}</TableCell>
                         <TableCell>{form.customer?.cnic || 'N/A'}</TableCell>
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
                         <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>

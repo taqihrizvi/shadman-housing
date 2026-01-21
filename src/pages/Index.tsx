@@ -69,6 +69,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
+import { toTitleCase } from "@/lib/utils";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
 import html2pdf from "html2pdf.js";
@@ -129,7 +130,8 @@ const Index = () => {
     queryKey: ['saleAgreements'],
     queryFn: async () => {
       const response = await formsAPI.getSaleAgreements();
-      return response.data;
+      // Filter out archived agreements
+      return response.data.filter((agreement: any) => !agreement.isArchived);
     },
   });
 
@@ -412,7 +414,7 @@ const Index = () => {
               ${reservedPlots.map((plot: any, index: number) => `
                 <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
                   <td style="padding: 12px; font-weight: 600; color: #1a5a4a; font-size: 14px;">${plot.plotNo}</td>
-                  <td style="padding: 12px; color: #1a5a4a; font-weight: 600; font-size: 14px;">${plot.customer?.name || 'N/A'}</td>
+                  <td style="padding: 12px; color: #1a5a4a; font-weight: 600; font-size: 14px;">${toTitleCase(plot.customer?.name || 'N/A')}</td>
                   <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatEnum(plot.project)}</td>
                   <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size)}</td>
                   <td style="padding: 12px; text-align: right; font-weight: 600; color: #1a5a4a; font-size: 14px;">${formatCurrency(plot.price)}</td>
@@ -453,7 +455,7 @@ const Index = () => {
               ${soldPlots.map((plot: any, index: number) => `
                 <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
                   <td style="padding: 12px; font-weight: 600; color: #1a5a4a; font-size: 14px;">${plot.plotNo}</td>
-                  <td style="padding: 12px; color: #1a5a4a; font-weight: 600; font-size: 14px;">${plot.buyer?.name || 'N/A'}</td>
+                  <td style="padding: 12px; color: #1a5a4a; font-weight: 600; font-size: 14px;">${toTitleCase(plot.buyer?.name || 'N/A')}</td>
                   <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatEnum(plot.project)}</td>
                   <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size)}</td>
                   <td style="padding: 12px; font-size: 14px;">
@@ -1040,7 +1042,7 @@ const Index = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Buyer</p>
-                      <p className="font-semibold">{selectedPlot.buyer?.name || "N/A"}</p>
+                      <p className="font-semibold">{toTitleCase(selectedPlot.buyer?.name || "N/A")}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Sold Date</p>
@@ -1166,7 +1168,7 @@ const Index = () => {
                           <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
                             <div>
                               <p className="text-sm text-muted-foreground">Customer</p>
-                              <p className="font-semibold">{biyana.customer?.name || "N/A"}</p>
+                              <p className="font-semibold">{toTitleCase(biyana.customer?.name || "N/A")}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">{t('payments.amount')}</p>
@@ -1204,8 +1206,11 @@ const Index = () => {
                   const paymentsTotal = payments.reduce((sum: number, p: any) => sum + p.amount, 0);
                   const biyanaAmount = biyana?.biyanaAmount || 0;
                   const downPayment = saleAgreement?.downPayment || 0;
-                  const calculatedTotalPaid = downPayment + biyanaAmount + paymentsTotal;
-                  const calculatedPending = saleAgreement?.totalAmount ? saleAgreement.totalAmount - calculatedTotalPaid : 0;
+                  // Total Paid should only show installment payments (not biyana or down payment)
+                  const calculatedTotalPaid = paymentsTotal;
+                  // Pending calculation should subtract all payments (biyana + down payment + installments)
+                  const totalReceived = downPayment + biyanaAmount + paymentsTotal;
+                  const calculatedPending = saleAgreement?.totalAmount ? saleAgreement.totalAmount - totalReceived : 0;
                   
                   return (
                     <div>
@@ -1245,7 +1250,7 @@ const Index = () => {
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Customer</p>
-                              <p className="font-semibold">{saleAgreement.customer?.name || "N/A"}</p>
+                              <p className="font-semibold">{toTitleCase(saleAgreement.customer?.name || "N/A")}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Total Amount</p>
@@ -1256,7 +1261,7 @@ const Index = () => {
                               <p className="font-semibold text-green-600">{formatCurrency(saleAgreement.downPayment)}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-muted-foreground">{t('payments.totalPaid')}</p>
+                              <p className="text-sm text-muted-foreground">Total Paid (Installments)</p>
                               <p className="font-semibold text-green-600">
                                 {formatCurrency(calculatedTotalPaid)}
                               </p>
@@ -1450,8 +1455,14 @@ const Index = () => {
                 new Date(a.date).getTime() - new Date(b.date).getTime()
               );
               
-              // Calculate totals including biyana
-              const totalPaid = allPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+              // Calculate total paid - ONLY installments (exclude BIYANA and DOWN_PAYMENT)
+              const installmentPayments = allPayments.filter((p: any) => 
+                p.type !== 'BIYANA' && p.type !== 'DOWN_PAYMENT'
+              );
+              const totalPaidInstallments = installmentPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+              
+              // Calculate total received (includes everything)
+              const totalReceived = allPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
               
               return (
                 <div className="space-y-6">
@@ -1612,16 +1623,18 @@ const Index = () => {
                     <div className="grid grid-cols-3 gap-6">
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-2">{t('payments.totalPaymentsMade')}</p>
-                        <p className="text-3xl font-bold text-blue-600">{allPayments.length}</p>
+                        <p className="text-3xl font-bold text-blue-600">{installmentPayments.length}</p>
+                        <p className="text-xs text-muted-foreground mt-1">(Installments Only)</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">{t('payments.totalAmountReceived')}</p>
-                        <p className="text-3xl font-bold text-green-600">{formatCurrency(totalPaid)}</p>
+                        <p className="text-sm text-muted-foreground mb-2">Total Paid (Installments)</p>
+                        <p className="text-3xl font-bold text-green-600">{formatCurrency(totalPaidInstallments)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">(Excluding Biyana & Down Payment)</p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-2">{t('payments.remainingAmount')}</p>
                         <p className="text-3xl font-bold text-orange-600">
-                          {formatCurrency(selectedPaymentPlot.totalReceivable - totalPaid)}
+                          {formatCurrency(selectedPaymentPlot.totalReceivable - totalReceived)}
                         </p>
                       </div>
                     </div>
@@ -1719,7 +1732,7 @@ const Index = () => {
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
                         <TableCell>{formatEnum(item.project)}</TableCell>
                         <TableCell>{formatSize(item.size)}</TableCell>
-                        <TableCell>{item.buyer?.name || "N/A"}</TableCell>
+                        <TableCell>{toTitleCase(item.buyer?.name || "N/A")}</TableCell>
                         <TableCell>
                           <Badge 
                             variant={isTransferred ? "secondary" : "default"}
@@ -1770,10 +1783,15 @@ const Index = () => {
 
       case 'reserved':
         data = (biyanaForms || [])
-          .filter((form: any) => form.status === 'APPROVED')
+          .filter((form: any) => {
+            // Only show if biyana is approved AND the plot is still in RESERVED status
+            if (form.status !== 'APPROVED') return false;
+            const plot = inventoryData?.find((p: any) => p.id === form.plotId);
+            return plot?.status === 'RESERVED';
+          })
           .map((form: any) => ({
             plotNo: form.plot?.plotNo || 'N/A',
-            customer: form.customer?.name || 'N/A',
+            customer: toTitleCase(form.customer?.name || 'N/A'),
             biyanaAmount: formatCurrency(form.biyanaAmount || 0),
             date: formatDate(form.date),
           }));
@@ -1793,7 +1811,7 @@ const Index = () => {
           .map((plot: any) => ({
             date: formatDate(plot.soldDate),
             plotNo: plot.plotNo,
-            customer: plot.buyer?.name || 'N/A',
+            customer: toTitleCase(plot.buyer?.name || 'N/A'),
             amount: formatCurrency(plot.price),
           }));
         break;
@@ -1809,7 +1827,7 @@ const Index = () => {
             // Show current plot owner (in case of transfer) - use currentOwner field from backend
             const ownerName = agreement.currentOwner?.name || agreement.customer?.name || 'N/A';
             return {
-              customer: ownerName,
+              customer: toTitleCase(ownerName),
               plotNo: agreement.plot?.plotNo || 'N/A',
               dueAmount: formatCurrency(pending > 0 ? pending : 0),
               dueDate: 'As per schedule',
@@ -1864,7 +1882,7 @@ const Index = () => {
               id: agreement.id,
               plotId: agreement.plotId,
               plotNo: agreement.plot?.plotNo || 'N/A',
-              customerName: agreement.customer?.name || 'N/A',
+              customerName: toTitleCase(agreement.customer?.name || 'N/A'),
               agreementDate: formatDate(agreement.agreementDate),
               totalReceived: totalReceived,
               totalReceivable: totalReceivable,
@@ -1961,11 +1979,11 @@ const Index = () => {
       case 'available':
         return [t('inventory.plotNo'), t('inventory.project'), t('inventory.size'), t('inventory.price')];
       case 'reserved':
-        return [t('inventory.plotNo'), t('customers.customer'), t('payments.biyanaAmount'), t('payments.date')];
+        return [t('inventory.plotNo'), t('customer'), t('payments.biyanaAmount'), t('payments.date')];
       case 'salesMonth':
-        return [t('payments.date'), t('inventory.plotNo'), t('customers.customer'), t('payments.amount')];
+        return [t('payments.date'), t('inventory.plotNo'), t('customer'), t('payments.amount')];
       case 'pending':
-        return [t('customers.customer'), t('inventory.plotNo'), t('payments.dueAmount'), t('payments.dueDate')];
+        return [t('customer'), t('inventory.plotNo'), t('payments.dueAmount'), t('payments.dueDate')];
       default:
         return [];
     }

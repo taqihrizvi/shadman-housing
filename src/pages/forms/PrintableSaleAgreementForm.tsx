@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -295,7 +296,7 @@ export default function PrintableSaleAgreementForm({ data, onClose }: PrintableS
                 {/* Description */}
                 <div className="mb-6 text-sm leading-relaxed text-justify">
                   <p>
-                    {t('printableForms.thisAgreement')} {data.customer.name} {t('printableForms.witnessedBy')}
+                    {t('printableForms.thisAgreement')} {toTitleCase(data.customer.name)} {t('printableForms.witnessedBy')}
                   </p>
                 </div>
 
@@ -494,7 +495,7 @@ export default function PrintableSaleAgreementForm({ data, onClose }: PrintableS
               <div className="text-center">
                 <div className="border-b-2 border-black h-16 print:h-12 mb-2 print:mb-1"></div>
                 <p className="font-bold text-sm print:text-xs">{t('printableForms.secondParty')}</p>
-                <p className="text-xs print:text-[10px] mt-1 print:mt-0">({data.customer.name})</p>
+                <p className="text-xs print:text-[10px] mt-1 print:mt-0">({toTitleCase(data.customer.name)})</p>
               </div>
             </div>
 

@@ -63,7 +63,8 @@ export default function RecordPayment() {
     queryKey: ['allSaleAgreements'],
     queryFn: async () => {
       const response = await formsAPI.getSaleAgreements();
-      return response.data;
+      // Filter out archived agreements
+      return response.data.filter((agreement: any) => !agreement.isArchived);
     },
   });
 
@@ -99,7 +100,8 @@ export default function RecordPayment() {
       if (!formData.plotId) return null;
       const response = await formsAPI.getSaleAgreements();
       console.log('All agreements from API:', response.data);
-      const filtered = response.data.filter((a: any) => {
+      // Filter out archived agreements and get agreements for this plot
+      const filtered = response.data.filter((a: any) => !a.isArchived).filter((a: any) => {
         console.log('Checking agreement:', a.plotId, '===', formData.plotId, 'status:', a.status, 'isActive:', a.isActive);
         return a.plotId === formData.plotId && a.status === 'APPROVED' && a.isActive === true;
       });

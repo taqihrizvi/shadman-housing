@@ -34,6 +34,7 @@ import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 const statusOptions = ["All Status", "SOLD", "TRANSFERRED"];
 const sizeOptions = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
@@ -98,7 +99,8 @@ export default function SoldInventory() {
     queryKey: ['saleAgreements'],
     queryFn: async () => {
       const response = await formsAPI.getSaleAgreements();
-      return response.data;
+      // Filter out archived agreements
+      return response.data.filter((agreement: any) => !agreement.isArchived);
     },
   });
 
@@ -424,7 +426,7 @@ export default function SoldInventory() {
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
                         <TableCell>{formatEnum(item.project)}</TableCell>
                         <TableCell>{formatSize(item.size)}</TableCell>
-                        <TableCell>{item.buyer?.name || "N/A"}</TableCell>
+                        <TableCell>{toTitleCase(item.buyer?.name || "N/A")}</TableCell>
                         <TableCell>
                           <Badge 
                             variant={isTransferred ? "secondary" : "default"}
@@ -497,7 +499,7 @@ export default function SoldInventory() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Buyer</p>
-                      <p className="font-semibold">{selectedPlot.buyer?.name || "N/A"}</p>
+                      <p className="font-semibold">{toTitleCase(selectedPlot.buyer?.name || "N/A")}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Agent</p>
@@ -556,11 +558,11 @@ export default function SoldInventory() {
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">From (Previous Owner)</p>
-                                <p className="font-semibold">{transfer.fromCustomer?.name || "N/A"}</p>
+                                <p className="font-semibold">{toTitleCase(transfer.fromCustomer?.name || "N/A")}</p>
                               </div>
                               <div>
-                                <p className="text-sm text-muted-foreground">To (New Owner)</p>
-                                <p className="font-semibold text-green-600">{transfer.toCustomer?.name || "N/A"}</p>
+                                <p className="text-sm text-muted-foreground">To</p>
+                                <p className="font-semibold text-green-600">{toTitleCase(transfer.toCustomer?.name || "N/A")}</p>
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">Transfer Amount</p>
@@ -656,7 +658,7 @@ export default function SoldInventory() {
                           <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
                             <div>
                               <p className="text-sm text-muted-foreground">Customer</p>
-                              <p className="font-semibold">{biyana.customer?.name || "N/A"}</p>
+                              <p className="font-semibold">{toTitleCase(biyana.customer?.name || "N/A")}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">{t('payments.amount')}</p>
@@ -694,8 +696,11 @@ export default function SoldInventory() {
                   const paymentsTotal = payments.reduce((sum: number, p: any) => sum + p.amount, 0);
                   const biyanaAmount = biyana?.biyanaAmount || 0;
                   const downPayment = saleAgreement?.downPayment || 0;
-                  const calculatedTotalPaid = downPayment + biyanaAmount + paymentsTotal;
-                  const calculatedPending = saleAgreement?.totalAmount ? saleAgreement.totalAmount - calculatedTotalPaid : 0;
+                  // Total Paid should only show installment payments (not biyana or down payment)
+                  const calculatedTotalPaid = paymentsTotal;
+                  // Pending calculation should subtract all payments (biyana + down payment + installments)
+                  const totalReceived = downPayment + biyanaAmount + paymentsTotal;
+                  const calculatedPending = saleAgreement?.totalAmount ? saleAgreement.totalAmount - totalReceived : 0;
                   
                   return (
                     <div>
@@ -735,7 +740,7 @@ export default function SoldInventory() {
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Customer</p>
-                              <p className="font-semibold">{saleAgreement.customer?.name || "N/A"}</p>
+                              <p className="font-semibold">{toTitleCase(saleAgreement.customer?.name || "N/A")}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Total Amount</p>
@@ -746,7 +751,7 @@ export default function SoldInventory() {
                               <p className="font-semibold text-green-600">{formatCurrency(saleAgreement.downPayment)}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-muted-foreground">{t('payments.totalPaid')}</p>
+                              <p className="text-sm text-muted-foreground">Total Paid (Installments)</p>
                               <p className="font-semibold text-green-600">
                                 {formatCurrency(calculatedTotalPaid)}
                               </p>

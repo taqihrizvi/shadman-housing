@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toTitleCase } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -196,7 +197,7 @@ const ViewBiyanaForms = () => {
                     {filteredForms.map((form: any) => (
                       <TableRow key={form.id}>
                         <TableCell className="font-medium">{form.formNumber}</TableCell>
-                        <TableCell>{form.customer?.name || 'N/A'}</TableCell>
+                        <TableCell>{toTitleCase(form.customer?.name || 'N/A')}</TableCell>
                         <TableCell>{form.customer?.cnic || 'N/A'}</TableCell>
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
                         <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>
@@ -289,7 +290,7 @@ const ViewBiyanaForms = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">{t('forms.customerName')}</label>
-                        <p className="text-base">{selectedForm.customer?.name || 'N/A'}</p>
+                        <p className="text-base">{toTitleCase(selectedForm.customer?.name || 'N/A')}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">{t('forms.fatherName')}</label>

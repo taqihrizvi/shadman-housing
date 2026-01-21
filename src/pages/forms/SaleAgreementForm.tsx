@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { FileSignature, Save } from "lucide-react";
 import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 const paymentPlans = ["FULL_PAYMENT", "INSTALLMENT_12", "INSTALLMENT_24", "INSTALLMENT_36"];
 
@@ -66,16 +67,44 @@ export default function SaleAgreementForm() {
 
   // Fetch reserved and transferred plots
   const { data: availablePlots, isLoading: plotsLoading } = useQuery({
-    queryKey: ['availablePlots'],
+    queryKey: ['availablePlots', 'saleAgreements', 'transfers'],
     queryFn: async () => {
-      // Fetch both RESERVED and TRANSFERRED plots
-      const [reservedResponse, transferredResponse] = await Promise.all([
+      // Fetch RESERVED plots, TRANSFERRED plots, all transfers, and all sale agreements
+      // Note: TRANSFERRED is the plot/inventory status (not transfer form status)
+      // APPROVED and COMPLETED are the transfer form statuses (not plot status)
+      const [reservedResponse, transferredResponse, transfersResponse, agreementsResponse] = await Promise.all([
         inventoryAPI.getAll({ status: 'RESERVED' }),
-        inventoryAPI.getAll({ status: 'TRANSFERRED' })
+        inventoryAPI.getAll({ status: 'TRANSFERRED' }), // Fetching plots with TRANSFERRED status
+        formsAPI.getTransferForms(),
+        formsAPI.getSaleAgreements()
       ]);
       
-      // Combine both results
-      return [...reservedResponse.data, ...transferredResponse.data];
+      // Filter transferred plots to only include those with APPROVED or COMPLETED transfer forms
+      // APPROVED: Transfer approved, waiting for new sale agreement to be created
+      // COMPLETED: Transfer complete, but this shouldn't show up since plot status becomes SOLD
+      const transferredPlotsWithApprovedTransfer = transferredResponse.data.filter((plot: any) => {
+        const approvedTransfer = transfersResponse.data.find((transfer: any) => 
+          transfer.plotId === plot.id && 
+          (transfer.status === 'APPROVED' || transfer.status === 'COMPLETED')
+        );
+        return approvedTransfer !== undefined;
+      });
+      
+      // Combine RESERVED plots and TRANSFERRED plots with approved transfers
+      const allPlots = [...reservedResponse.data, ...transferredPlotsWithApprovedTransfer];
+      
+      // Filter out plots that already have a pending sale agreement for their current buyer
+      const filteredPlots = allPlots.filter((plot: any) => {
+        const hasPendingAgreement = agreementsResponse.data.some((agreement: any) => 
+          agreement.plotId === plot.id && 
+          agreement.customerId === plot.buyerId && 
+          agreement.status === 'PENDING' &&
+          !agreement.isArchived
+        );
+        return !hasPendingAgreement;
+      });
+      
+      return filteredPlots;
     },
   });
 
@@ -174,7 +203,10 @@ export default function SaleAgreementForm() {
     
     if (isTransferred) {
       // For transferred plots, get buyer info from transfer form (new owner)
-      const transfer = transfersData?.find((t: any) => t.plotId === plotId && t.status === 'APPROVED');
+      const transfer = transfersData?.find((t: any) => 
+        t.plotId === plotId && 
+        (t.status === 'APPROVED' || t.status === 'COMPLETED')
+      );
       console.log('Transfer Data for plot:', transfer);
       console.log('All Sale Agreements:', saleAgreementsData);
       
@@ -249,6 +281,13 @@ export default function SaleAgreementForm() {
       totalPrice = biyanaForm?.totalAmount || plot?.price || 0;
     }
     
+    // For transferred plots, also fetch biyana amount (regardless of who paid)
+    if (isTransferred) {
+      const biyanaForm = plot?.biyanaForms?.[0];
+      biyana = biyanaForm?.biyanaAmount || 0;
+      console.log('✅ Biyana amount for transferred plot:', biyana);
+    }
+    
     setBiyanaAmount(biyana);
     
     console.log('Setting form data with downPayment:', downPayment);
@@ -298,6 +337,27 @@ export default function SaleAgreementForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate CNIC format
+    if (!/^\d{13}$/.test(formData.cnic)) {
+      toast({
+        title: "Invalid CNIC",
+        description: "CNIC must be exactly 13 digits",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate phone format
+    if (!/^\d{1,11}$/.test(formData.phone)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Phone number must be 1-11 digits only",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     createAgreementMutation.mutate(formData);
   };
 
@@ -413,7 +473,7 @@ export default function SaleAgreementForm() {
                       id="customerName"
                       placeholder="Full legal name"
                       value={formData.customerName}
-                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, customerName: toTitleCase(e.target.value) })}
                       disabled={isTransferredPlot}
                       required
                     />
@@ -424,7 +484,7 @@ export default function SaleAgreementForm() {
                       id="fatherName"
                       placeholder={t('forms.fatherName')}
                       value={formData.fatherName}
-                      onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, fatherName: toTitleCase(e.target.value) })}
                       disabled={isTransferredPlot}
                       required
                     />
@@ -433,23 +493,41 @@ export default function SaleAgreementForm() {
                     <Label htmlFor="cnic">{t('forms.cnicNumber')} *</Label>
                     <Input
                       id="cnic"
-                      placeholder="00000-0000000-0"
+                      placeholder="0000000000000 (13 digits)"
                       value={formData.cnic}
-                      onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                        if (value.length <= 13) {
+                          setFormData({ ...formData, cnic: value });
+                        }
+                      }}
+                      className={formData.cnic && !/^\d{13}$/.test(formData.cnic) ? "border-red-500" : ""}
                       disabled={isTransferredPlot}
                       required
                     />
+                    {formData.cnic && !/^\d{13}$/.test(formData.cnic) && (
+                      <p className="text-xs text-red-500">CNIC must be exactly 13 digits</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">{t('forms.phoneNumber')} *</Label>
                     <Input
                       id="phone"
-                      placeholder="+92 300 0000000"
+                      placeholder="03001234567 (max 11 digits)"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                        if (value.length <= 11) {
+                          setFormData({ ...formData, phone: value });
+                        }
+                      }}
+                      className={formData.phone && !/^\d{1,11}$/.test(formData.phone) ? "border-red-500" : ""}
                       disabled={isTransferredPlot}
                       required
                     />
+                    {formData.phone && !/^\d{1,11}$/.test(formData.phone) && (
+                      <p className="text-xs text-red-500">Phone number must be 1-11 digits only</p>
+                    )}
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="address">{t('forms.address')} *</Label>

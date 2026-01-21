@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
 import { voucherAPI } from "@/lib/api";
 import { useTranslation } from 'react-i18next';
+import { toTitleCase } from "@/lib/utils";
 
 export default function TransferForm() {
   const { t, i18n } = useTranslation();
@@ -28,6 +29,7 @@ export default function TransferForm() {
   const [fromCustomerId, setFromCustomerId] = useState("");
   const [toCustomerId, setToCustomerId] = useState("");
   const [totalPaidAmount, setTotalPaidAmount] = useState<number>(0);
+  const [validationError, setValidationError] = useState<string>("");
   
   const [formData, setFormData] = useState({
     // Property
@@ -84,7 +86,8 @@ export default function TransferForm() {
     queryKey: ['saleAgreements'],
     queryFn: async () => {
       const response = await formsAPI.getSaleAgreements();
-      return response.data;
+      // Filter out archived agreements
+      return response.data.filter((agreement: any) => !agreement.isArchived);
     },
   });
 
@@ -113,7 +116,24 @@ export default function TransferForm() {
       const biyanaAmount = plotBiyana?.biyanaAmount || 0;
       
       // Get sale agreement down payment
-      const plotAgreement = saleAgreements?.find((a: any) => a.plotId === plotId && a.isActive);
+      const plotAgreement = saleAgreements?.find((a: any) => 
+        a.plotId === plotId && 
+        a.isActive && 
+        a.status === 'APPROVED'
+      );
+      
+      // Validate that plot has an approved sale agreement
+      if (!plotAgreement) {
+        toast({
+          title: "Cannot Transfer Plot",
+          description: "This plot does not have an approved sale agreement. A sale agreement must be created and approved before the plot can be transferred.",
+          variant: "destructive",
+        });
+        setSelectedPlot(null);
+        setFormData({ ...formData, plotId: "" });
+        return;
+      }
+      
       const downPayment = plotAgreement?.downPayment || 0;
       
       totalPaid = voucherTotal + biyanaAmount + downPayment;
@@ -123,7 +143,8 @@ export default function TransferForm() {
         vouchers: voucherTotal,
         biyana: biyanaAmount,
         downPayment: downPayment,
-        total: totalPaid
+        total: totalPaid,
+        hasSaleAgreement: !!plotAgreement
       });
     }
   };
@@ -139,6 +160,13 @@ export default function TransferForm() {
     enabled: !!fromCustomerId,
   });
 
+  // Auto-fill transfer amount when totalPaidAmount is calculated
+  useEffect(() => {
+    if (totalPaidAmount > 0 && !formData.transferAmount) {
+      setFormData(prev => ({ ...prev, transferAmount: totalPaidAmount.toString() }));
+    }
+  }, [totalPaidAmount]);
+
   // Create transfer mutation
   const createTransferMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -148,6 +176,7 @@ export default function TransferForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transferForms'] });
       queryClient.invalidateQueries({ queryKey: ['soldPlots'] });
+      setValidationError(""); // Clear any previous errors
       toast({
         title: "Transfer Form Submitted",
         description: "Transfer form has been submitted successfully and is pending approval.",
@@ -174,9 +203,11 @@ export default function TransferForm() {
       setToCustomerId("");
     },
     onError: (error: any) => {
+      const errorMessage = error.message || error.response?.data?.message || "Failed to submit transfer form";
+      setValidationError(errorMessage);
       toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to submit transfer form",
+        title: "Error Submitting Transfer Form",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -184,22 +215,63 @@ export default function TransferForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(""); // Clear previous errors
     
     if (!fromCustomerId) {
+      const errorMsg = "Please select a plot with a current owner";
+      setValidationError(errorMsg);
       toast({
         title: "Error",
-        description: "Please select a plot with a current owner",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
     }
 
-    // Validate transfer amount >= total paid amount
+    // Validate CNIC format
+    if (!/^\d{13}$/.test(newOwnerData.cnic)) {
+      const errorMsg = "CNIC must be exactly 13 digits";
+      setValidationError(errorMsg);
+      toast({
+        title: "Invalid CNIC",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate phone format
+    if (!/^\d{1,11}$/.test(newOwnerData.phone)) {
+      const errorMsg = "Phone number must be 1-11 digits only";
+      setValidationError(errorMsg);
+      toast({
+        title: "Invalid Phone Number",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if trying to transfer to same person
+    if (currentOwner && currentOwner.cnic === newOwnerData.cnic) {
+      const errorMsg = "Transferor and Transferee cannot be the same person";
+      setValidationError(errorMsg);
+      toast({
+        title: "Invalid Transfer",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate transfer amount equals total paid amount
     const transferAmount = parseFloat(formData.transferAmount) || 0;
-    if (transferAmount < totalPaidAmount) {
+    if (transferAmount !== totalPaidAmount) {
+      const errorMsg = `Transfer amount (Rs ${transferAmount.toLocaleString()}) must exactly equal the total amount paid for this plot (Rs ${totalPaidAmount.toLocaleString()})`;
+      setValidationError(errorMsg);
       toast({
         title: "Invalid Transfer Amount",
-        description: `Transfer amount (Rs ${transferAmount.toLocaleString()}) cannot be less than the total paid amount (Rs ${totalPaidAmount.toLocaleString()}).`,
+        description: errorMsg,
         variant: "destructive",
       });
       return;
@@ -284,9 +356,19 @@ export default function TransferForm() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {t('forms.transferWarning')}
+            <strong>Important:</strong> Only SOLD plots with approved sale agreements can be transferred. The plot must have a completed sale agreement before transfer can be initiated.
           </AlertDescription>
         </Alert>
+
+        {/* Validation Error Display */}
+        {validationError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Error:</strong> {validationError}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card variant="elevated">
           <CardHeader>
@@ -368,7 +450,7 @@ export default function TransferForm() {
                         <div className="md:col-span-2 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <Label className="text-sm font-semibold text-blue-900">Total Amount Paid by Current Owner</Label>
                           <p className="text-2xl font-bold text-blue-600 mt-1">Rs {totalPaidAmount.toLocaleString()}</p>
-                          <p className="text-xs text-blue-700 mt-1">Transfer amount must be at least this amount</p>
+                          <p className="text-xs text-blue-700 mt-1">Transfer amount must equal this exact amount</p>
                         </div>
                       )}
                     </div>
@@ -386,7 +468,7 @@ export default function TransferForm() {
                       id="newOwnerName"
                       placeholder={t('forms.customerName')}
                       value={newOwnerData.name}
-                      onChange={(e) => setNewOwnerData({ ...newOwnerData, name: e.target.value })}
+                      onChange={(e) => setNewOwnerData({ ...newOwnerData, name: toTitleCase(e.target.value) })}
                       required
                     />
                   </div>
@@ -396,7 +478,7 @@ export default function TransferForm() {
                       id="newOwnerFatherName"
                       placeholder={t('forms.fatherName')}
                       value={newOwnerData.fatherName}
-                      onChange={(e) => setNewOwnerData({ ...newOwnerData, fatherName: e.target.value })}
+                      onChange={(e) => setNewOwnerData({ ...newOwnerData, fatherName: toTitleCase(e.target.value) })}
                       required
                     />
                   </div>
@@ -404,21 +486,39 @@ export default function TransferForm() {
                     <Label htmlFor="newOwnerCnic">{t('forms.cnicNumber')} *</Label>
                     <Input
                       id="newOwnerCnic"
-                      placeholder="00000-0000000-0"
+                      placeholder="0000000000000 (13 digits)"
                       value={newOwnerData.cnic}
-                      onChange={(e) => setNewOwnerData({ ...newOwnerData, cnic: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                        if (value.length <= 13) {
+                          setNewOwnerData({ ...newOwnerData, cnic: value });
+                        }
+                      }}
+                      className={newOwnerData.cnic && !/^\d{13}$/.test(newOwnerData.cnic) ? "border-red-500" : ""}
                       required
                     />
+                    {newOwnerData.cnic && !/^\d{13}$/.test(newOwnerData.cnic) && (
+                      <p className="text-xs text-red-500">CNIC must be exactly 13 digits</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newOwnerPhone">{t('forms.phoneNumber')} *</Label>
                     <Input
                       id="newOwnerPhone"
-                      placeholder="+92 300 0000000"
+                      placeholder="03001234567 (max 11 digits)"
                       value={newOwnerData.phone}
-                      onChange={(e) => setNewOwnerData({ ...newOwnerData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                        if (value.length <= 11) {
+                          setNewOwnerData({ ...newOwnerData, phone: value });
+                        }
+                      }}
+                      className={newOwnerData.phone && !/^\d{1,11}$/.test(newOwnerData.phone) ? "border-red-500" : ""}
                       required
                     />
+                    {newOwnerData.phone && !/^\d{1,11}$/.test(newOwnerData.phone) && (
+                      <p className="text-xs text-red-500">Phone number must be 1-11 digits only</p>
+                    )}
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="newOwnerAddress">{t('forms.address')} *</Label>
@@ -457,11 +557,20 @@ export default function TransferForm() {
                     <Input
                       id="transferAmount"
                       type="number"
-                      placeholder={t('forms.transferAmount')}
-                      value={formData.transferAmount}
-                      onChange={(e) => setFormData({ ...formData, transferAmount: e.target.value })}
+                      placeholder={totalPaidAmount > 0 ? `Required: ${totalPaidAmount}` : t('forms.transferAmount')}
+                      value={formData.transferAmount || (totalPaidAmount > 0 ? totalPaidAmount.toString() : "")}
+                      onChange={(e) => {
+                        setFormData({ ...formData, transferAmount: e.target.value });
+                        setValidationError(""); // Clear error on change
+                      }}
                       required
+                      className={totalPaidAmount > 0 && parseFloat(formData.transferAmount || "0") !== totalPaidAmount ? "border-red-500" : ""}
                     />
+                    {totalPaidAmount > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Required amount: Rs {totalPaidAmount.toLocaleString()} (total paid for this plot)
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="transferFee">{t('forms.transferFee')} (PKR) *</Label>

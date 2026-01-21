@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -106,7 +107,7 @@ export default function PrintableVoucher() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-600">{t('vouchers.name')}</p>
-              <p className="font-semibold text-gray-800">{voucher.customer?.name || t('payments.notAvailable')}</p>
+              <p className="font-semibold text-gray-800">{toTitleCase(voucher.customer?.name || t('payments.notAvailable'))}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">{t('vouchers.cnic')}</p>

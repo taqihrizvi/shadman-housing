@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -236,7 +237,7 @@ export default function PrintableBiyanaForm({ data, onClose }: PrintableBiyanaFo
               <div className="space-y-4 mb-6">
                   <div className="flex items-baseline gap-3">
                     <span className="font-semibold whitespace-nowrap w-40">{t('printableForms.buyerName')}:</span>
-                    <div className="border-b-2 border-black px-3 py-1 flex-1">{data.customerName}</div>
+                    <div className="border-b-2 border-black px-3 py-1 flex-1">{toTitleCase(data.customerName)}</div>
                   </div>
                   
                   <div className="flex items-baseline gap-3">

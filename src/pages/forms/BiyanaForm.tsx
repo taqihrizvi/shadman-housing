@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { FileText, Save } from "lucide-react";
 import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 const formatEnum = (value: string) => {
   if (!value) return "";
@@ -388,6 +389,27 @@ export default function BiyanaForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate CNIC format
+    if (!/^\d{13}$/.test(formData.cnic)) {
+      toast({
+        title: isUrdu ? 'غلط شناختی کارڈ نمبر' : "Invalid CNIC",
+        description: isUrdu ? 'شناختی کارڈ نمبر بالکل 13 ہندسے ہونا چاہیے' : "CNIC must be exactly 13 digits",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate phone format
+    if (!/^\d{1,11}$/.test(formData.phone)) {
+      toast({
+        title: isUrdu ? 'غلط موبائل نمبر' : "Invalid Phone Number",
+        description: isUrdu ? 'موبائل نمبر 1-11 ہندسے ہونا چاہیے' : "Phone number must be 1-11 digits only",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     createBiyanaMutation.mutate(formData);
   };
 
@@ -437,7 +459,7 @@ export default function BiyanaForm() {
                       id="customerName"
                       placeholder={isUrdu ? 'خریدار کا نام درج کریں' : 'Enter buyer name'}
                       value={formData.customerName}
-                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, customerName: toTitleCase(e.target.value) })}
                       required
                     />
                   </div>
@@ -449,7 +471,7 @@ export default function BiyanaForm() {
                       id="fatherHusbandName"
                       placeholder={isUrdu ? 'والد/شوہر کا نام درج کریں' : 'Enter father/husband name'}
                       value={formData.fatherHusbandName}
-                      onChange={(e) => setFormData({ ...formData, fatherHusbandName: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, fatherHusbandName: toTitleCase(e.target.value) })}
                       required
                     />
                   </div>
@@ -459,11 +481,22 @@ export default function BiyanaForm() {
                     </Label>
                     <Input
                       id="cnic"
-                      placeholder={isUrdu ? 'شناختی کارڈ نمبر درج کریں' : 'Enter CNIC number'}
+                      placeholder={isUrdu ? '0000000000000 (13 digits)' : '0000000000000 (13 digits)'}
                       value={formData.cnic}
-                      onChange={(e) => setFormData({ ...formData, cnic: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                        if (value.length <= 13) {
+                          setFormData({ ...formData, cnic: value });
+                        }
+                      }}
+                      className={formData.cnic && !/^\d{13}$/.test(formData.cnic) ? "border-red-500" : ""}
                       required
                     />
+                    {formData.cnic && !/^\d{13}$/.test(formData.cnic) && (
+                      <p className="text-xs text-red-500">
+                        {isUrdu ? 'شناختی کارڈ نمبر بالکل 13 ہندسے ہونا چاہیے' : 'CNIC must be exactly 13 digits'}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">
@@ -471,11 +504,22 @@ export default function BiyanaForm() {
                     </Label>
                     <Input
                       id="phone"
-                      placeholder={isUrdu ? 'موبائل نمبر درج کریں' : 'Enter mobile number'}
+                      placeholder={isUrdu ? '03001234567 (max 11 digits)' : '03001234567 (max 11 digits)'}
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                        if (value.length <= 11) {
+                          setFormData({ ...formData, phone: value });
+                        }
+                      }}
+                      className={formData.phone && !/^\d{1,11}$/.test(formData.phone) ? "border-red-500" : ""}
                       required
                     />
+                    {formData.phone && !/^\d{1,11}$/.test(formData.phone) && (
+                      <p className="text-xs text-red-500">
+                        {isUrdu ? 'موبائل نمبر 1-11 ہندسے ہونا چاہیے' : 'Phone number must be 1-11 digits only'}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

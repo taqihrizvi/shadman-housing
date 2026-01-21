@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -287,11 +288,11 @@ export default function PrintableTransferForm({ data, onClose }: PrintableTransf
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
             <div>
               <span className="text-gray-600">Name:</span>
-              <span className="font-semibold ml-2">{data.fromCustomer.name}</span>
+              <span className="font-semibold ml-2">{toTitleCase(data.fromCustomer.name)}</span>
             </div>
             <div>
               <span className="text-gray-600">Father Name:</span>
-              <span className="font-semibold ml-2">{data.fromCustomer.fatherName}</span>
+              <span className="font-semibold ml-2">{toTitleCase(data.fromCustomer.fatherName)}</span>
             </div>
             <div>
               <span className="text-gray-600">CNIC:</span>
@@ -314,11 +315,11 @@ export default function PrintableTransferForm({ data, onClose }: PrintableTransf
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
             <div>
               <span className="text-gray-600">Name:</span>
-              <span className="font-semibold ml-2">{data.toCustomer.name}</span>
+              <span className="font-semibold ml-2">{toTitleCase(data.toCustomer.name)}</span>
             </div>
             <div>
               <span className="text-gray-600">Father Name:</span>
-              <span className="font-semibold ml-2">{data.toCustomer.fatherName}</span>
+              <span className="font-semibold ml-2">{toTitleCase(data.toCustomer.fatherName)}</span>
             </div>
             <div>
               <span className="text-gray-600">CNIC:</span>
@@ -382,7 +383,7 @@ export default function PrintableTransferForm({ data, onClose }: PrintableTransf
         <div>
           <div className="border-b-2 border-gray-900 h-12 mb-1.5"></div>
           <p className="text-[10px] text-gray-600 text-center">Transferor Signature</p>
-          <p className="text-xs font-semibold text-center">{data.fromCustomer.name}</p>
+          <p className="text-xs font-semibold text-center">{toTitleCase(data.fromCustomer.name)}</p>
         </div>
       </div>
 

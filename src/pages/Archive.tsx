@@ -24,6 +24,7 @@ import { formsAPI } from "@/lib/api";
 import { Archive as ArchiveIcon, Loader2, Eye, Printer, Search, ArrowRightLeft } from "lucide-react";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import { useTranslation } from 'react-i18next';
+import { toTitleCase } from "@/lib/utils";
 
 const Archive = () => {
   const { t, i18n } = useTranslation();
@@ -184,7 +185,7 @@ const Archive = () => {
                     {filteredAgreements.map((form: any) => (
                       <TableRow key={form.id}>
                         <TableCell className="font-medium">{form.agreementNumber}</TableCell>
-                        <TableCell>{form.customer?.name || t('payments.notAvailable')}</TableCell>
+                        <TableCell>{toTitleCase(form.customer?.name || t('payments.notAvailable'))}</TableCell>
                         <TableCell>{form.customer?.cnic || t('payments.notAvailable')}</TableCell>
                         <TableCell>{form.plot?.plotNo || t('payments.notAvailable')}</TableCell>
                         <TableCell>{formatProjectName(form.plot?.project) || t('payments.notAvailable')}</TableCell>

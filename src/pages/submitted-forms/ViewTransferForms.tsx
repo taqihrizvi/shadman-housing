@@ -323,6 +323,38 @@ const ViewTransferForms = () => {
                     </div>
                   </div>
 
+                  {/* Note for approved transfers */}
+                  {selectedForm.status === 'APPROVED' && (
+                    <div className="border-t pt-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="bg-blue-100 rounded-full p-1">
+                            <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                              {isUrdu ? 'اگلا قدم' : 'Next Step Required'}
+                            </h4>
+                            <p className="text-sm text-blue-800">
+                              {isUrdu 
+                                ? 'یہ منتقلی منظور شدہ ہے۔ اب نئے مالک کے لیے فروخت کا معاہدہ بنانا ضروری ہے۔'
+                                : 'This transfer has been approved. You now need to create a Sale Agreement for the new owner to complete the transfer process.'
+                              }
+                            </p>
+                            <p className="text-xs text-blue-700 mt-2">
+                              {isUrdu 
+                                ? 'Sales Agreement → Forms → Sale Agreement پر جائیں'
+                                : 'Go to Forms → Sale Agreement to create the new agreement'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {selectedForm.remarks && (
                     <div className="border-t pt-4">
                       <label className="text-sm font-medium text-muted-foreground">{t('forms.remarks')}</label>

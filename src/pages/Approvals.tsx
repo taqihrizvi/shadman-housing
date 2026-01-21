@@ -226,8 +226,9 @@ export default function Approvals() {
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Transfer form approved successfully",
+        title: "Transfer Approved",
+        description: "Transfer form approved successfully. Now create a Sale Agreement for the new owner to complete the transfer.",
+        duration: 8000, // Show longer to ensure user sees the instruction
       });
       queryClient.invalidateQueries({ queryKey: ['pendingTransfers'] });
       queryClient.invalidateQueries({ queryKey: ['approvalStats'] });
@@ -954,7 +955,16 @@ export default function Approvals() {
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t('approvals.approve')} {approvalType === 'biyana' ? t('forms.biyanaForm') : t('vouchers.title')}</DialogTitle>
+              <DialogTitle>
+                {t('approvals.approve')}{' '}
+                {approvalType === 'biyana' 
+                  ? t('forms.biyanaForm') 
+                  : approvalType === 'transfer' 
+                  ? t('forms.transferForm') 
+                  : approvalType === 'agreement'
+                  ? t('forms.saleAgreement')
+                  : t('vouchers.title')}
+              </DialogTitle>
               <DialogDescription>
                 {t('approvals.confirmApprove')}
               </DialogDescription>
@@ -962,22 +972,71 @@ export default function Approvals() {
             {selectedItem && (
               <div className="space-y-4">
                 <div>
-                  <div className="text-sm font-medium">{approvalType === 'biyana' ? t('forms.formNumber') : t('vouchers.voucherNo')}</div>
-                  <div className="text-sm text-muted-foreground">{approvalType === 'biyana' ? selectedItem.formNumber : selectedItem.voucherNo}</div>
+                  <div className="text-sm font-medium">
+                    {approvalType === 'biyana' 
+                      ? t('forms.formNumber') 
+                      : approvalType === 'transfer'
+                      ? t('forms.transferNumber')
+                      : approvalType === 'agreement'
+                      ? t('forms.agreementNumber')
+                      : t('vouchers.voucherNo')}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {approvalType === 'biyana' 
+                      ? selectedItem.formNumber 
+                      : approvalType === 'transfer'
+                      ? selectedItem.transferNumber
+                      : approvalType === 'agreement'
+                      ? selectedItem.agreementNumber
+                      : selectedItem.voucherNo}
+                  </div>
                 </div>
-                {selectedItem.customer && (
+                {approvalType === 'transfer' ? (
+                  <>
+                    <div>
+                      <div className="text-sm font-medium">{t('forms.fromCustomer')}</div>
+                      <div className="text-sm text-muted-foreground">{selectedItem.fromCustomer?.name}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{t('forms.toCustomer')}</div>
+                      <div className="text-sm text-muted-foreground">{selectedItem.toCustomer?.name}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{t('inventory.plotNo')}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {selectedItem.plot?.plotNo} - {selectedItem.plot?.project ? formatProjectName(selectedItem.plot.project) : ''}
+                      </div>
+                    </div>
+                  </>
+                ) : selectedItem.customer && (
                   <div>
                     <div className="text-sm font-medium">{t('forms.customer')}</div>
                     <div className="text-sm text-muted-foreground">{selectedItem.customer?.name}</div>
                   </div>
                 )}
                 <div>
-                  <div className="text-sm font-medium">{t('payments.amount')}</div>
-                  <div className="text-sm text-muted-foreground">{formatCurrency(approvalType === 'biyana' ? selectedItem.biyanaAmount : selectedItem.amount)}</div>
+                  <div className="text-sm font-medium">
+                    {approvalType === 'transfer' ? t('forms.transferFee') : t('payments.amount')}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatCurrency(
+                      approvalType === 'biyana' 
+                        ? selectedItem.biyanaAmount 
+                        : approvalType === 'transfer'
+                        ? selectedItem.transferFee
+                        : selectedItem.amount
+                    )}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm font-medium">{t('forms.date')}</div>
-                  <div className="text-sm text-muted-foreground">{formatDate(selectedItem.date)}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatDate(
+                      approvalType === 'transfer' 
+                        ? selectedItem.transferDate 
+                        : selectedItem.date
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -996,7 +1055,16 @@ export default function Approvals() {
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t('approvals.reject')} {approvalType === 'biyana' ? t('forms.biyanaForm') : t('vouchers.title')}</DialogTitle>
+              <DialogTitle>
+                {t('approvals.reject')}{' '}
+                {approvalType === 'biyana' 
+                  ? t('forms.biyanaForm') 
+                  : approvalType === 'transfer' 
+                  ? t('forms.transferForm') 
+                  : approvalType === 'agreement'
+                  ? t('forms.saleAgreement')
+                  : t('vouchers.title')}
+              </DialogTitle>
               <DialogDescription>
                 {t('approvals.provideReason')}
               </DialogDescription>

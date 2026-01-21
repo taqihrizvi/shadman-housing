@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toTitleCase } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -175,7 +176,7 @@ export default function Vouchers() {
                   {filteredVouchers.map((voucher: any) => (
                     <TableRow key={voucher.id}>
                       <TableCell className="font-medium">{voucher.voucherNo}</TableCell>
-                      <TableCell>{voucher.customer?.name || t('payments.notAvailable')}</TableCell>
+                      <TableCell>{toTitleCase(voucher.customer?.name || t('payments.notAvailable'))}</TableCell>
                       <TableCell>{voucher.plot?.plotNo || t('payments.notAvailable')}</TableCell>
                       <TableCell className="font-semibold">
                         {formatCurrency(voucher.amount)}
