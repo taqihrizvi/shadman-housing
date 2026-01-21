@@ -45,9 +45,10 @@ interface PrintableTransferFormProps {
     approvedAt?: string;
   };
   onClose?: () => void;
+  hidePrintButton?: boolean;
 }
 
-export default function PrintableTransferForm({ data, onClose }: PrintableTransferFormProps) {
+export default function PrintableTransferForm({ data, onClose, hidePrintButton }: PrintableTransferFormProps) {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
   const contentRef = useRef<HTMLDivElement>(null);
@@ -412,10 +413,12 @@ export default function PrintableTransferForm({ data, onClose }: PrintableTransf
             <ArrowLeft className="h-4 w-4 mr-2" />
             {isUrdu ? 'واپس' : 'Back'}
           </Button>
-          <Button onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            {isUrdu ? 'پرنٹ کریں' : 'Print'}
-          </Button>
+          {!hidePrintButton && (
+            <Button onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              {isUrdu ? 'پرنٹ کریں' : 'Print'}
+            </Button>
+          )}
         </div>
       </div>
 

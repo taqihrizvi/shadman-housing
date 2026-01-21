@@ -52,9 +52,10 @@ interface PrintableSaleAgreementFormProps {
     };
   };
   onClose?: () => void;
+  hidePrintButton?: boolean;
 }
 
-export default function PrintableSaleAgreementForm({ data, onClose }: PrintableSaleAgreementFormProps) {
+export default function PrintableSaleAgreementForm({ data, onClose, hidePrintButton }: PrintableSaleAgreementFormProps) {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
   const contentRef = useRef<HTMLDivElement>(null);
@@ -215,10 +216,12 @@ export default function PrintableSaleAgreementForm({ data, onClose }: PrintableS
                 {t('common.close')}
               </Button>
             )}
-            <Button onClick={handlePrint} variant="outline">
-              <Printer className="mr-2 h-4 w-4" />
-              {t('printableForms.printDocument')}
-            </Button>
+            {!hidePrintButton && (
+              <Button onClick={handlePrint} variant="outline">
+                <Printer className="mr-2 h-4 w-4" />
+                {t('printableForms.printDocument')}
+              </Button>
+            )}
           </div>
         </div>
       </div>

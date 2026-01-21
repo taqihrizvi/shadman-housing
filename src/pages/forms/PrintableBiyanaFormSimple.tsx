@@ -36,9 +36,10 @@ interface PrintableBiyanaFormProps {
     };
   };
   onClose?: () => void;
+  hidePrintButton?: boolean;
 }
 
-export default function PrintableBiyanaForm({ data, onClose }: PrintableBiyanaFormProps) {
+export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: PrintableBiyanaFormProps) {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
   const contentRef = useRef<HTMLDivElement>(null);
@@ -188,10 +189,12 @@ export default function PrintableBiyanaForm({ data, onClose }: PrintableBiyanaFo
                 {t('common.close')}
               </Button>
             )}
-            <Button onClick={handlePrint} variant="outline">
-              <Printer className="mr-2 h-4 w-4" />
-              {t('printableForms.printDocument')}
-            </Button>
+            {!hidePrintButton && (
+              <Button onClick={handlePrint} variant="outline">
+                <Printer className="mr-2 h-4 w-4" />
+                {t('printableForms.printDocument')}
+              </Button>
+            )}
           </div>
         </div>
       </div>

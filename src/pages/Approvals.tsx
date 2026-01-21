@@ -9,9 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, FileCheck, Wallet } from "lucide-react";
+import { CheckCircle, XCircle, Clock, FileCheck, Wallet, Eye, Check, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
+import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
+import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
+import { voucherAPI } from "@/lib/api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -40,6 +45,7 @@ export default function Approvals() {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Helper function to format project names
   const formatProjectName = (value: string) => {
@@ -54,6 +60,96 @@ export default function Approvals() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [approvalType, setApprovalType] = useState<'biyana' | 'payment' | 'agreement' | 'transfer'>('biyana');
+  
+  // Print dialog states
+  const [isPrintBiyanaOpen, setIsPrintBiyanaOpen] = useState(false);
+  const [isPrintAgreementOpen, setIsPrintAgreementOpen] = useState(false);
+  const [isPrintTransferOpen, setIsPrintTransferOpen] = useState(false);
+  const [isPrintPaymentOpen, setIsPrintPaymentOpen] = useState(false);
+  const [printData, setPrintData] = useState<any>(null);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+
+  // Helper function to format size
+  const formatSize = (value: string) => {
+    if (!value) return "";
+    const sizeMap: { [key: string]: string } = {
+      'FIVE_MARLA': t('plotSizes.fiveMarla'),
+      'SEVEN_MARLA': t('plotSizes.sevenMarla'),
+      'TEN_MARLA': t('plotSizes.tenMarla'),
+      'ONE_KANAL': t('plotSizes.oneKanal'),
+      'TWO_KANAL': t('plotSizes.twoKanal'),
+    };
+    return sizeMap[value] || value;
+  };
+
+  // Print handler functions
+  const handlePrintBiyana = (biyana: any) => {
+    const data = {
+      customerName: biyana.customer?.name || "",
+      fatherHusbandName: biyana.fatherHusbandName || biyana.customer?.fatherName || "",
+      cnic: biyana.customer?.cnic || "",
+      phone: biyana.customer?.phone || "",
+      plot: {
+        plotNo: biyana.plot?.plotNo || "",
+        project: biyana.plot?.project || "",
+        size: formatSize(biyana.plot?.size || ""),
+        block: biyana.plot?.block || "",
+        price: biyana.plot?.price || 0,
+      },
+      pricePerMarla: biyana.pricePerMarla,
+      totalAmount: biyana.totalAmount,
+      biyanaAmount: biyana.biyanaAmount || 0,
+      totalRemaining: biyana.totalRemaining,
+      firstInstallmentRemaining: biyana.firstInstallmentRemaining,
+      lastInstallmentDate: biyana.lastInstallmentDate,
+      monthlyInstallments: biyana.monthlyInstallments,
+      quarterlyInstallments: biyana.quarterlyInstallments,
+      agreementDuration: biyana.agreementDuration,
+      monthlyInstallmentAmount: biyana.monthlyInstallmentAmount,
+      quarterlyInstallmentAmount: biyana.quarterlyInstallmentAmount,
+      date: biyana.date || new Date().toISOString(),
+      agreementNumber: biyana.id,
+      status: biyana.status,
+      approvedBy: biyana.approvedBy,
+    };
+    setPrintData(data);
+    setIsPrintBiyanaOpen(true);
+  };
+
+  const handlePrintPayment = async (payment: any) => {
+    try {
+      setSelectedPaymentId(payment.id);
+      setIsPrintPaymentOpen(true);
+    } catch (error) {
+      console.error('Error loading payment voucher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load payment voucher",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePrintAgreement = (agreement: any) => {
+    setPrintData(agreement);
+    setIsPrintAgreementOpen(true);
+  };
+
+  const handlePrintTransfer = (transfer: any) => {
+    setPrintData(transfer);
+    setIsPrintTransferOpen(true);
+  };
+
+  // Fetch voucher data for print dialog
+  const { data: voucherData } = useQuery({
+    queryKey: ['voucher', selectedPaymentId],
+    queryFn: async () => {
+      if (!selectedPaymentId) return null;
+      const response = await voucherAPI.getById(selectedPaymentId);
+      return response.data;
+    },
+    enabled: !!selectedPaymentId && isPrintPaymentOpen,
+  });
 
   // Fetch pending Biyana forms
   const { data: pendingBiyanas, isLoading: loadingBiyanas } = useQuery({
@@ -657,7 +753,8 @@ export default function Approvals() {
                         <TableHead>{t('payments.paymentMethod')}</TableHead>
                         <TableHead>{t('approvals.submittedBy')}</TableHead>
                         <TableHead>{t('forms.date')}</TableHead>
-                        <TableHead>{t('common.actions')}</TableHead>
+                        <TableHead className="text-center">{t('common.view')}</TableHead>
+                        <TableHead className="w-32">{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -679,20 +776,35 @@ export default function Approvals() {
                             <div className="text-xs text-muted-foreground">{biyana.createdBy?.email || '-'}</div>
                           </TableCell>
                           <TableCell>{formatDate(biyana.date)}</TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handlePrintBiyana(biyana)}
+                              className="h-8 w-8 p-0"
+                              title="View Print Preview"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1">
                               <Button
                                 size="sm"
                                 onClick={() => handleApprove(biyana, 'biyana')}
+                                className="h-8 w-8 p-0"
+                                title={t('approvals.approve')}
                               >
-                                {t('approvals.approve')}
+                                <Check className="h-4 w-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => handleReject(biyana, 'biyana')}
+                                className="h-8 w-8 p-0"
+                                title={t('approvals.reject')}
                               >
-                                {t('approvals.reject')}
+                                <X className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -731,7 +843,8 @@ export default function Approvals() {
                         <TableHead>{t('forms.installmentMonths')}</TableHead>
                         <TableHead>Submitted By</TableHead>
                         <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead className="text-center">{t('common.view')}</TableHead>
+                        <TableHead className="w-32">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -763,20 +876,35 @@ export default function Approvals() {
                             <div className="text-xs text-muted-foreground">{agreement.createdBy?.email || '-'}</div>
                           </TableCell>
                           <TableCell>{formatDate(agreement.agreementDate)}</TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handlePrintAgreement(agreement)}
+                              className="h-8 w-8 p-0"
+                              title="View Print Preview"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1">
                               <Button
                                 size="sm"
                                 onClick={() => handleApprove(agreement, 'agreement')}
+                                className="h-8 w-8 p-0"
+                                title={t('approvals.approve')}
                               >
-                                Approve
+                                <Check className="h-4 w-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => handleReject(agreement, 'agreement')}
+                                className="h-8 w-8 p-0"
+                                title={t('approvals.reject')}
                               >
-                                {t('approvals.reject')}
+                                <X className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -816,7 +944,8 @@ export default function Approvals() {
                           <TableHead>{t('forms.transferReason')}</TableHead>
                           <TableHead>{t('approvals.submittedBy')}</TableHead>
                           <TableHead>{t('forms.date')}</TableHead>
-                          <TableHead>{t('common.actions')}</TableHead>
+                          <TableHead className="text-center">{t('common.view')}</TableHead>
+                          <TableHead className="w-32">{t('common.actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -842,20 +971,35 @@ export default function Approvals() {
                               <div className="text-xs text-muted-foreground">{transfer.createdBy?.email || '-'}</div>
                             </TableCell>
                             <TableCell>{formatDate(transfer.transferDate)}</TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handlePrintTransfer(transfer)}
+                                className="h-8 w-8 p-0"
+                                title="View Print Preview"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                             <TableCell>
-                              <div className="flex gap-2">
+                              <div className="flex gap-1">
                                 <Button
                                   size="sm"
                                   onClick={() => handleApprove(transfer, 'transfer')}
+                                  className="h-8 w-8 p-0"
+                                  title={t('approvals.approve')}
                                 >
-                                  {t('approvals.approve')}
+                                  <Check className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="destructive"
                                   onClick={() => handleReject(transfer, 'transfer')}
+                                  className="h-8 w-8 p-0"
+                                  title={t('approvals.reject')}
                                 >
-                                  {t('approvals.reject')}
+                                  <X className="h-4 w-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -895,7 +1039,8 @@ export default function Approvals() {
                         <TableHead>{t('payments.paymentMethod')}</TableHead>
                         <TableHead>{t('approvals.submittedBy')}</TableHead>
                         <TableHead>{t('forms.date')}</TableHead>
-                        <TableHead>{t('common.actions')}</TableHead>
+                        <TableHead className="text-center">{t('common.view')}</TableHead>
+                        <TableHead className="w-32">{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -924,20 +1069,35 @@ export default function Approvals() {
                             <div className="text-xs text-muted-foreground">{payment.createdBy?.email || '-'}</div>
                           </TableCell>
                           <TableCell>{formatDate(payment.date)}</TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handlePrintPayment(payment)}
+                              className="h-8 w-8 p-0"
+                              title="View Print Preview"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1">
                               <Button
                                 size="sm"
                                 onClick={() => handleApprove(payment, 'payment')}
+                                className="h-8 w-8 p-0"
+                                title={t('approvals.approve')}
                               >
-                                {t('approvals.approve')}
+                                <Check className="h-4 w-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => handleReject(payment, 'payment')}
+                                className="h-8 w-8 p-0"
+                                title={t('approvals.reject')}
                               >
-                                {t('approvals.reject')}
+                                <X className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -1097,7 +1257,296 @@ export default function Approvals() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Biyana Print Dialog */}
+        <Dialog open={isPrintBiyanaOpen} onOpenChange={setIsPrintBiyanaOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            {printData && (
+              <PrintableBiyanaFormSimple 
+                data={printData}
+                onClose={() => setIsPrintBiyanaOpen(false)}
+                hidePrintButton={true}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Sale Agreement Print Dialog */}
+        <Dialog open={isPrintAgreementOpen} onOpenChange={setIsPrintAgreementOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            {printData && (
+              <PrintableSaleAgreementForm 
+                data={printData}
+                onClose={() => setIsPrintAgreementOpen(false)}
+                hidePrintButton={true}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Transfer Print Dialog */}
+        <Dialog open={isPrintTransferOpen} onOpenChange={setIsPrintTransferOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            {printData && (
+              <PrintableTransferForm 
+                data={printData}
+                onClose={() => setIsPrintTransferOpen(false)}
+                hidePrintButton={true}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Payment Voucher Print Dialog */}
+        <Dialog open={isPrintPaymentOpen} onOpenChange={(open) => {
+          setIsPrintPaymentOpen(open);
+          if (!open) setSelectedPaymentId(null);
+        }}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+            {voucherData && (
+              <div className="p-6">
+                <PrintableVoucherContent voucher={voucherData} onClose={() => {
+                  setIsPrintPaymentOpen(false);
+                  setSelectedPaymentId(null);
+                }} />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
+  );
+}
+
+// Separate component for printable voucher content
+function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: () => void }) {
+  const { t, i18n } = useTranslation();
+  const isUrdu = i18n.language === 'ur';
+  const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("en-PK", {
+      style: "currency",
+      currency: "PKR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-PK", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatEnum = (value: string) => {
+    if (!value) return "";
+    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatPaymentMethod = (method: string) => {
+    if (!method) return "";
+    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
+  };
+
+  const formatPaymentType = (type: string) => {
+    if (!type) return "";
+    return t(`payments.paymentTypes.${type}`) || formatEnum(type);
+  };
+
+  const renderReceiptContent = () => (
+    <div className="receipt-copy" style={{ position: 'relative', padding: '40px 60px' }}>
+      {/* Logo Watermark */}
+      <div className="watermark-logo" style={{ 
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        opacity: 0.08,
+        zIndex: 0,
+        pointerEvents: 'none',
+        width: '500px',
+        height: '500px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <img 
+          src="/Logo.png" 
+          alt="Watermark" 
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain'
+          }}
+        />
+      </div>
+
+      <div style={{ position: 'relative', zIndex: 1 }} dir={isUrdu ? 'rtl' : 'ltr'}>
+        {/* Header Section with Logo and Title */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', borderBottom: '3px solid #000', paddingBottom: '20px' }}>
+          <div>
+            <img src="/Logo.png" alt="Logo" style={{ height: '80px', width: 'auto' }} />
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0, fontFamily: "'Outfit', sans-serif", letterSpacing: '2px' }}>
+              PAYMENT RECEIPT
+            </h1>
+            <div style={{ marginTop: '10px', padding: '8px 16px', backgroundColor: '#000', color: '#fff', display: 'inline-block' }}>
+              <strong>{voucher.voucherNo}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Basic Information Section */}
+        <div style={{ marginBottom: '20px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '8px 0', width: '25%', fontWeight: '600' }}>Name:</td>
+                <td style={{ padding: '8px 0', borderBottom: '1px solid #ccc' }}>
+                  {voucher.customer?.name || voucher.plot?.buyer?.name || ''}
+                </td>
+                <td style={{ padding: '8px 0', width: '15%', textAlign: 'right', fontWeight: '600' }}>Date:</td>
+                <td style={{ padding: '8px 0', width: '25%', borderBottom: '1px solid #ccc', textAlign: 'right' }}>
+                  {formatDate(voucher.date)}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '8px 0', fontWeight: '600' }}>ID/Document:</td>
+                <td colSpan={3} style={{ padding: '8px 0', borderBottom: '1px solid #ccc' }}>
+                  {voucher.customer?.cnic || voucher.plot?.buyer?.cnic || ''}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Project Details Section */}
+        <div style={{ marginBottom: '25px' }}>
+          <div style={{ backgroundColor: '#f5f5f5', padding: '8px 12px', fontWeight: 'bold', border: '1px solid #000', marginBottom: '2px' }}>
+            Project Details
+          </div>
+          <table style={{ width: '100%', border: '1px solid #000', borderTop: 'none' }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '10px', width: '30%', borderRight: '1px solid #ddd', fontWeight: '600' }}>Project Name:</td>
+                <td style={{ padding: '10px' }}>{voucher.plot?.project || 'Shadman Greens'}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '10px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Plot No:</td>
+                <td style={{ padding: '10px', borderTop: '1px solid #ddd' }}>{voucher.plot?.plotNo || ''}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Payment Details Section */}
+        <div style={{ marginBottom: '30px' }}>
+          <div style={{ backgroundColor: '#f5f5f5', padding: '8px 12px', fontWeight: 'bold', border: '1px solid #000', marginBottom: '2px' }}>
+            Payment Details
+          </div>
+          <table style={{ width: '100%', border: '1px solid #000', borderTop: 'none' }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '12px', width: '30%', borderRight: '1px solid #ddd', fontWeight: '600' }}>Payment Type:</td>
+                <td style={{ padding: '12px', fontWeight: 'bold' }}>
+                  {voucher.formType === 'BIYANA' ? 'Biyana Payment' :
+                   voucher.formType === 'INSTALLMENT' ? 'Installment' :
+                   voucher.formType === 'QUARTERLY' ? 'Quarterly Payment' :
+                   voucher.formType === 'SALES_AGREEMENT' ? 'Sales Agreement Payment' :
+                   formatPaymentType(voucher.formType)}
+                </td>
+              </tr>
+              <tr style={{ backgroundColor: '#fff9e6' }}>
+                <td style={{ padding: '12px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Amount:</td>
+                <td style={{ padding: '12px', borderTop: '1px solid #ddd', fontSize: '20px', fontWeight: 'bold', color: '#0a5c0a' }}>
+                  {formatCurrency(voucher.amount)}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '12px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Payment Method:</td>
+                <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{formatPaymentMethod(voucher.paymentMethod)}</td>
+              </tr>
+              {voucher.chequeNumber && (
+                <tr>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Cheque Number:</td>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{voucher.chequeNumber}</td>
+                </tr>
+              )}
+              {voucher.bankName && (
+                <tr>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Bank Name:</td>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{voucher.bankName}</td>
+                </tr>
+              )}
+              {voucher.description && (
+                <tr>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600', verticalAlign: 'top' }}>Description/Remarks:</td>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{voucher.description}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Signatures Section */}
+        <div style={{ marginTop: '80px', borderTop: '2px solid #000', paddingTop: '40px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', maxWidth: '600px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ borderTop: '2px solid #000', paddingTop: '8px', minHeight: '60px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+              </div>
+              <p style={{ fontWeight: 'bold', marginTop: '8px', fontSize: '14px' }}>Customer Signature</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              {voucher.approvedBy?.signature ? (
+                <div>
+                  <div style={{ borderTop: '2px solid #000', paddingTop: '8px', minHeight: '60px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <img 
+                      src={voucher.approvedBy.signature.startsWith('http') ? voucher.approvedBy.signature : `${API_BASE_URL}${voucher.approvedBy.signature}`}
+                      alt="Signature" 
+                      style={{ maxHeight: '50px', maxWidth: '140px', objectFit: 'contain' }}
+                    />
+                  </div>
+                  <p style={{ fontWeight: 'bold', marginTop: '8px', fontSize: '14px' }}>{voucher.approvedBy?.name}</p>
+                  <p style={{ fontSize: '12px', color: '#666' }}>Authorized Signature</p>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ borderTop: '2px solid #000', paddingTop: '8px', minHeight: '60px' }}></div>
+                  <p style={{ fontWeight: 'bold', marginTop: '8px', fontSize: '14px' }}>Authorized Signature</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Note */}
+        <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px dotted #ccc', textAlign: 'center', fontSize: '11px', color: '#666' }}>
+          <p style={{ margin: 0 }}>This is a computer-generated receipt and does not require a physical signature for validation.</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Print Controls */}
+      <div className="print:hidden mb-4 flex justify-between items-center border-b pb-4">
+        <h2 className="text-lg font-semibold">{t('vouchers.paymentReceipt')} - {voucher.voucherNo}</h2>
+        <div className="flex gap-2">
+          <Button onClick={onClose} variant="outline">
+            {t('common.close')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Printable Content */}
+      <div className="bg-white">
+        {renderReceiptContent()}
+      </div>
+    </div>
   );
 }

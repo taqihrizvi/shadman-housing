@@ -72,7 +72,7 @@ export default function PrintableVoucher() {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        opacity: 0.15,
+        opacity: 0.25,
         zIndex: 0,
         pointerEvents: 'none',
         width: '600px',
@@ -162,7 +162,7 @@ export default function PrintableVoucher() {
           {/* Payment Type */}
           {voucher.formType && (
             <div className="mb-4 pt-3 border-t border-gray-300">
-              <p className="text-sm text-gray-600">{t('vouchers.paymentType')}</p>
+              <p className="text-sm text-gray-600">{t('Payment Type')}</p>
               <p className="font-semibold text-gray-800">{formatPaymentType(voucher.formType)}</p>
             </div>
           )}

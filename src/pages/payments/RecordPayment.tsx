@@ -48,13 +48,18 @@ export default function RecordPayment() {
   const [pendingAmount, setPendingAmount] = useState(0);
   const [autoFilledAmount, setAutoFilledAmount] = useState<number | null>(null);
   const [duplicateVoucherWarning, setDuplicateVoucherWarning] = useState<string | null>(null);
+  const [topError, setTopError] = useState<string | null>(null);
 
-  // Fetch sold plots
+  // Fetch sold and reserved plots
   const { data: plotsData } = useQuery({
-    queryKey: ['soldPlots'],
+    queryKey: ['soldAndReservedPlots'],
     queryFn: async () => {
-      const response = await inventoryAPI.getAll({ status: 'SOLD' });
-      return response.data;
+      // Fetch both SOLD and RESERVED plots
+      const [soldResponse, reservedResponse] = await Promise.all([
+        inventoryAPI.getAll({ status: 'SOLD' }),
+        inventoryAPI.getAll({ status: 'RESERVED' })
+      ]);
+      return [...soldResponse.data, ...reservedResponse.data];
     },
   });
 
@@ -70,18 +75,28 @@ export default function RecordPayment() {
 
   // Filter out plots with completed payments
   const availablePlots = plotsData?.filter((plot: any) => {
-    const agreement = allAgreementsData?.find((a: any) => 
-      a.plotId === plot.id && a.status === 'ACTIVE'
-    );
+    // For RESERVED plots: show them (they have approved Biyana)
+    if (plot.status === 'RESERVED') {
+      return true;
+    }
     
-    if (!agreement) return true; // Include plots without agreements
+    // For SOLD plots: check if they have pending payments
+    if (plot.status === 'SOLD') {
+      const agreement = allAgreementsData?.find((a: any) => 
+        a.plotId === plot.id && a.status === 'ACTIVE'
+      );
+      
+      if (!agreement) return true; // Include plots without agreements
+      
+      // Check if payment is completed (pendingAmount <= 0)
+      const pendingAmount = agreement.pendingAmount !== undefined 
+        ? agreement.pendingAmount 
+        : 0;
+      
+      return pendingAmount > 0; // Only include plots with pending payments
+    }
     
-    // Check if payment is completed (pendingAmount <= 0)
-    const pendingAmount = agreement.pendingAmount !== undefined 
-      ? agreement.pendingAmount 
-      : 0;
-    
-    return pendingAmount > 0; // Only include plots with pending payments
+    return false;
   });
 
   // Fetch customers
@@ -92,6 +107,37 @@ export default function RecordPayment() {
       return response.data;
     },
   });
+
+  // Update payment type change handler to validate plot status
+  const handlePaymentTypeChange = (value: string) => {
+    // If BIYANA is selected, check if plot is RESERVED
+    if (value === 'BIYANA' && selectedPlot && selectedPlot.status !== 'RESERVED') {
+      const errorMsg = "Biyana payment vouchers can only be created for plots with RESERVED status (plots with approved Biyana forms).";
+      setTopError(errorMsg);
+      toast({
+        title: "Invalid Payment Type",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // If INSTALLMENT or QUARTERLY is selected, check if plot is RESERVED or TRANSFERRED
+    if ((value === 'INSTALLMENT' || value === 'QUARTERLY') && selectedPlot && (selectedPlot.status === 'RESERVED' || selectedPlot.status === 'TRANSFERRED')) {
+      const errorMsg = "Installment and Quarterly payments cannot be created for RESERVED or TRANSFERRED plots. Please create a Sales Agreement first.";
+      setTopError(errorMsg);
+      toast({
+        title: "Invalid Payment Type",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Clear error if validation passes
+    setTopError(null);
+    setFormData(prev => ({ ...prev, paymentType: value }));
+  };
 
   // Fetch sale agreement for selected plot
   const { data: agreements, isLoading: agreementsLoading } = useQuery({
@@ -228,6 +274,34 @@ export default function RecordPayment() {
       const plot = availablePlots.find((p: any) => p.id === formData.plotId);
       setSelectedPlot(plot);
       
+      // If BIYANA payment type is selected but plot is not RESERVED, reset payment type
+      if (plot && formData.paymentType === 'BIYANA' && plot.status !== 'RESERVED') {
+        const errorMsg = "Biyana payment can only be created for RESERVED plots. Payment type has been reset.";
+        setTopError(errorMsg);
+        toast({
+          title: "Payment Type Reset",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        setFormData(prev => ({ ...prev, paymentType: 'INSTALLMENT' }));
+      }
+      
+      // If INSTALLMENT or QUARTERLY payment type is selected but plot is RESERVED or TRANSFERRED, reset payment type
+      if (plot && (formData.paymentType === 'INSTALLMENT' || formData.paymentType === 'QUARTERLY') && 
+          (plot.status === 'RESERVED' || plot.status === 'TRANSFERRED')) {
+        const errorMsg = "Installment and Quarterly payments cannot be created for RESERVED or TRANSFERRED plots. Please create a Sales Agreement first.";
+        setTopError(errorMsg);
+        toast({
+          title: "Payment Type Reset",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        setFormData(prev => ({ ...prev, paymentType: 'SALES_AGREEMENT' }));
+      } else {
+        // Clear error if validation passes
+        setTopError(null);
+      }
+      
       // Auto-fill customer from plot's current owner (buyer)
       if (plot && plot.buyerId) {
         setFormData(prev => ({ ...prev, customerId: plot.buyerId }));
@@ -361,6 +435,15 @@ export default function RecordPayment() {
           </div>
         </div>
 
+        {topError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Validation Error:</strong> {topError}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {pendingAmount > 0 && (formData.paymentType === 'INSTALLMENT' || formData.paymentType === 'QUARTERLY') && (
           <Alert>
             <AlertCircle className="h-4 w-4" />
@@ -408,7 +491,7 @@ export default function RecordPayment() {
                   <Label htmlFor="paymentType">Select Payment Type *</Label>
                   <Select
                     value={formData.paymentType}
-                    onValueChange={(value) => setFormData({ ...formData, paymentType: value })}
+                    onValueChange={handlePaymentTypeChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select payment type" />
@@ -443,7 +526,7 @@ export default function RecordPayment() {
                       <SelectContent>
                         {availablePlots?.map((plot: any) => (
                           <SelectItem key={plot.id} value={plot.id}>
-                            {plot.plotNo} - {formatEnum(plot.project)}
+                            {plot.plotNo} - {formatEnum(plot.project)} {plot.status === 'RESERVED' ? '(Reserved)' : '(Sold)'}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -459,6 +542,11 @@ export default function RecordPayment() {
                         <Label className="text-muted-foreground">Plot Details</Label>
                         <p className="text-sm">
                           <strong>{selectedPlot.plotNo}</strong> - {formatEnum(selectedPlot.project)}
+                        </p>
+                        <p className="text-xs mt-1">
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${selectedPlot.status === 'RESERVED' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                            {selectedPlot.status === 'RESERVED' ? 'RESERVED' : 'SOLD'}
+                          </span>
                         </p>
                       </div>
                     )}
