@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, Clock, FileCheck, Wallet, Eye, Check, X } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
@@ -47,6 +47,19 @@ export default function Approvals() {
   const isUrdu = i18n.language === 'ur';
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // Get initial tab from URL or default to 'forms'
+  const initialTab = searchParams.get('tab') || 'forms';
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  // Update active tab when URL changes
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['forms', 'agreements', 'transfers', 'payments'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // Helper function to format project names
   const formatProjectName = (value: string) => {
@@ -711,7 +724,7 @@ export default function Approvals() {
         )}
 
         {/* Tabs for Biyana Forms, Agreements, Transfers, and Payments */}
-        <Tabs defaultValue="forms" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-4 h-auto">
             <TabsTrigger value="forms" className="px-6 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
               {t('approvals.biyanaForms')}

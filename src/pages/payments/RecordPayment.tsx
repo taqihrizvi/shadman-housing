@@ -21,7 +21,7 @@ import { inventoryAPI, customerAPI, formsAPI, voucherAPI } from "@/lib/api";
 import { useTranslation } from 'react-i18next';
 
 const paymentMethods = ["BANK_DEPOSIT", "BANK_TRANSFER", "CHEQUE", "ONLINE"];
-const paymentTypes = ["INSTALLMENT", "QUARTERLY", "BIYANA", "SALES_AGREEMENT"];
+const paymentTypes = ["INSTALLMENT", "QUARTERLY", "BIYANA", "SALES_AGREEMENT", "TRANSFER_FEE"];
 
 // Bank account mapping
 const BANK_ACCOUNTS = {
@@ -108,6 +108,15 @@ export default function RecordPayment() {
     },
   });
 
+  // Fetch all Transfer forms to filter for TRANSFER_FEE payment type
+  const { data: allTransferForms } = useQuery({
+    queryKey: ['allTransferForms'],
+    queryFn: async () => {
+      const response = await formsAPI.getTransferForms();
+      return response.data;
+    },
+  });
+
   // Debug: Log plots data when payment type is BIYANA
   if (formData.paymentType === 'BIYANA' && plotsData) {
     console.log('Payment type is BIYANA. Total plots fetched:', plotsData.length);
@@ -136,6 +145,14 @@ export default function RecordPayment() {
         a.plotId === plot.id && a.status === 'PENDING'
       );
       return !!pendingAgreement; // Only include plots with pending sale agreements
+    }
+
+    // For TRANSFER_FEE payment type: only show plots with PENDING transfer forms
+    if (formData.paymentType === 'TRANSFER_FEE') {
+      const pendingTransfer = allTransferForms?.find((t: any) =>
+        t.plotId === plot.id && t.status === 'PENDING'
+      );
+      return !!pendingTransfer; // Only include plots with pending transfer forms
     }
 
     // For other payment types: show RESERVED and SOLD plots with pending payments
@@ -228,11 +245,22 @@ export default function RecordPayment() {
     enabled: !!formData.plotId && (formData.paymentType === 'BIYANA'),
   });
 
+  // Fetch Transfer forms for selected plot
+  const { data: transferForms } = useQuery({
+    queryKey: ['transferForms', formData.plotId],
+    queryFn: async () => {
+      if (!formData.plotId) return null;
+      const response = await formsAPI.getTransferForms();
+      return response.data.filter((t: any) => t.plotId === formData.plotId && t.status === 'PENDING');
+    },
+    enabled: !!formData.plotId && (formData.paymentType === 'TRANSFER_FEE'),
+  });
+
   // Check for existing vouchers to prevent duplicates
   const { data: existingVouchers } = useQuery({
     queryKey: ['existingVouchers', formData.plotId, formData.paymentType],
     queryFn: async () => {
-      if (!formData.plotId || (formData.paymentType !== 'BIYANA' && formData.paymentType !== 'SALES_AGREEMENT')) {
+      if (!formData.plotId || !['BIYANA', 'SALES_AGREEMENT', 'TRANSFER_FEE'].includes(formData.paymentType)) {
         return null;
       }
       const response = await voucherAPI.getAll();
@@ -242,13 +270,15 @@ export default function RecordPayment() {
         (v.status === 'PENDING' || v.status === 'APPROVED')
       );
     },
-    enabled: !!formData.plotId && (formData.paymentType === 'BIYANA' || formData.paymentType === 'SALES_AGREEMENT'),
+    enabled: !!formData.plotId && ['BIYANA', 'SALES_AGREEMENT', 'TRANSFER_FEE'].includes(formData.paymentType),
   });
 
   // Update duplicate warning based on existing vouchers
   useEffect(() => {
     if (existingVouchers && existingVouchers.length > 0) {
-      const voucherType = formData.paymentType === 'BIYANA' ? 'Biyana' : 'Sales Agreement';
+      const voucherType = formData.paymentType === 'BIYANA' ? 'Biyana' : 
+                          formData.paymentType === 'SALES_AGREEMENT' ? 'Sales Agreement' :
+                          'Transfer Fee';
       setDuplicateVoucherWarning(`${voucherType} voucher for this plot already exists (${existingVouchers[0].voucherNo})`);
     } else {
       setDuplicateVoucherWarning(null);
@@ -318,11 +348,26 @@ export default function RecordPayment() {
     }
   }, [biyanaForms, formData.paymentType]);
 
+  // Handle Transfer Fee payment type
+  useEffect(() => {
+    if (formData.paymentType === 'TRANSFER_FEE' && transferForms && transferForms.length > 0) {
+      const latestTransfer = transferForms[0];
+      const transferFee = latestTransfer.transferFee || 0;
+      setAutoFilledAmount(transferFee);
+      setFormData(prev => ({
+        ...prev,
+        amount: transferFee.toString(),
+        customerId: latestTransfer.toCustomerId, // New owner pays transfer fee
+        description: `Transfer Fee - ${latestTransfer.transferNumber}`
+      }));
+    }
+  }, [transferForms, formData.paymentType]);
+
   // Reset amount when payment type changes to manual entry types
   useEffect(() => {
     if (formData.paymentType === 'INSTALLMENT' || formData.paymentType === 'QUARTERLY') {
       setAutoFilledAmount(null);
-      if (formData.amount && (formData.description?.includes('Biyana Payment') || formData.description?.includes('Sales Agreement'))) {
+      if (formData.amount && (formData.description?.includes('Biyana Payment') || formData.description?.includes('Sales Agreement') || formData.description?.includes('Transfer Fee'))) {
         setFormData(prev => ({ ...prev, amount: "", description: "" }));
       }
     }
@@ -479,11 +524,29 @@ export default function RecordPayment() {
   };
 
   const getPaymentTypeLabel = (type: string) => {
+    // Define custom labels for payment types
+    const labels: Record<string, string> = {
+      'INSTALLMENT': 'Installment Payment',
+      'QUARTERLY': 'Quarterly Payment',
+      'BIYANA': 'Biyana Payment',
+      'SALES_AGREEMENT': 'Down Payment',
+      'TRANSFER_FEE': 'Transfer Fee',
+    };
+    
+    // Try translation first, fallback to custom label, then to formatted type
     const key = `payments.paymentTypes.${type}` as const;
-    return t(key, type);
+    const translated = t(key);
+    
+    // If translation exists and is different from the key, use it
+    if (translated !== key) {
+      return translated;
+    }
+    
+    // Otherwise use custom label or format the type
+    return labels[type] || type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const isAmountReadOnly = formData.paymentType === 'BIYANA' || formData.paymentType === 'SALES_AGREEMENT';
+  const isAmountReadOnly = formData.paymentType === 'BIYANA' || formData.paymentType === 'SALES_AGREEMENT' || formData.paymentType === 'TRANSFER_FEE';
 
   return (
     <DashboardLayout>
@@ -526,7 +589,7 @@ export default function RecordPayment() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              {t('payments.autoFilledFrom')} {formData.paymentType === 'BIYANA' ? t('payments.biyanaForm') : t('payments.salesAgreement')}: <strong>{formatCurrency(autoFilledAmount)}</strong>
+              {t('payments.autoFilledFrom')} {formData.paymentType === 'BIYANA' ? t('payments.biyanaForm') : formData.paymentType === 'TRANSFER_FEE' ? 'Transfer Form' : t('payments.salesAgreement')}: <strong>{formatCurrency(autoFilledAmount)}</strong>
             </AlertDescription>
           </Alert>
         )}

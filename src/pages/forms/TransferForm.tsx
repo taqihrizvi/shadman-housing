@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { toTitleCase } from "@/lib/utils";
 export default function TransferForm() {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
   const [fromCustomerId, setFromCustomerId] = useState("");
@@ -103,19 +105,18 @@ export default function TransferForm() {
       setFromCustomerId(plot.buyerId);
     }
 
-    // Calculate total paid amount (vouchers + biyana + down payment)
+    // Calculate total paid amount (biyana token + down payment + approved installment vouchers)
     if (plot) {
       let totalPaid = 0;
       
-      // Get vouchers for this plot
-      const plotVouchers = vouchersData || [];
-      const voucherTotal = plotVouchers.reduce((sum: number, v: any) => sum + (v.amount || 0), 0);
+      // Get biyana token amount for this plot (approved only)
+      const plotBiyana = biyanaForms?.find((b: any) => 
+        b.plotId === plotId && 
+        b.status === 'APPROVED'
+      );
+      const biyanaTokenAmount = plotBiyana?.tokenAmount || 0;
       
-      // Get biyana for this plot
-      const plotBiyana = biyanaForms?.find((b: any) => b.plotId === plotId);
-      const biyanaAmount = plotBiyana?.biyanaAmount || 0;
-      
-      // Get sale agreement down payment
+      // Get sale agreement down payment (approved only)
       const plotAgreement = saleAgreements?.find((a: any) => 
         a.plotId === plotId && 
         a.isActive && 
@@ -136,15 +137,25 @@ export default function TransferForm() {
       
       const downPayment = plotAgreement?.downPayment || 0;
       
-      totalPaid = voucherTotal + biyanaAmount + downPayment;
+      // Get approved installment vouchers for this plot (INSTALLMENT or QUARTERLY formType only)
+      const plotVouchers = vouchersData || [];
+      const approvedInstallmentVouchers = plotVouchers.filter((v: any) => 
+        v.status === 'APPROVED' && 
+        (v.formType === 'INSTALLMENT' || v.formType === 'QUARTERLY')
+      );
+      const installmentTotal = approvedInstallmentVouchers.reduce((sum: number, v: any) => sum + (v.amount || 0), 0);
+      
+      totalPaid = biyanaTokenAmount + downPayment + installmentTotal;
       setTotalPaidAmount(totalPaid);
       
       console.log('Total Paid Calculation:', {
-        vouchers: voucherTotal,
-        biyana: biyanaAmount,
+        biyanaToken: biyanaTokenAmount,
         downPayment: downPayment,
+        installmentVouchers: installmentTotal,
+        voucherCount: approvedInstallmentVouchers.length,
         total: totalPaid,
-        hasSaleAgreement: !!plotAgreement
+        hasSaleAgreement: !!plotAgreement,
+        hasBiyana: !!plotBiyana
       });
     }
   };
@@ -181,6 +192,7 @@ export default function TransferForm() {
         title: "Transfer Form Submitted",
         description: "Transfer form has been submitted successfully and is pending approval.",
       });
+      
       // Reset form
       setFormData({
         plotId: "",
@@ -201,6 +213,9 @@ export default function TransferForm() {
       setSelectedPlot(null);
       setFromCustomerId("");
       setToCustomerId("");
+      
+      // Redirect to approvals page
+      navigate('/approvals');
     },
     onError: (error: any) => {
       const errorMessage = error.message || error.response?.data?.message || "Failed to submit transfer form";
@@ -447,10 +462,48 @@ export default function TransferForm() {
                         <p className="font-medium">{currentOwner.address}</p>
                       </div>
                       {totalPaidAmount > 0 && (
-                        <div className="md:col-span-2 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="md:col-span-2 mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                           <Label className="text-sm font-semibold text-blue-900">Total Amount Paid by Current Owner</Label>
                           <p className="text-2xl font-bold text-blue-600 mt-1">Rs {totalPaidAmount.toLocaleString()}</p>
-                          <p className="text-xs text-blue-700 mt-1">Transfer amount must equal this exact amount</p>
+                          <p className="text-xs text-blue-700 mt-2">Transfer amount must equal this exact amount</p>
+                          
+                          {/* Payment Breakdown */}
+                          <div className="mt-3 pt-3 border-t border-blue-200">
+                            <p className="text-xs font-semibold text-blue-900 mb-2">Payment Breakdown:</p>
+                            <div className="space-y-1 text-xs text-blue-800">
+                              {(() => {
+                                const plotBiyana = biyanaForms?.find((b: any) => 
+                                  b.plotId === formData.plotId && b.status === 'APPROVED'
+                                );
+                                const plotAgreement = saleAgreements?.find((a: any) => 
+                                  a.plotId === formData.plotId && a.isActive && a.status === 'APPROVED'
+                                );
+                                const plotVouchers = vouchersData || [];
+                                const approvedInstallmentVouchers = plotVouchers.filter((v: any) => 
+                                  v.status === 'APPROVED' && 
+                                  (v.formType === 'INSTALLMENT' || v.formType === 'QUARTERLY')
+                                );
+                                const installmentTotal = approvedInstallmentVouchers.reduce((sum: number, v: any) => sum + (v.amount || 0), 0);
+                                
+                                return (
+                                  <>
+                                    <div className="flex justify-between">
+                                      <span>• Biyana Token:</span>
+                                      <span className="font-medium">Rs {(plotBiyana?.tokenAmount || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>• Down Payment:</span>
+                                      <span className="font-medium">Rs {(plotAgreement?.downPayment || 0).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>• Installments Paid ({approvedInstallmentVouchers.length} vouchers):</span>
+                                      <span className="font-medium">Rs {installmentTotal.toLocaleString()}</span>
+                                    </div>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -568,7 +621,7 @@ export default function TransferForm() {
                     />
                     {totalPaidAmount > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        Required amount: Rs {totalPaidAmount.toLocaleString()} (total paid for this plot)
+                        Required amount: Rs {totalPaidAmount.toLocaleString()} 
                       </p>
                     )}
                   </div>

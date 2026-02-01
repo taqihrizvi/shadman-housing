@@ -57,7 +57,25 @@ export default function PrintableVoucher() {
 
   const formatPaymentType = (type: string) => {
     if (!type) return "";
-    return t(`payments.paymentTypes.${type}`) || formatEnum(type);
+    
+    // Custom labels for payment types
+    const labels: Record<string, string> = {
+      'INSTALLMENT': 'Monthly Installment',
+      'QUARTERLY': 'Quarterly Installment',
+      'BIYANA': 'Biyana Payment',
+      'SALES_AGREEMENT': 'Down Payment',
+      'TRANSFER_FEE': 'Transfer Fee'
+    };
+    
+    // Try translation first
+    const translated = t(`payments.paymentTypes.${type}`);
+    
+    // If translation returns the key itself (no translation found), use custom label or formatEnum
+    if (translated && !translated.startsWith('payments.paymentTypes.')) {
+      return translated;
+    }
+    
+    return labels[type] || formatEnum(type);
   };
 
   const handlePrint = () => {

@@ -64,11 +64,25 @@ export default function Vouchers() {
 
   const formatPaymentType = (type: string) => {
     if (!type) return "";
-    if (type === 'BIYANA') return t('payments.paymentTypes.BIYANA');
-    if (type === 'INSTALLMENT') return 'Installment';
-    if (type === 'QUARTERLY') return 'Quarterly Payment';
-    if (type === 'SALES_AGREEMENT') return 'Sales Agreement';
-    return t(`payments.paymentTypes.${type}`) || formatEnum(type);
+    
+    // Custom labels for payment types
+    const labels: Record<string, string> = {
+      'INSTALLMENT': 'Monthly Installment',
+      'QUARTERLY': 'Quarterly Installment',
+      'BIYANA': 'Biyana Payment',
+      'SALES_AGREEMENT': 'Down Payment',
+      'TRANSFER_FEE': 'Transfer Fee'
+    };
+    
+    // Try translation first
+    const translated = t(`payments.paymentTypes.${type}`);
+    
+    // If translation returns the key itself (no translation found), use custom label or formatEnum
+    if (translated && !translated.startsWith('payments.paymentTypes.')) {
+      return translated;
+    }
+    
+    return labels[type] || formatEnum(type);
   };
 
   const formatDate = (dateString: string) => {
@@ -261,7 +275,8 @@ export default function Vouchers() {
                       <SelectItem value="BIYANA">{t('payments.paymentTypes.BIYANA')}</SelectItem>
                       <SelectItem value="INSTALLMENT">Installment</SelectItem>
                       <SelectItem value="QUARTERLY">Quarterly Payment</SelectItem>
-                      <SelectItem value="SALES_AGREEMENT">Sales Agreement</SelectItem>
+                      <SelectItem value="SALES_AGREEMENT">Down Payment</SelectItem>
+                      <SelectItem value="TRANSFER_FEE">Transfer Fee</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
