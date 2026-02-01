@@ -133,7 +133,7 @@ const ViewBiyanaForms = () => {
       },
       pricePerMarla: form.pricePerMarla,
       totalAmount: form.totalAmount,
-      biyanaAmount: form.biyanaAmount || 0,
+      tokenAmount: form.tokenAmount || 0,
       totalRemaining: form.totalRemaining,
       firstInstallmentRemaining: form.firstInstallmentRemaining,
       lastInstallmentDate: form.lastInstallmentDate,
@@ -201,7 +201,7 @@ const ViewBiyanaForms = () => {
                         <TableCell>{form.customer?.cnic || 'N/A'}</TableCell>
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
                         <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>
-                        <TableCell>{formatCurrency(form.biyanaAmount)}</TableCell>
+                        <TableCell>{formatCurrency(form.tokenAmount)}</TableCell>
                         <TableCell>{formatDate(form.date)}</TableCell>
                         <TableCell>
                           <Badge 
@@ -316,7 +316,7 @@ const ViewBiyanaForms = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">{t('forms.biyanaAmount')}</label>
-                        <p className="text-base font-semibold text-green-600">{formatCurrency(selectedForm.biyanaAmount)}</p>
+                        <p className="text-base font-semibold text-green-600">{formatCurrency(selectedForm.tokenAmount)}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">{t('forms.paymentMethod')}</label>

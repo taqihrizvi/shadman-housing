@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -98,7 +99,7 @@ export default function Approvals() {
       },
       pricePerMarla: biyana.pricePerMarla,
       totalAmount: biyana.totalAmount,
-      biyanaAmount: biyana.biyanaAmount || 0,
+      tokenAmount: biyana.tokenAmount || 0,
       totalRemaining: biyana.totalRemaining,
       firstInstallmentRemaining: biyana.firstInstallmentRemaining,
       lastInstallmentDate: biyana.lastInstallmentDate,
@@ -131,7 +132,17 @@ export default function Approvals() {
   };
 
   const handlePrintAgreement = (agreement: any) => {
-    setPrintData(agreement);
+    // Extract biyana data from plot.biyanaForms array
+    const biyanaData = agreement.plot?.biyanaForms?.[0];
+    
+    // Add biyana amount to the agreement data for printable form
+    const enrichedData = {
+      ...agreement,
+      biyanaAmount: biyanaData?.tokenAmount || 0,
+      biyana: biyanaData || null,
+    };
+    
+    setPrintData(enrichedData);
     setIsPrintAgreementOpen(true);
   };
 
@@ -1261,6 +1272,10 @@ export default function Approvals() {
         {/* Biyana Print Dialog */}
         <Dialog open={isPrintBiyanaOpen} onOpenChange={setIsPrintBiyanaOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <VisuallyHidden>
+              <DialogTitle>Biyana Form Preview</DialogTitle>
+              <DialogDescription>Print preview of Biyana form</DialogDescription>
+            </VisuallyHidden>
             {printData && (
               <PrintableBiyanaFormSimple 
                 data={printData}
@@ -1274,6 +1289,10 @@ export default function Approvals() {
         {/* Sale Agreement Print Dialog */}
         <Dialog open={isPrintAgreementOpen} onOpenChange={setIsPrintAgreementOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <VisuallyHidden>
+              <DialogTitle>Sale Agreement Preview</DialogTitle>
+              <DialogDescription>Print preview of sale agreement</DialogDescription>
+            </VisuallyHidden>
             {printData && (
               <PrintableSaleAgreementForm 
                 data={printData}
@@ -1287,6 +1306,10 @@ export default function Approvals() {
         {/* Transfer Print Dialog */}
         <Dialog open={isPrintTransferOpen} onOpenChange={setIsPrintTransferOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <VisuallyHidden>
+              <DialogTitle>Transfer Form Preview</DialogTitle>
+              <DialogDescription>Print preview of transfer form</DialogDescription>
+            </VisuallyHidden>
             {printData && (
               <PrintableTransferForm 
                 data={printData}
@@ -1303,6 +1326,10 @@ export default function Approvals() {
           if (!open) setSelectedPaymentId(null);
         }}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+            <VisuallyHidden>
+              <DialogTitle>Payment Voucher Preview</DialogTitle>
+              <DialogDescription>Print preview of payment voucher</DialogDescription>
+            </VisuallyHidden>
             {voucherData && (
               <div className="p-6">
                 <PrintableVoucherContent voucher={voucherData} onClose={() => {

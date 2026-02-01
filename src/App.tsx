@@ -62,7 +62,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'VIEWER']}><Index /></ProtectedRoute>} />
           <Route path="/calculator" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Calculator /></ProtectedRoute>} />

@@ -253,7 +253,7 @@ const Index = () => {
       },
       pricePerMarla: biyana.pricePerMarla,
       totalAmount: biyana.totalAmount,
-      biyanaAmount: biyana.biyanaAmount || 0,
+      tokenAmount: biyana.tokenAmount || 0,
       totalRemaining: biyana.totalRemaining,
       firstInstallmentRemaining: biyana.firstInstallmentRemaining,
       lastInstallmentDate: biyana.lastInstallmentDate,
@@ -551,8 +551,8 @@ const Index = () => {
         let totalReceived = plotPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
         
         // Add biyana amount only if no biyana voucher exists
-        if (!hasBiyanaVoucher && plotBiyana && plotBiyana.biyanaAmount) {
-          totalReceived += plotBiyana.biyanaAmount;
+        if (!hasBiyanaVoucher && plotBiyana && plotBiyana.tokenAmount) {
+          totalReceived += plotBiyana.tokenAmount;
         }
         
         // Add down payment only if no sales agreement voucher exists
@@ -1172,7 +1172,7 @@ const Index = () => {
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">{t('payments.amount')}</p>
-                              <p className="font-semibold text-green-600">{formatCurrency(biyana.biyanaAmount)}</p>
+                              <p className="font-semibold text-green-600">{formatCurrency(biyana.tokenAmount)}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Date</p>
@@ -1437,7 +1437,7 @@ const Index = () => {
               }
               
               // Add biyana payment if it exists and no voucher exists
-              if (biyana && biyana.biyanaAmount && !hasBiyanaVoucher) {
+              if (biyana && biyana.tokenAmount && !hasBiyanaVoucher) {
                 allPayments.push({
                   id: `biyana-${biyana.id}`,
                   date: biyana.date || biyana.createdAt,
@@ -1445,7 +1445,7 @@ const Index = () => {
                   voucherNumber: biyana.formNumber,
                   bankSlipNumber: 'N/A',
                   paymentMethod: biyana.paymentMethod || 'N/A',
-                  amount: biyana.biyanaAmount,
+                  amount: biyana.tokenAmount,
                   type: 'BIYANA'
                 });
               }
@@ -1497,7 +1497,7 @@ const Index = () => {
                         <div>
                           <p className="text-sm text-muted-foreground">{t('payments.installmentPlan')}</p>
                           <p className="font-semibold">
-                            {agreement.installmentMonths ? `${agreement.installmentMonths} ${t('common.months')}` : t('payments.fullPayment')}
+                            {agreement.installmentMonths ? `${agreement.installmentMonths} ${t('months')}` : t('payments.fullPayment')}
                           </p>
                         </div>
                       </div>
@@ -1521,7 +1521,7 @@ const Index = () => {
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">{t('payments.biyanaAmount')}</p>
-                            <p className="font-semibold text-green-600">{formatCurrency(biyana.biyanaAmount)}</p>
+                            <p className="font-semibold text-green-600">{formatCurrency(biyana.tokenAmount)}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Total Amount</p>
@@ -1792,7 +1792,7 @@ const Index = () => {
           .map((form: any) => ({
             plotNo: form.plot?.plotNo || 'N/A',
             customer: toTitleCase(form.customer?.name || 'N/A'),
-            biyanaAmount: formatCurrency(form.biyanaAmount || 0),
+            biyanaAmount: formatCurrency(form.tokenAmount || 0),
             date: formatDate(form.date),
           }));
         break;
@@ -1867,8 +1867,8 @@ const Index = () => {
             let totalReceived = plotPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
             
             // Add biyana amount only if no biyana voucher exists
-            if (!hasBiyanaVoucher && plotBiyana && plotBiyana.biyanaAmount) {
-              totalReceived += plotBiyana.biyanaAmount;
+            if (!hasBiyanaVoucher && plotBiyana && plotBiyana.tokenAmount) {
+              totalReceived += plotBiyana.tokenAmount;
             }
             
             // Add down payment only if no sales agreement voucher exists

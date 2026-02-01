@@ -64,6 +64,19 @@ export default function SaleAgreementForm() {
   const [monthlyInstallment, setMonthlyInstallment] = useState<number>(0);
   const [isTransferredPlot, setIsTransferredPlot] = useState<boolean>(false);
   const [oldSaleAgreement, setOldSaleAgreement] = useState<any>(null);
+  
+  // Installment details from Biyana form
+  const [installmentDetails, setInstallmentDetails] = useState<{
+    installmentType: string;
+    monthlyInstallments: number;
+    quarterlyInstallments: number;
+    monthlyInstallmentAmount: number;
+    quarterlyInstallmentAmount: number;
+  } | null>(null);
+  
+  // Calculated installments based on current due payment
+  const [calculatedMonthlyInstallment, setCalculatedMonthlyInstallment] = useState<number>(0);
+  const [calculatedQuarterlyInstallment, setCalculatedQuarterlyInstallment] = useState<number>(0);
 
   // Fetch reserved and transferred plots
   const { data: availablePlots, isLoading: plotsLoading } = useQuery({
@@ -262,11 +275,12 @@ export default function SaleAgreementForm() {
     } else {
       // For reserved plots, get buyer info from biyana form (original reservation)
       const biyanaForm = plot?.biyanaForms?.[0];
-      biyana = biyanaForm?.biyanaAmount || 0;
+      biyana = biyanaForm?.tokenAmount || 0;
       customer = biyanaForm?.customer;
       
       console.log('Biyana Form Data:', biyanaForm);
       console.log('Monthly Installments:', biyanaForm?.monthlyInstallments);
+      console.log('Down Payment from Biyana:', biyanaForm?.downPayment);
       
       // Get payment plan from biyana's agreement duration
       if (biyanaForm?.monthlyInstallments) {
@@ -277,6 +291,22 @@ export default function SaleAgreementForm() {
         else if (months === 36) paymentPlanEnum = "INSTALLMENT_36";
       }
       
+      // Fetch installment details from Biyana form
+      if (biyanaForm) {
+        setInstallmentDetails({
+          installmentType: biyanaForm.installmentType || 'MONTHLY_ONLY',
+          monthlyInstallments: biyanaForm.monthlyInstallments || 0,
+          quarterlyInstallments: biyanaForm.quarterlyInstallments || 0,
+          monthlyInstallmentAmount: biyanaForm.monthlyInstallmentAmount || 0,
+          quarterlyInstallmentAmount: biyanaForm.quarterlyInstallmentAmount || 0,
+        });
+        
+        // Use downPayment from Biyana form if available
+        if (biyanaForm.downPayment !== undefined && biyanaForm.downPayment !== null) {
+          downPayment = biyanaForm.downPayment;
+        }
+      }
+      
       console.log('Payment Plan Display:', paymentPlanDisplay);
       totalPrice = biyanaForm?.totalAmount || plot?.price || 0;
     }
@@ -284,7 +314,7 @@ export default function SaleAgreementForm() {
     // For transferred plots, also fetch biyana amount (regardless of who paid)
     if (isTransferred) {
       const biyanaForm = plot?.biyanaForms?.[0];
-      biyana = biyanaForm?.biyanaAmount || 0;
+      biyana = biyanaForm?.tokenAmount || 0;
       console.log('✅ Biyana amount for transferred plot:', biyana);
     }
     
@@ -316,24 +346,96 @@ export default function SaleAgreementForm() {
     setDuePayment(due > 0 ? due : 0);
   }, [formData.totalPrice, formData.downPayment, biyanaAmount]);
 
-  // Calculate monthly installment based on payment plan and due payment
+  // Calculate installments based on payment plan and due payment
   useEffect(() => {
-    if (!formData.paymentPlan || duePayment <= 0) {
+    if (duePayment <= 0 || !installmentDetails) {
+      setCalculatedMonthlyInstallment(0);
+      setCalculatedQuarterlyInstallment(0);
       setMonthlyInstallment(0);
       return;
     }
 
-    let months = 0;
-    if (formData.paymentPlan === "INSTALLMENT_12") months = 12;
-    else if (formData.paymentPlan === "INSTALLMENT_24") months = 24;
-    else if (formData.paymentPlan === "INSTALLMENT_36") months = 36;
-
-    if (months > 0) {
-      setMonthlyInstallment(duePayment / months);
-    } else {
-      setMonthlyInstallment(0);
+    const monthlyCount = installmentDetails.monthlyInstallments || 0;
+    const quarterlyCount = installmentDetails.quarterlyInstallments || 0;
+    
+    if (installmentDetails.installmentType === 'MONTHLY_ONLY' && monthlyCount > 0) {
+      // For monthly only: divide due payment by number of months and round up
+      const monthlyAmt = Math.ceil(duePayment / monthlyCount);
+      setCalculatedMonthlyInstallment(monthlyAmt);
+      setMonthlyInstallment(monthlyAmt);
+      setCalculatedQuarterlyInstallment(0);
+    } else if (installmentDetails.installmentType === 'MONTHLY_AND_QUARTERLY') {
+      // For monthly + quarterly: calculate using the same logic as Biyana form
+      const originalQuarterlyAmt = installmentDetails.quarterlyInstallmentAmount || 0;
+      const originalMonthlyAmt = installmentDetails.monthlyInstallmentAmount || 0;
+      
+      if (quarterlyCount > 0 && monthlyCount > 0 && originalMonthlyAmt > 0 && originalQuarterlyAmt > 0) {
+        // Calculate the original ratio of monthly to total in Biyana form
+        const originalMonthlyTotal = originalMonthlyAmt * monthlyCount;
+        const originalQuarterlyTotal = originalQuarterlyAmt * quarterlyCount;
+        const originalTotal = originalMonthlyTotal + originalQuarterlyTotal;
+        
+        // Calculate what portion of the original total was monthly payments
+        const monthlyRatio = originalMonthlyTotal / originalTotal;
+        
+        // Apply this ratio to the new due payment
+        const newMonthlyTotal = duePayment * monthlyRatio;
+        const newMonthlyAmt = Math.ceil(newMonthlyTotal / monthlyCount);
+        
+        // Quarterly gets the remainder
+        const remainingForQuarterly = duePayment - newMonthlyTotal;
+        const newQuarterlyAmt = Math.ceil(remainingForQuarterly / quarterlyCount);
+        
+        setCalculatedMonthlyInstallment(newMonthlyAmt);
+        setCalculatedQuarterlyInstallment(newQuarterlyAmt);
+        setMonthlyInstallment(newMonthlyAmt);
+      } else if (monthlyCount > 0) {
+        // Fallback: only monthly installments
+        const monthlyAmt = Math.ceil(duePayment / monthlyCount);
+        setCalculatedMonthlyInstallment(monthlyAmt);
+        setMonthlyInstallment(monthlyAmt);
+        setCalculatedQuarterlyInstallment(0);
+      }
     }
-  }, [formData.paymentPlan, duePayment]);
+  }, [duePayment, installmentDetails]);
+
+  // Handle manual monthly installment change
+  const handleMonthlyInstallmentChange = (value: string) => {
+    const newMonthlyAmt = parseFloat(value) || 0;
+    setCalculatedMonthlyInstallment(newMonthlyAmt);
+    
+    // Recalculate quarterly if applicable
+    if (installmentDetails?.installmentType === 'MONTHLY_AND_QUARTERLY') {
+      const monthlyCount = installmentDetails.monthlyInstallments || 0;
+      const quarterlyCount = installmentDetails.quarterlyInstallments || 0;
+      
+      if (quarterlyCount > 0) {
+        const totalMonthlyPayments = newMonthlyAmt * monthlyCount;
+        const remainingForQuarterly = duePayment - totalMonthlyPayments;
+        const newQuarterlyAmt = Math.ceil(remainingForQuarterly / quarterlyCount);
+        setCalculatedQuarterlyInstallment(newQuarterlyAmt);
+      }
+    }
+  };
+
+  // Handle manual quarterly installment change
+  const handleQuarterlyInstallmentChange = (value: string) => {
+    const newQuarterlyAmt = parseFloat(value) || 0;
+    setCalculatedQuarterlyInstallment(newQuarterlyAmt);
+    
+    // Recalculate monthly
+    if (installmentDetails) {
+      const monthlyCount = installmentDetails.monthlyInstallments || 0;
+      const quarterlyCount = installmentDetails.quarterlyInstallments || 0;
+      
+      if (monthlyCount > 0) {
+        const totalQuarterlyPayments = newQuarterlyAmt * quarterlyCount;
+        const remainingForMonthly = duePayment - totalQuarterlyPayments;
+        const newMonthlyAmt = Math.ceil(remainingForMonthly / monthlyCount);
+        setCalculatedMonthlyInstallment(newMonthlyAmt);
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -566,6 +668,9 @@ export default function SaleAgreementForm() {
                       {isTransferredPlot && (
                         <span className="ml-2 text-xs text-blue-600">(From old agreement)</span>
                       )}
+                      {!isTransferredPlot && formData.downPayment && (
+                        <span className="ml-2 text-xs text-green-600">(From Biyana form)</span>
+                      )}
                     </Label>
                     <Input
                       id="downPayment"
@@ -607,7 +712,50 @@ export default function SaleAgreementForm() {
                       Total Price - Down Payment - Biyana Amount = Due Payment (PKR)
                     </p>
                   </div>
-                  {formData.paymentPlan && formData.paymentPlan !== "FULL_PAYMENT" && monthlyInstallment > 0 && (
+                  
+                  {/* Show calculated installment details */}
+                  {installmentDetails && calculatedMonthlyInstallment > 0 && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="monthlyInstallment">
+                          Monthly Installment (PKR) *
+                        </Label>
+                        <Input
+                          id="monthlyInstallment"
+                          type="number"
+                          placeholder="Monthly installment amount"
+                          value={Math.ceil(calculatedMonthlyInstallment)}
+                          onChange={(e) => handleMonthlyInstallmentChange(e.target.value)}
+                          required
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          {installmentDetails.monthlyInstallments} monthly installments = PKR {(Math.ceil(calculatedMonthlyInstallment) * installmentDetails.monthlyInstallments).toLocaleString()}
+                        </p>
+                      </div>
+                      
+                      {installmentDetails.installmentType === 'MONTHLY_AND_QUARTERLY' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="quarterlyInstallment">
+                            Quarterly Installment (PKR) *
+                          </Label>
+                          <Input
+                            id="quarterlyInstallment"
+                            type="number"
+                            placeholder="Quarterly installment amount"
+                            value={Math.ceil(calculatedQuarterlyInstallment)}
+                            onChange={(e) => handleQuarterlyInstallmentChange(e.target.value)}
+                            required
+                          />
+                          <p className="text-sm text-muted-foreground">
+                            {installmentDetails.quarterlyInstallments} quarterly installments = PKR {(Math.ceil(calculatedQuarterlyInstallment) * installmentDetails.quarterlyInstallments).toLocaleString()}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  
+                  {/* Fallback to calculated monthly installment if no Biyana form details */}
+                  {(!installmentDetails || installmentDetails.monthlyInstallmentAmount === 0) && formData.paymentPlan && formData.paymentPlan !== "FULL_PAYMENT" && monthlyInstallment > 0 && (
                     <div className="space-y-2 md:col-span-2">
                       <Label className="text-base font-semibold">Monthly Installment (PKR)</Label>
                       <div className="text-2xl font-bold text-success bg-success/5 p-4 rounded-lg border-2 border-success/20">
@@ -617,6 +765,76 @@ export default function SaleAgreementForm() {
                   )}
                 </div>
               </div>
+
+              {/* Installment Details from Biyana Form */}
+              {installmentDetails && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">
+                    {isUrdu ? 'قسط کی تفصیلات (بیعانہ فارم سے)' : 'Installment Details (from Biyana Form)'}
+                  </h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>{isUrdu ? 'قسط کی قسم' : 'Installment Type'}</Label>
+                      <Input
+                        type="text"
+                        value={installmentDetails.installmentType === 'MONTHLY_ONLY' 
+                          ? (isUrdu ? 'صرف ماہانہ اقساط' : 'Monthly Installments Only')
+                          : (isUrdu ? 'ماہانہ + سہ ماہی اقساط' : 'Monthly + Quarterly Installments')
+                        }
+                        disabled
+                        className="bg-muted"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isUrdu ? 'ماہانہ اقساط' : 'Monthly Installments'}</Label>
+                      <Input
+                        type="number"
+                        value={installmentDetails.monthlyInstallments}
+                        disabled
+                        className="bg-muted"
+                      />
+                    </div>
+                    {installmentDetails.installmentType === 'MONTHLY_AND_QUARTERLY' && (
+                      <div className="space-y-2">
+                        <Label>{isUrdu ? 'سہ ماہی اقساط' : 'Quarterly Installments'}</Label>
+                        <Input
+                          type="number"
+                          value={installmentDetails.quarterlyInstallments}
+                          disabled
+                          className="bg-muted"
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label>{isUrdu ? 'ماہانہ قسط رقم' : 'Monthly Installment Amount'}</Label>
+                      <Input
+                        type="number"
+                        value={installmentDetails.monthlyInstallmentAmount}
+                        disabled
+                        className="bg-muted"
+                      />
+                    </div>
+                    {installmentDetails.installmentType === 'MONTHLY_AND_QUARTERLY' && (
+                      <div className="space-y-2">
+                        <Label>{isUrdu ? 'سہ ماہی قسط رقم' : 'Quarterly Installment Amount'}</Label>
+                        <Input
+                          type="number"
+                          value={installmentDetails.quarterlyInstallmentAmount}
+                          disabled
+                          className="bg-muted"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-900">
+                      {isUrdu 
+                        ? 'یہ قسط کی تفصیلات بیعانہ فارم سے خودکار طور پر بھری گئی ہیں۔'
+                        : 'These installment details are auto-filled from the Biyana Form.'}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Terms */}
               <div className="space-y-4">

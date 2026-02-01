@@ -168,7 +168,7 @@ export default function PrintableVoucher() {
           )}
 
           {/* Additional Payment Details */}
-          {(voucher.chequeNumber || voucher.bankName || voucher.transactionId) && (
+          {(voucher.chequeNumber || voucher.bankName || voucher.accountNumber || voucher.slipNumber || voucher.transactionId) && (
             <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-300">
               {voucher.chequeNumber && (
                 <div>
@@ -180,6 +180,18 @@ export default function PrintableVoucher() {
                 <div>
                   <p className="text-sm text-gray-600">{t('vouchers.bankName')}</p>
                   <p className="font-semibold text-gray-800">{voucher.bankName}</p>
+                </div>
+              )}
+              {voucher.accountNumber && (
+                <div>
+                  <p className="text-sm text-gray-600">Account Number</p>
+                  <p className="font-semibold text-gray-800">{voucher.accountNumber}</p>
+                </div>
+              )}
+              {voucher.slipNumber && (
+                <div>
+                  <p className="text-sm text-gray-600">Slip Number</p>
+                  <p className="font-semibold text-gray-800">{voucher.slipNumber}</p>
                 </div>
               )}
               {voucher.transactionId && (
@@ -231,7 +243,7 @@ export default function PrintableVoucher() {
             ) : (
               <div>
                 <div className="border-b-2 border-gray-800 h-16 mb-2 flex items-center justify-center">
-                  <span className="text-gray-500 text-sm">{t('printableForms.unsigned')}</span>
+                  <span className="text-gray-500 text-sm"></span>
                 </div>
                 <p className="text-sm text-gray-600 text-center">{t('vouchers.receivedBy')}</p>
                 <p className="text-xs text-gray-500 text-center mt-1">{voucher.approvedBy?.name || 'Admin'}</p>

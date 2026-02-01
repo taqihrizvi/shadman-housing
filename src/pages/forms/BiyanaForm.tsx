@@ -49,7 +49,8 @@ export default function BiyanaForm() {
     plotId: "",
     pricePerMarla: "",
     totalAmount: "",
-    biyanaAmount: "",
+    tokenAmount: "",
+    downPayment: "",
     totalRemaining: "",
     lastInstallmentDate: "",
     monthlyInstallments: "",
@@ -119,8 +120,8 @@ export default function BiyanaForm() {
       const biyanaData: any = {
         customerId,
         plotId: data.plotId,
-        biyanaAmount: parseFloat(data.biyanaAmount),
-        paymentMethod: "CASH", // Default value - using valid enum value
+        tokenAmount: parseFloat(data.tokenAmount),
+        downPayment: parseFloat(data.downPayment) || 0,
         date: new Date(data.date).toISOString(),
         // Additional fields for new format
         pricePerMarla: parseFloat(data.pricePerMarla) || 0,
@@ -178,16 +179,17 @@ export default function BiyanaForm() {
       const pricePerMarla = sizeInMarla > 0 ? (plot.price / sizeInMarla).toFixed(2) : "0";
       const totalAmount = plot.price.toString();
       
-      // Calculate remaining if biyana already entered
-      const biyanaAmount = parseFloat(formData.biyanaAmount) || 0;
-      const totalRemaining = (plot.price - biyanaAmount).toString();
+      // Calculate remaining if token and downpayment already entered
+      const tokenAmount = parseFloat(formData.tokenAmount) || 0;
+      const downPayment = parseFloat(formData.downPayment) || 0;
+      const totalRemaining = (plot.price - tokenAmount - downPayment).toString();
       
       setFormData({ 
         ...formData, 
         plotId,
         pricePerMarla,
         totalAmount,
-        totalRemaining: biyanaAmount > 0 ? totalRemaining : ""
+        totalRemaining: (tokenAmount > 0 || downPayment > 0) ? totalRemaining : ""
       });
     } else {
       setFormData({ ...formData, plotId });
@@ -347,16 +349,58 @@ export default function BiyanaForm() {
     });
   };
   
-  // Handle biyana amount change and auto-calculate remaining
-  const handleBiyanaAmountChange = (value: string) => {
-    const biyanaAmount = parseFloat(value) || 0;
+  // Handle down payment change and auto-calculate remaining
+  const handleDownPaymentChange = (value: string) => {
+    const downPayment = parseFloat(value) || 0;
+    const tokenAmount = parseFloat(formData.tokenAmount) || 0;
     const totalAmount = parseFloat(formData.totalAmount) || 0;
-    const totalRemaining = totalAmount > 0 ? (totalAmount - biyanaAmount).toString() : "";
+    const totalRemaining = totalAmount > 0 ? (totalAmount - tokenAmount - downPayment).toString() : "";
     
     // Recalculate installments if we have a last installment date
     let updatedData = { 
       ...formData, 
-      biyanaAmount: value,
+      downPayment: value,
+      totalRemaining 
+    };
+    
+    if (formData.lastInstallmentDate) {
+      const months = parseInt(formData.monthlyInstallments) || 0;
+      const remaining = parseFloat(totalRemaining) || 0;
+      
+      if (formData.installmentType === "MONTHLY_ONLY") {
+        const monthlyAmount = months > 0 ? (remaining / months).toFixed(2) : "0";
+        updatedData = {
+          ...updatedData,
+          monthlyInstallmentAmount: monthlyAmount,
+        };
+      } else {
+        const quarters = parseInt(formData.quarterlyInstallments) || 0;
+        const quarterlyAmount = parseFloat(formData.quarterlyInstallmentAmount) || 0;
+        const totalQuarterlyPayments = quarters * quarterlyAmount;
+        const remainingAfterQuarterly = remaining - totalQuarterlyPayments;
+        const monthlyAmount = months > 0 ? (remainingAfterQuarterly / months).toFixed(2) : "0";
+        
+        updatedData = {
+          ...updatedData,
+          monthlyInstallmentAmount: monthlyAmount,
+        };
+      }
+    }
+    
+    setFormData(updatedData);
+  };
+
+  // Handle token amount change and auto-calculate remaining
+  const handleTokenAmountChange = (value: string) => {
+    const tokenAmount = parseFloat(value) || 0;
+    const downPayment = parseFloat(formData.downPayment) || 0;
+    const totalAmount = parseFloat(formData.totalAmount) || 0;
+    const totalRemaining = totalAmount > 0 ? (totalAmount - tokenAmount - downPayment).toString() : "";
+    
+    // Recalculate installments if we have a last installment date
+    let updatedData = { 
+      ...formData, 
+      tokenAmount: value,
       totalRemaining 
     };
     
@@ -595,16 +639,28 @@ export default function BiyanaForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="biyanaAmount">
-                      {isUrdu ? 'بیانہ ادائیگی' : 'Biyana Payment'} *
+                    <Label htmlFor="tokenAmount">
+                      {t('forms.biyanaAmount')} *
                     </Label>
                     <Input
-                      id="biyanaAmount"
+                      id="tokenAmount"
                       type="number"
-                      placeholder={isUrdu ? 'بیانہ رقم درج کریں' : 'Enter biyana amount'}
-                      value={formData.biyanaAmount}
-                      onChange={(e) => handleBiyanaAmountChange(e.target.value)}
+                      placeholder={isUrdu ? 'ٹوکن رقم درج کریں' : 'Enter token amount'}
+                      value={formData.tokenAmount}
+                      onChange={(e) => handleTokenAmountChange(e.target.value)}
                       required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="downPayment">
+                      {isUrdu ? 'ڈاؤن پیمنٹ' : 'Down Payment'}
+                    </Label>
+                    <Input
+                      id="downPayment"
+                      type="number"
+                      placeholder={isUrdu ? 'ڈاؤن پیمنٹ رقم درج کریں' : 'Enter down payment'}
+                      value={formData.downPayment}
+                      onChange={(e) => handleDownPaymentChange(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">

@@ -64,7 +64,7 @@ export default function Vouchers() {
 
   const formatPaymentType = (type: string) => {
     if (!type) return "";
-    if (type === 'BIYANA') return 'Biyana Payment';
+    if (type === 'BIYANA') return t('payments.paymentTypes.BIYANA');
     if (type === 'INSTALLMENT') return 'Installment';
     if (type === 'QUARTERLY') return 'Quarterly Payment';
     if (type === 'SALES_AGREEMENT') return 'Sales Agreement';
@@ -258,7 +258,7 @@ export default function Vouchers() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">All Types</SelectItem>
-                      <SelectItem value="BIYANA">Biyana Payment</SelectItem>
+                      <SelectItem value="BIYANA">{t('payments.paymentTypes.BIYANA')}</SelectItem>
                       <SelectItem value="INSTALLMENT">Installment</SelectItem>
                       <SelectItem value="QUARTERLY">Quarterly Payment</SelectItem>
                       <SelectItem value="SALES_AGREEMENT">Sales Agreement</SelectItem>
@@ -275,7 +275,7 @@ export default function Vouchers() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">All Methods</SelectItem>
-                      <SelectItem value="CASH">Cash</SelectItem>
+                      <SelectItem value="BANK_DEPOSIT">Bank Deposit</SelectItem>
                       <SelectItem value="CHEQUE">Cheque</SelectItem>
                       <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
                       <SelectItem value="ONLINE">Online</SelectItem>

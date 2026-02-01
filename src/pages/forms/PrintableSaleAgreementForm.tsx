@@ -29,6 +29,7 @@ interface PrintableSaleAgreementFormProps {
     possessionDate?: string;
     agreementNumber: string;
     status?: string;
+    biyanaAmount?: number;
     createdBy?: {
       name: string;
       signature?: string;
@@ -39,6 +40,7 @@ interface PrintableSaleAgreementFormProps {
     }>;
     terms?: string;
     biyana?: {
+      tokenAmount?: number;
       totalAmount?: number;
       pricePerMarla?: number;
       totalRemaining?: number;
@@ -188,21 +190,54 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
 
   // Use biyana data if available, otherwise fall back to sale agreement data
   const totalAmount = data.biyana?.totalAmount || data.totalAmount;
+  const biyanaAmount = data.biyana?.tokenAmount || data.biyanaAmount || 0;
   const installmentMonths = data.biyana?.monthlyInstallments || data.installmentMonths;
-  const monthlyAmount = data.biyana?.monthlyInstallmentAmount || data.monthlyAmount;
   const quarterlyInstallments = data.biyana?.quarterlyInstallments || 0;
-  const quarterlyAmount = data.biyana?.quarterlyInstallmentAmount || 0;
   const installmentType = data.biyana?.installmentType || 'MONTHLY_ONLY';
   const tenPercentAmount = data.plot.price * 0.10;
   
-  // Calculate remaining balance same as biyana form
-  let remainingBalance;
-  if (installmentType === 'MONTHLY_AND_QUARTERLY') {
-    const totalQuarterlyPayments = quarterlyInstallments * quarterlyAmount;
-    remainingBalance = totalAmount - data.downPayment - totalQuarterlyPayments;
-  } else {
-    remainingBalance = totalAmount - data.downPayment;
+  // Calculate due payment (same as SaleAgreementForm)
+  const duePayment = totalAmount - data.downPayment - biyanaAmount;
+  
+  // Calculate installments using the same logic as SaleAgreementForm
+  let calculatedMonthlyAmount = 0;
+  let calculatedQuarterlyAmount = 0;
+  
+  if (duePayment > 0 && installmentMonths > 0) {
+    if (installmentType === 'MONTHLY_ONLY') {
+      // Monthly only: divide due payment by number of months and round up
+      calculatedMonthlyAmount = Math.ceil(duePayment / installmentMonths);
+    } else if (installmentType === 'MONTHLY_AND_QUARTERLY' && quarterlyInstallments > 0) {
+      // Monthly + Quarterly: calculate using original ratio from Biyana form
+      const originalQuarterlyAmt = data.biyana?.quarterlyInstallmentAmount || 0;
+      const originalMonthlyAmt = data.biyana?.monthlyInstallmentAmount || 0;
+      
+      if (originalMonthlyAmt > 0 && originalQuarterlyAmt > 0) {
+        const originalMonthlyTotal = originalMonthlyAmt * installmentMonths;
+        const originalQuarterlyTotal = originalQuarterlyAmt * quarterlyInstallments;
+        const originalTotal = originalMonthlyTotal + originalQuarterlyTotal;
+        
+        // Calculate ratio and apply to new due payment
+        const monthlyRatio = originalMonthlyTotal / originalTotal;
+        const newMonthlyTotal = duePayment * monthlyRatio;
+        calculatedMonthlyAmount = Math.ceil(newMonthlyTotal / installmentMonths);
+        
+        // Quarterly gets the remainder
+        const remainingForQuarterly = duePayment - newMonthlyTotal;
+        calculatedQuarterlyAmount = Math.ceil(remainingForQuarterly / quarterlyInstallments);
+      } else {
+        // Fallback if no original amounts
+        calculatedMonthlyAmount = Math.ceil(duePayment / installmentMonths);
+      }
+    }
   }
+  
+  // Use calculated amounts or fall back to data amounts
+  const monthlyAmount = calculatedMonthlyAmount || data.biyana?.monthlyInstallmentAmount || data.monthlyAmount;
+  const quarterlyAmount = calculatedQuarterlyAmount || data.biyana?.quarterlyInstallmentAmount || 0;
+  
+  // Calculate remaining balance for display
+  const remainingBalance = duePayment;
 
   return (
     <div className="bg-gray-50 max-h-screen overflow-auto print:max-h-none print:overflow-visible">
@@ -347,6 +382,12 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
                           <td className="border-r border-black p-2 print:p-1.5 font-bold bg-gray-100">{t('printableForms.totalAmount')}</td>
                           <td className="p-2 print:p-1.5 font-bold">{formatCurrency(totalAmount)}</td>
                         </tr>
+                        {biyanaAmount > 0 && (
+                          <tr className="border-b border-black">
+                            <td className="border-r border-black p-2 print:p-1.5 font-bold bg-gray-100">{t('forms.biyanaAmount')}</td>
+                            <td className="p-2 print:p-1.5 font-bold">{formatCurrency(biyanaAmount)}</td>
+                          </tr>
+                        )}
                         <tr className="border-b border-black">
                           <td className="border-r border-black p-2 print:p-1.5 font-bold bg-gray-100">{t('printableForms.downPayment')}</td>
                           <td className="p-2 print:p-1.5 font-bold">{formatCurrency(data.downPayment)}</td>
@@ -488,7 +529,7 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
                 ) : (
                   <>
                     <div className="border-b-2 border-black h-16 print:h-12 mb-2 print:mb-1 flex items-center justify-center">
-                      <span className="text-gray-500 text-sm print:text-xs">{t('printableForms.unsigned')}</span>
+                      <span className="text-gray-500 text-sm print:text-xs"></span>
                     </div>
                     <p className="font-bold text-sm print:text-xs">{t('printableForms.firstParty')}</p>
                     <p className="text-xs print:text-[10px] mt-1 print:mt-0">({data.createdBy?.name || 'Admin'})</p>

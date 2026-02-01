@@ -21,7 +21,7 @@ interface PrintableBiyanaFormProps {
     };
     pricePerMarla?: number;
     totalAmount?: number;
-    biyanaAmount: number;
+    tokenAmount: number;
     totalRemaining?: number;
     monthlyInstallments?: number;
     agreementDuration?: string;
@@ -252,6 +252,13 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
                     <span className="font-semibold whitespace-nowrap w-40">{t('printableForms.cnicNo')}:</span>
                     <div className="border-b-2 border-black px-3 py-1 flex-1">{data.cnic}</div>
                   </div>
+
+                  {data.phone && (
+                    <div className="flex items-baseline gap-3">
+                      <span className="font-semibold whitespace-nowrap w-40">{t('Phone Number')}:</span>
+                      <div className="border-b-2 border-black px-3 py-1 flex-1">{data.phone}</div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -259,7 +266,7 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
                   <p>
                     {t('printableForms.receiptConfirmation', { 
                       customerName: data.customerName, 
-                      amount: formatCurrency(data.biyanaAmount) 
+                      amount: formatCurrency(data.tokenAmount) 
                     })}
                   </p>
                 </div>
@@ -294,8 +301,8 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
                           <td className="p-2 print:p-1.5 font-bold">{formatCurrency(data.totalAmount || data.plot.price)}</td>
                         </tr>
                         <tr>
-                          <td className="border-r border-black p-2 print:p-1.5 font-bold bg-gray-100">{t('printableForms.downPayment')}</td>
-                          <td className="p-2 print:p-1.5 font-bold">{formatCurrency(data.biyanaAmount)}</td>
+                          <td className="border-r border-black p-2 print:p-1.5 font-bold bg-gray-100">{t('printableForms.tokenAmount')}</td>
+                          <td className="p-2 print:p-1.5 font-bold">{formatCurrency(data.tokenAmount)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -309,12 +316,12 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
                     <table className="w-full text-sm print:text-xs">
                       <tbody>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.downPaymentDate')}</td>
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('Token Amount Date')}</td>
                           <td className="p-2 print:p-1.5">{formatDate(data.date)}</td>
                         </tr>
                         <tr className="border-b border-black">
                           <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.remainingInstallments')}</td>
-                          <td className="p-2 print:p-1.5">{formatCurrency(data.totalRemaining || ((data.totalAmount || data.plot.price) - data.biyanaAmount))}</td>
+                          <td className="p-2 print:p-1.5">{formatCurrency(data.totalRemaining || ((data.totalAmount || data.plot.price) - data.tokenAmount))}</td>
                         </tr>
                         <tr className="border-b border-black">
                           <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.agreementDuration')}</td>

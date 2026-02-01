@@ -167,7 +167,7 @@ const resources = {
         currentAddress: 'Current Address',
         selectPlot: 'Select Plot',
         selectCustomer: 'Select Customer',
-        biyanaAmount: 'Biyana Amount',
+        biyanaAmount: 'Token Amount',
         paymentMethod: 'Payment Method',
         chequeNumber: 'Cheque Number',
         bankName: 'Bank Name',
@@ -205,6 +205,7 @@ const resources = {
         
         // Options
         selectOption: 'Select an option',
+        bankDeposit: 'Bank Deposit',
         cash: 'Cash',
         bankTransfer: 'Bank Transfer',
         cheque: 'Cheque',
@@ -257,6 +258,7 @@ const resources = {
         notAvailable: 'N/A',
         agreementNumber: 'Agreement Number',
         paymentMethods: {
+          BANK_DEPOSIT: 'Bank Deposit',
           CASH: 'Cash',
           BANK_TRANSFER: 'Bank Transfer',
           CHEQUE: 'Cheque',
@@ -271,7 +273,7 @@ const resources = {
         paymentTypeHelp: {
           INSTALLMENT: 'Record a monthly installment payment',
           QUARTERLY: 'Record a quarterly payment (recurring every 3 months)',
-          BIYANA: 'Auto-fetches amount from approved Biyana form',
+          BIYANA: 'Auto-fetches amount from pending Biyana form',
           SALES_AGREEMENT: 'Auto-fetches down payment from active Sales Agreement',
         },
         autoFilledFrom: 'Amount auto-filled from',
@@ -289,7 +291,7 @@ const resources = {
         pendingBalance: 'Pending Balance',
         installment: 'Installment',
         downPayment: 'Down Payment',
-        biyana: 'Biyana',
+        biyana: 'Token',
         voucher: 'Voucher',
         noPaymentsReceived: 'No payments received yet',
         completePaymentHistory: 'Complete payment history including Biyana and Sale Agreement payments',
@@ -297,7 +299,7 @@ const resources = {
         monthlyInstallmentAmount: 'Monthly Installment Amount',
         quarterlyInstallmentAmount: 'Quarterly Installment Amount',
         formNumber: 'Form Number',
-        biyanaAmount: 'Biyana Amount',
+        biyanaAmount: 'Token Amount',
         totalRemaining: 'Total Remaining',
         lastInstallmentDate: 'Last Installment Date',
         noPaymentsRecorded: 'No payments recorded',
@@ -376,7 +378,7 @@ const resources = {
         saleAgreement: 'Sale Agreements',
         transferForms: 'Transfer Forms',
         pendingBiyanaForms: 'Pending Biyana Forms',
-        reviewBiyanaForms: 'Review and approve Biyana forms submitted by managers',
+        reviewBiyanaForms: 'Review and approve Token forms submitted by managers',
         noPendingForms: 'No pending form approvals',
         submittedBy: 'Submitted By',
         pendingSaleAgreements: 'Pending Sale Agreements',
@@ -744,7 +746,7 @@ const resources = {
         currentAddress: 'موجودہ پتہ',
         selectPlot: 'پلاٹ منتخب کریں',
         selectCustomer: 'گاہک منتخب کریں',
-        biyanaAmount: 'بیعانہ رقم',
+        biyanaAmount: 'ٹوکن رقم',
         paymentMethod: 'ادائیگی کا طریقہ',
         chequeNumber: 'چیک نمبر',
         bankName: 'بینک کا نام',
@@ -782,6 +784,7 @@ const resources = {
         
         // Options
         selectOption: 'ایک اختیار منتخب کریں',
+        bankDeposit: 'بینک جمع',
         cash: 'نقد',
         bankTransfer: 'بینک ٹرانسفر',
         cheque: 'چیک',
@@ -984,6 +987,7 @@ const resources = {
         monthlyInstallment: 'ماہانہ قسط',
         agreementNumber: 'معاہدہ نمبر',
         paymentMethods: {
+          BANK_DEPOSIT: 'بینک جمع',
           CASH: 'نقد',
           BANK_TRANSFER: 'بینک ٹرانسفر',
           CHEQUE: 'چیک',
@@ -998,7 +1002,7 @@ const resources = {
         paymentTypeHelp: {
           INSTALLMENT: 'ماہانہ قسط کی ادائیگی ریکارڈ کریں',
           QUARTERLY: 'سہ ماہی ادائیگی ریکارڈ کریں (ہر 3 ماہ بعد)',
-          BIYANA: 'منظور شدہ بیعانہ فارم سے رقم خودکار طریقے سے بھری جاتی ہے',
+          BIYANA: 'بیعانہ فارم سے رقم خودکار طریقے سے بھری جاتی ہے',
           SALES_AGREEMENT: 'فعال فروخت معاہدے سے ابتدائی ادائیگی خودکار طریقے سے بھری جاتی ہے',
         },
         autoFilledFrom: 'رقم خودکار طریقے سے بھری گئی از',
@@ -1016,15 +1020,15 @@ const resources = {
         pendingBalance: 'بقایا بیلنس',
         installment: 'قسط',
         downPayment: 'ابتدائی ادائیگی',
-        biyana: 'بیعانہ',
+        biyana: 'ٹوکن',
         voucher: 'واؤچر',
         noPaymentsReceived: 'ابھی تک کوئی ادائیگی موصول نہیں ہوئی',
-        completePaymentHistory: 'بیعانہ اور فروخت معاہدے کی ادائیگیوں سمیت مکمل ادائیگی کی تاریخ',
+        completePaymentHistory: 'ٹوکن اور فروخت معاہدے کی ادائیگیوں سمیت مکمل ادائیگی کی تاریخ',
         installmentPlan: 'قسطوں کا منصوبہ',
         monthlyInstallmentAmount: 'ماہانہ قسط کی رقم',
         quarterlyInstallmentAmount: 'سہ ماہی قسط کی رقم',
         formNumber: 'فارم نمبر',
-        biyanaAmount: 'بیعانہ رقم',
+        biyanaAmount: 'ٹوکن رقم',
         totalRemaining: 'کل بقایا',
         lastInstallmentDate: 'آخری قسط کی تاریخ',
         noPaymentsRecorded: 'کوئی ادائیگی ریکارڈ نہیں',
@@ -1061,8 +1065,8 @@ const resources = {
 
       // Printable Forms
       printableForms: {
-        // Biyana Form
-        biyanaReceipt: 'بیعانہ فارم',
+        // Token Form
+        biyanaReceipt: 'ٹوکن فارم',
         tokenAdvanceReceipt: 'ٹوکن/ایڈوانس ادائیگی رسید',
         receiptNo: 'رسید نمبر',
         customerDetails: 'گاہک کی تفصیلات',
