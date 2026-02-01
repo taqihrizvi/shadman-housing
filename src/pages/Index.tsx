@@ -272,54 +272,23 @@ const Index = () => {
     setIsPrintOpen(true);
   };
 
-  const handleViewSaleAgreement = (plot: any) => {
+  const handleViewSaleAgreement = async (plot: any) => {
     const saleAgreement = getPlotSaleAgreement(plot.id, plot.buyerId);
     if (!saleAgreement) {
       alert("No Sale Agreement found for this plot");
       return;
     }
     
-    const biyana = getPlotBiyana(plot.id);
-    const data = {
-      customer: {
-        name: plot.buyer?.name || "",
-        fatherName: saleAgreement.customer?.fatherName || plot.buyer?.fatherName || "",
-        cnic: plot.buyer?.cnic || "",
-        phone: plot.buyer?.phone || "",
-        address: plot.buyer?.address || "",
-      },
-      plot: {
-        plotNo: plot.plotNo || "",
-        project: plot.project || "",
-        size: formatSize(plot.size || ""),
-        price: plot.price || 0,
-      },
-      totalAmount: saleAgreement.totalAmount,
-      downPayment: saleAgreement.downPayment,
-      installmentMonths: saleAgreement.installmentMonths,
-      monthlyAmount: saleAgreement.monthlyAmount,
-      agreementDate: saleAgreement.agreementDate,
-      possessionDate: saleAgreement.possessionDate,
-      agreementNumber: saleAgreement.agreementNumber,
-      status: saleAgreement.status,
-      createdBy: saleAgreement.createdBy,
-      witnesses: saleAgreement.witnesses,
-      terms: saleAgreement.terms,
-      biyana: biyana ? {
-        totalAmount: biyana.totalAmount,
-        pricePerMarla: biyana.pricePerMarla,
-        totalRemaining: biyana.totalRemaining,
-        monthlyInstallments: biyana.monthlyInstallments,
-        quarterlyInstallments: biyana.quarterlyInstallments,
-        monthlyInstallmentAmount: biyana.monthlyInstallmentAmount,
-        quarterlyInstallmentAmount: biyana.quarterlyInstallmentAmount,
-        agreementDuration: biyana.agreementDuration,
-        lastInstallmentDate: biyana.lastInstallmentDate,
-      } : undefined,
-    };
-    setPrintData(data);
-    setFormType('saleAgreement');
-    setIsPrintOpen(true);
+    try {
+      // Fetch full sale agreement details including all related data
+      const response = await formsAPI.getSaleAgreementById(saleAgreement.id);
+      setPrintData(response.data);
+      setFormType('saleAgreement');
+      setIsPrintOpen(true);
+    } catch (error) {
+      console.error('Error fetching sale agreement details:', error);
+      alert("Error loading sale agreement details");
+    }
   };
 
   const handleViewTransfer = (plot: any) => {
