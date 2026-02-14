@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { FileSignature, Loader2, Eye, Printer } from "lucide-react";
+import { FileSignature, Loader2, Eye, Printer, CheckCircle, XCircle, Clock } from "lucide-react";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import { useTranslation } from 'react-i18next';
 import { toTitleCase } from "@/lib/utils";
@@ -35,10 +35,14 @@ const ViewSaleAgreements = () => {
 
   // Helper function to format project names
   const formatProjectName = (value: string) => {
+    if (!value) return "";
+    // Check for translation first
     if (value === 'SHADMAN_GREENS') {
-      return t('projects.shadmanGreens');
+      const translated = t('projects.shadmanGreens');
+      if (translated && !translated.startsWith('projects.')) return translated;
     }
-    return value;
+    // Fallback to formatting the enum value
+    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
   // Helper function to format status
@@ -167,16 +171,24 @@ const ViewSaleAgreements = () => {
                         <TableCell>{formatPaymentPlan(form.installmentMonths)}</TableCell>
                         <TableCell>{formatDate(form.agreementDate)}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant="outline" 
-                            className={
-                              form.status === 'APPROVED'
-                                ? "bg-green-50 text-green-700 border-green-200"
-                                : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                            }
-                          >
-                            {form.status === 'APPROVED' ? t('status.approved') : t('status.pending')}
-                          </Badge>
+                          <div className="flex items-center justify-center">
+                            {form.status === 'APPROVED' ? (
+                              <CheckCircle 
+                                className="w-4 h-4 text-green-600"
+                                title={t('status.approved')}
+                              />
+                            ) : form.status === 'REJECTED' ? (
+                              <XCircle 
+                                className="w-4 h-4 text-red-600"
+                                title={t('status.rejected')}
+                              />
+                            ) : (
+                              <Clock 
+                                className="w-4 h-4 text-yellow-500"
+                                title={t('status.pending')}
+                              />
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -290,16 +302,16 @@ const ViewSaleAgreements = () => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Status</label>
-                        <Badge 
-                          variant="outline" 
-                          className={
-                            selectedForm.status === 'APPROVED'
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                          }
-                        >
-                          {formatStatus(selectedForm.status)}
-                        </Badge>
+                        <div className="flex items-center gap-2 mt-1">
+                          {selectedForm.status === 'APPROVED' ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : selectedForm.status === 'REJECTED' ? (
+                            <XCircle className="w-5 h-5 text-red-600" />
+                          ) : (
+                            <Clock className="w-5 h-5 text-yellow-500" />
+                          )}
+                          <span className="text-base">{formatStatus(selectedForm.status)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>

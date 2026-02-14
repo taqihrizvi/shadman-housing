@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { FileOutput, Loader2, Eye, Printer } from "lucide-react";
+import { FileOutput, Loader2, Eye, Printer, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import PrintableTransferForm from "../forms/PrintableTransferForm";
 
@@ -33,10 +33,14 @@ const ViewTransferForms = () => {
 
   // Helper function to format project names
   const formatProjectName = (value: string) => {
+    if (!value) return "";
+    // Check for translation first
     if (value === 'SHADMAN_GREENS') {
-      return t('projects.shadmanGreens');
+      const translated = t('projects.shadmanGreens');
+      if (translated && !translated.startsWith('projects.')) return translated;
     }
-    return value;
+    // Fallback to formatting the enum value
+    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
   // Helper function to get status display and styling
@@ -175,12 +179,24 @@ const ViewTransferForms = () => {
                         <TableCell>{formatCurrency(form.transferFee)}</TableCell>
                         <TableCell>{formatDate(form.transferDate)}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant="outline" 
-                            className={getStatusInfo(form.status).className}
-                          >
-                            {getStatusInfo(form.status).label}
-                          </Badge>
+                          <div className="flex items-center justify-center">
+                            {form.status === 'APPROVED' || form.status === 'COMPLETED' ? (
+                              <CheckCircle 
+                                className="w-4 h-4 text-green-600"
+                                title={getStatusInfo(form.status).label}
+                              />
+                            ) : form.status === 'REJECTED' ? (
+                              <XCircle 
+                                className="w-4 h-4 text-red-600"
+                                title={getStatusInfo(form.status).label}
+                              />
+                            ) : (
+                              <Clock 
+                                className="w-4 h-4 text-yellow-500"
+                                title={getStatusInfo(form.status).label}
+                              />
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -313,12 +329,16 @@ const ViewTransferForms = () => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">{t('forms.status')}</label>
-                        <Badge 
-                          variant="outline" 
-                          className={getStatusInfo(selectedForm.status).className}
-                        >
-                          {getStatusInfo(selectedForm.status).label}
-                        </Badge>
+                        <div className="flex items-center gap-2 mt-1">
+                          {selectedForm.status === 'APPROVED' || selectedForm.status === 'COMPLETED' ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : selectedForm.status === 'REJECTED' ? (
+                            <XCircle className="w-5 h-5 text-red-600" />
+                          ) : (
+                            <Clock className="w-5 h-5 text-yellow-500" />
+                          )}
+                          <span className="text-base">{getStatusInfo(selectedForm.status).label}</span>
+                        </div>
                       </div>
                     </div>
                   </div>

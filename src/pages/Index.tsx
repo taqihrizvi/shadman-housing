@@ -1442,7 +1442,7 @@ const Index = () => {
                         <FileSignature className="h-5 w-5" />
                         {t('payments.saleAgreementInformation')}
                       </h3>
-                      <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                      <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
                         <div>
                           <p className="text-sm text-muted-foreground">{t('payments.agreementNumber')}</p>
                           <p className="font-semibold">{agreement.agreementNumber}</p>
@@ -1469,54 +1469,135 @@ const Index = () => {
                             {agreement.installmentMonths ? `${agreement.installmentMonths} ${t('months')}` : t('payments.fullPayment')}
                           </p>
                         </div>
+                        {biyana && biyana.monthlyInstallmentAmount && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">{t('payments.monthlyInstallment')}</p>
+                            <p className="font-semibold text-green-600">{formatCurrency(biyana.monthlyInstallmentAmount || 0)}</p>
+                          </div>
+                        )}
+                        {biyana && biyana.quarterlyInstallmentAmount && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Quarterly Installment</p>
+                            <p className="font-semibold text-blue-600">{formatCurrency(biyana.quarterlyInstallmentAmount || 0)}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
 
                   <Separator />
 
-                  {/* Biyana Information */}
-                  {biyana && (
-                    <>
-                      <div>
-                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                          <FileText className="h-5 w-5" />
-                          {t('payments.biyanaDetails')}
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                          <div>
-                            <p className="text-sm text-muted-foreground">{t('payments.formNumber')}</p>
-                            <p className="font-semibold">{biyana.formNumber}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">{t('payments.biyanaAmount')}</p>
-                            <p className="font-semibold text-green-600">{formatCurrency(biyana.tokenAmount)}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Total Amount</p>
-                            <p className="font-semibold">{formatCurrency(biyana.totalAmount)}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">{t('payments.monthlyInstallment')}</p>
-                            <p className="font-semibold">{formatCurrency(biyana.monthlyInstallmentAmount || 0)}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <Separator />
-                    </>
-                  )}
-
                   {/* Payment History */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                      <Receipt className="h-5 w-5" />
-                      {t('payments.paymentHistory')}
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Receipt className="h-5 w-5" />
+                        {t('payments.paymentHistory')}
+                      </h3>
+                      {allPayments.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const printContent = document.getElementById('payment-history-print-content');
+                            if (printContent) {
+                              const printWindow = window.open('', '', 'height=800,width=1000');
+                              if (printWindow) {
+                                printWindow.document.write('<html><head><title>Payment History</title>');
+                                printWindow.document.write('<style>');
+                                printWindow.document.write('body { font-family: Arial, sans-serif; padding: 20px; }');
+                                printWindow.document.write('h2 { color: #1a5a4a; border-bottom: 3px solid #1a5a4a; padding-bottom: 10px; }');
+                                printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 20px; }');
+                                printWindow.document.write('th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }');
+                                printWindow.document.write('th { background-color: #1a5a4a; color: white; font-weight: bold; }');
+                                printWindow.document.write('tr:nth-child(even) { background-color: #f9f9f9; }');
+                                printWindow.document.write('.badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }');
+                                printWindow.document.write('.badge-biyana { background-color: #2563eb; color: white; }');
+                                printWindow.document.write('.badge-down { background-color: #16a34a; color: white; }');
+                                printWindow.document.write('.badge-outline { border: 1px solid #ccc; }');
+                                printWindow.document.write('@media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }');
+                                printWindow.document.write('</style></head><body>');
+                                printWindow.document.write(printContent.innerHTML);
+                                printWindow.document.write('</body></html>');
+                                printWindow.document.close();
+                                printWindow.print();
+                              }
+                            }
+                          }}
+                          className="gap-1"
+                        >
+                          <Printer className="h-4 w-4" />
+                          Print History
+                        </Button>
+                      )}
+                    </div>
+                    
                     {allPayments.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         {t('payments.noPaymentsReceived')}
                       </div>
                     ) : (
+                      <>
+                        {/* Hidden print content */}
+                        <div id="payment-history-print-content" style={{ display: 'none' }}>
+                          <h2>Payment History - Plot {selectedPaymentPlot?.plotNo}</h2>
+                          <p><strong>Customer:</strong> {agreement?.customer?.name || 'N/A'}</p>
+                          <p><strong>Date:</strong> {new Date().toLocaleDateString('en-PK')}</p>
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Date</th>
+                                <th>Payment Type</th>
+                                <th>Payment Method</th>
+                                <th>Bank & Account</th>
+                                <th>Slip Number</th>
+                                <th>Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {allPayments.map((payment: any) => {
+                                const isBiyana = payment.type === 'BIYANA' || payment.formType === 'BIYANA';
+                                const isSalesAgreement = payment.type === 'DOWN_PAYMENT' || payment.formType === 'SALES_AGREEMENT';
+                                return (
+                                  <tr key={`print-${payment.id}`}>
+                                    <td>{formatDate(payment.date)}</td>
+                                    <td>
+                                      {isBiyana ? (
+                                        <span className="badge badge-biyana">Biyana</span>
+                                      ) : isSalesAgreement ? (
+                                        <span className="badge badge-down">Down Payment</span>
+                                      ) : (
+                                        payment.description || 'Installment'
+                                      )}
+                                      {(payment.voucherNo || payment.voucherNumber) && (
+                                        <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                                          Voucher: {payment.voucherNo || payment.voucherNumber}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td>{formatEnum(payment.paymentMethod)}</td>
+                                    <td>
+                                      {payment.bankName ? (
+                                        <div>
+                                          <div style={{ fontWeight: 600 }}>{formatEnum(payment.bankName)}</div>
+                                          {payment.accountNumber && (
+                                            <div style={{ fontSize: '11px', color: '#666' }}>{payment.accountNumber}</div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        'N/A'
+                                      )}
+                                    </td>
+                                    <td>{payment.slipNumber || 'N/A'}</td>
+                                    <td style={{ fontWeight: 600 }}>{formatCurrency(payment.amount)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        
+                        {/* Visible table */}
                       <div className="border rounded-lg overflow-hidden">
                         <Table>
                           <TableHeader>
@@ -1524,6 +1605,8 @@ const Index = () => {
                               <TableHead>{t('payments.dateOfPayment')}</TableHead>
                               <TableHead>{t('payments.paymentType')}</TableHead>
                               <TableHead>{t('payments.paymentMethod')}</TableHead>
+                              <TableHead>Bank & Account</TableHead>
+                              <TableHead>Slip Number</TableHead>
                               <TableHead className="text-right">{t('payments.amount')}</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -1574,6 +1657,25 @@ const Index = () => {
                                   <TableCell>
                                     <Badge variant="outline">{formatEnum(payment.paymentMethod)}</Badge>
                                   </TableCell>
+                                  <TableCell>
+                                    {payment.bankName ? (
+                                      <div>
+                                        <div className="font-semibold">{formatEnum(payment.bankName)}</div>
+                                        {payment.accountNumber && (
+                                          <div className="text-xs text-muted-foreground">{payment.accountNumber}</div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground">N/A</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {payment.slipNumber ? (
+                                      <Badge variant="outline">{payment.slipNumber}</Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground">N/A</span>
+                                    )}
+                                  </TableCell>
                                   <TableCell className="text-right font-semibold">{formatCurrency(payment.amount)}</TableCell>
                                 </TableRow>
                               );
@@ -1581,6 +1683,7 @@ const Index = () => {
                           </TableBody>
                         </Table>
                       </div>
+                      </>
                     )}
                   </div>
 

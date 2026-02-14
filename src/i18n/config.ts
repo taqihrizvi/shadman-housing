@@ -265,10 +265,10 @@ const resources = {
           ONLINE: 'Online',
         },
         paymentTypes: {
-          INSTALLMENT: 'Monthly Installment',
+          INSTALLMENT: 'Installment',
           QUARTERLY: 'Quarterly Payment',
           BIYANA: 'Biyana Payment',
-          SALES_AGREEMENT: 'Sales Agreement Down Payment',
+          SALES_AGREEMENT: 'Down Payment',
         },
         paymentTypeHelp: {
           INSTALLMENT: 'Record a monthly installment payment',
@@ -997,7 +997,7 @@ const resources = {
           INSTALLMENT: 'ماہانہ قسط',
           QUARTERLY: 'سہ ماہی ادائیگی',
           BIYANA: 'بیعانہ ادائیگی',
-          SALES_AGREEMENT: 'فروخت معاہدے کی ابتدائی ادائیگی',
+          SALES_AGREEMENT: 'ابتدائی ادائیگی',
         },
         paymentTypeHelp: {
           INSTALLMENT: 'ماہانہ قسط کی ادائیگی ریکارڈ کریں',

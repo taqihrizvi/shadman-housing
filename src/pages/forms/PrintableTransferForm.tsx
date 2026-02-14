@@ -46,9 +46,10 @@ interface PrintableTransferFormProps {
   };
   onClose?: () => void;
   hidePrintButton?: boolean;
+  isApprovalView?: boolean;
 }
 
-export default function PrintableTransferForm({ data, onClose, hidePrintButton }: PrintableTransferFormProps) {
+export default function PrintableTransferForm({ data, onClose, hidePrintButton, isApprovalView }: PrintableTransferFormProps) {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
   const contentRef = useRef<HTMLDivElement>(null);
@@ -79,7 +80,12 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton }
     if (!value) return "";
     if (isUrdu) {
       if (value === 'SHADMAN_GREENS') return 'شادمان گرینز';
-      return formatEnum(value);
+    } else {
+      // Check for translation first
+      if (value === 'SHADMAN_GREENS') {
+        const translated = t('projects.shadmanGreens');
+        if (translated && !translated.startsWith('projects.')) return translated;
+      }
     }
     return formatEnum(value);
   };
@@ -259,7 +265,7 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton }
 
       {/* Property Details */}
       <div className="border-2 border-gray-900 mb-1.5">
-        <div className="bg-gray-50 px-2 py-0.5 border-b border-gray-900">
+        <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
           <h3 className="text-xs font-bold text-gray-900">PROPERTY DETAILS</h3>
         </div>
         <div className="p-1.5">
@@ -282,7 +288,7 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton }
 
       {/* Current Owner (From) */}
       <div className="border-2 border-gray-900 mb-1.5">
-        <div className="bg-gray-50 px-2 py-0.5 border-b border-gray-900">
+        <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
           <h3 className="text-xs font-bold text-gray-900">CURRENT OWNER (TRANSFEROR)</h3>
         </div>
         <div className="p-1.5">
@@ -309,7 +315,7 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton }
 
       {/* New Owner (To) */}
       <div className="border-2 border-gray-900 mb-1.5">
-        <div className="bg-gray-50 px-2 py-0.5 border-b border-gray-900">
+        <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
           <h3 className="text-xs font-bold text-gray-900">NEW OWNER (TRANSFEREE)</h3>
         </div>
         <div className="p-1.5">
@@ -336,7 +342,7 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton }
 
       {/* Financial Details */}
       <div className="border-2 border-gray-900 mb-2">
-        <div className="bg-gray-50 px-2 py-0.5 border-b border-gray-900">
+        <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
           <h3 className="text-xs font-bold text-gray-900">FINANCIAL DETAILS</h3>
         </div>
         <div className="p-1.5">
@@ -407,7 +413,7 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton }
   return (
     <>
       {/* Print Controls - Hidden when printing */}
-      <div className="print:hidden bg-gray-100 p-4 sticky top-0 z-50 border-b">
+      <div className={`print:hidden ${isApprovalView ? '' : 'bg-gray-100'} p-4 sticky top-0 z-[100] border-b`}>
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <Button variant="outline" onClick={onClose}>
             <ArrowLeft className="h-4 w-4 mr-2" />

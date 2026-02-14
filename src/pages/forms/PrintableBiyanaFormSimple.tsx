@@ -184,11 +184,6 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t('printableForms.biyanaReceipt')} - {data.formNumber || data.plot.plotNo}</h2>
           <div className="flex gap-2">
-            {onClose && (
-              <Button onClick={onClose} variant="outline">
-                {t('common.close')}
-              </Button>
-            )}
             {!hidePrintButton && (
               <Button onClick={handlePrint} variant="outline">
                 <Printer className="mr-2 h-4 w-4" />

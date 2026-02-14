@@ -50,6 +50,17 @@ export default function PrintableVoucher() {
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const formatProjectName = (value: string) => {
+    if (!value) return "";
+    // Check for translation first
+    if (value === 'SHADMAN_GREENS') {
+      const translated = t('projects.shadmanGreens');
+      if (translated && !translated.startsWith('projects.')) return translated;
+    }
+    // Fallback to formatting the enum value
+    return formatEnum(value);
+  };
+
   const formatPaymentMethod = (method: string) => {
     if (!method) return "";
     return t(`payments.paymentMethods.${method}`) || formatEnum(method);
@@ -155,7 +166,7 @@ export default function PrintableVoucher() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">{t('vouchers.project')}</p>
-                <p className="font-semibold text-gray-800">{formatEnum(voucher.plot.project)}</p>
+                <p className="font-semibold text-gray-800">{formatProjectName(voucher.plot.project)}</p>
               </div>
             </div>
           </div>
@@ -197,7 +208,7 @@ export default function PrintableVoucher() {
               {voucher.bankName && (
                 <div>
                   <p className="text-sm text-gray-600">{t('vouchers.bankName')}</p>
-                  <p className="font-semibold text-gray-800">{voucher.bankName}</p>
+                  <p className="font-semibold text-gray-800">{formatEnum(voucher.bankName)}</p>
                 </div>
               )}
               {voucher.accountNumber && (

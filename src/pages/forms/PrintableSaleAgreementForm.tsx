@@ -84,7 +84,12 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
     if (!value) return "";
     if (isUrdu) {
       if (value === 'SHADMAN_GREENS') return 'شادمان گرینز';
-      return formatEnum(value);
+    } else {
+      // Check for translation first
+      if (value === 'SHADMAN_GREENS') {
+        const translated = t('projects.shadmanGreens');
+        if (translated && !translated.startsWith('projects.')) return translated;
+      }
     }
     return formatEnum(value);
   };
@@ -246,11 +251,6 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t('printableForms.saleAgreementDeed')} - {data.agreementNumber}</h2>
           <div className="flex gap-2">
-            {onClose && (
-              <Button onClick={onClose} variant="outline">
-                {t('common.close')}
-              </Button>
-            )}
             {!hidePrintButton && (
               <Button onClick={handlePrint} variant="outline">
                 <Printer className="mr-2 h-4 w-4" />

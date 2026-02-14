@@ -49,9 +49,13 @@ export default function AddInventory() {
 
   // Helper function to format project names
   const formatProjectName = (value: string) => {
+    if (!value) return "";
+    // Check for translation first
     if (value === 'SHADMAN_GREENS') {
-      return t('projects.shadmanGreens');
+      const translated = t('projects.shadmanGreens');
+      if (translated && !translated.startsWith('projects.')) return translated;
     }
+    // Fallback to formatting the enum value
     return formatEnum(value);
   };
 

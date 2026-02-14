@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Download, ShoppingCart, MapPin, Pencil } from "lucide-react";
+import { Search, Download, ShoppingCart, MapPin, Pencil, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI } from "@/lib/api";
@@ -138,9 +138,13 @@ export default function UnsoldInventory() {
   };
 
   const formatProjectName = (value: string) => {
+    if (!value) return "";
+    // Check for translation first
     if (value === 'SHADMAN_GREENS') {
-      return t('projects.shadmanGreens');
+      const translated = t('projects.shadmanGreens');
+      if (translated && !translated.startsWith('projects.')) return translated;
     }
+    // Fallback to formatting the enum value
     return formatEnum(value);
   };
 
@@ -524,9 +528,6 @@ export default function UnsoldInventory() {
                 </div>
               </div>
               <div className="flex gap-3 justify-end pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  {t('common.cancel')}
-                </Button>
                 <Button type="submit" disabled={updateInventoryMutation.isPending}>
                   {updateInventoryMutation.isPending ? t('common.loading') : t('common.update')}
                 </Button>

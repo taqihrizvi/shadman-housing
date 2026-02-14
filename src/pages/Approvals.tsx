@@ -63,10 +63,26 @@ export default function Approvals() {
 
   // Helper function to format project names
   const formatProjectName = (value: string) => {
+    if (!value) return "";
+    // Check for translation first
     if (value === 'SHADMAN_GREENS') {
-      return t('projects.shadmanGreens');
+      const translated = t('projects.shadmanGreens');
+      if (translated && !translated.startsWith('projects.')) return translated;
     }
-    return value;
+    // Fallback to formatting the enum value
+    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Helper function to format payment method
+  const formatPaymentMethod = (method: string) => {
+    if (!method) return "";
+    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
+  };
+
+  // Helper function to format payment type
+  const formatPaymentType = (type: string) => {
+    if (!type) return "";
+    return t(`payments.paymentTypes.${type}`) || formatEnum(type);
   };
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -628,15 +644,24 @@ export default function Approvals() {
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-yellow-500" title={t('status.pending')} />
+                      <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    </div>
                     <span className="text-sm font-semibold">{stats.forms.pending}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" title={t('status.approved')} />
+                      <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    </div>
                     <span className="text-sm font-semibold text-green-600">{stats.forms.approved}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-4 h-4 text-red-600" title={t('status.rejected')} />
+                      <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    </div>
                     <span className="text-sm font-semibold text-red-600">{stats.forms.rejected}</span>
                   </div>
                 </div>
@@ -654,15 +679,24 @@ export default function Approvals() {
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-yellow-500" title={t('status.pending')} />
+                      <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    </div>
                     <span className="text-sm font-semibold">{stats.agreements?.pending || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" title={t('status.approved')} />
+                      <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    </div>
                     <span className="text-sm font-semibold text-green-600">{stats.agreements?.approved || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-4 h-4 text-red-600" title={t('status.rejected')} />
+                      <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    </div>
                     <span className="text-sm font-semibold text-red-600">{stats.agreements?.rejected || 0}</span>
                   </div>
                 </div>
@@ -680,15 +714,24 @@ export default function Approvals() {
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-yellow-500" title={t('status.pending')} />
+                      <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    </div>
                     <span className="text-sm font-semibold">{stats.transfers?.pending || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" title={t('status.approved')} />
+                      <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    </div>
                     <span className="text-sm font-semibold text-green-600">{stats.transfers?.approved || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-4 h-4 text-red-600" title={t('status.rejected')} />
+                      <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    </div>
                     <span className="text-sm font-semibold text-red-600">{stats.transfers?.rejected || 0}</span>
                   </div>
                 </div>
@@ -706,15 +749,24 @@ export default function Approvals() {
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-yellow-500" title={t('status.pending')} />
+                      <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
+                    </div>
                     <span className="text-sm font-semibold">{stats.payments.pending}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" title={t('status.approved')} />
+                      <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
+                    </div>
                     <span className="text-sm font-semibold text-green-600">{stats.payments.approved}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-4 h-4 text-red-600" title={t('status.rejected')} />
+                      <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
+                    </div>
                     <span className="text-sm font-semibold text-red-600">{stats.payments.rejected}</span>
                   </div>
                 </div>
@@ -1208,16 +1260,52 @@ export default function Approvals() {
                         ? selectedItem.biyanaAmount 
                         : approvalType === 'transfer'
                         ? selectedItem.transferFee
+                        : approvalType === 'agreement'
+                        ? selectedItem.downPayment
                         : selectedItem.amount
                     )}
                   </div>
                 </div>
+                {approvalType === 'payment' && (
+                  <>
+                    {selectedItem.formType && (
+                      <div>
+                        <div className="text-sm font-medium">{t('payments.paymentType')}</div>
+                        <div className="text-sm text-muted-foreground">{formatPaymentType(selectedItem.formType)}</div>
+                      </div>
+                    )}
+                    {selectedItem.paymentMethod === 'BANK_DEPOSIT' && (
+                      <>
+                        {selectedItem.bankName && (
+                          <div>
+                            <div className="text-sm font-medium">{t('vouchers.bankName')}</div>
+                            <div className="text-sm text-muted-foreground">{formatEnum(selectedItem.bankName)}</div>
+                          </div>
+                        )}
+                        {selectedItem.accountNumber && (
+                          <div>
+                            <div className="text-sm font-medium">Account Number</div>
+                            <div className="text-sm text-muted-foreground">{selectedItem.accountNumber}</div>
+                          </div>
+                        )}
+                        {selectedItem.slipNumber && (
+                          <div>
+                            <div className="text-sm font-medium">Slip Number</div>
+                            <div className="text-sm text-muted-foreground">{selectedItem.slipNumber}</div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
                 <div>
                   <div className="text-sm font-medium">{t('forms.date')}</div>
                   <div className="text-sm text-muted-foreground">
                     {formatDate(
                       approvalType === 'transfer' 
-                        ? selectedItem.transferDate 
+                        ? selectedItem.transferDate
+                        : approvalType === 'agreement'
+                        ? selectedItem.agreementDate
                         : selectedItem.date
                     )}
                   </div>
@@ -1225,9 +1313,6 @@ export default function Approvals() {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDialog(false)}>
-                {t('common.cancel')}
-              </Button>
               <Button onClick={confirmApprove}>
                 {t('approvals.confirmApproval')}
               </Button>
@@ -1266,15 +1351,6 @@ export default function Approvals() {
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowRejectDialog(false);
-                  setRejectReason("");
-                }}
-              >
-                {t('common.cancel')}
-              </Button>
               <Button variant="destructive" onClick={confirmReject}>
                 {t('approvals.confirmRejection')}
               </Button>
@@ -1328,6 +1404,7 @@ export default function Approvals() {
                 data={printData}
                 onClose={() => setIsPrintTransferOpen(false)}
                 hidePrintButton={true}
+                isApprovalView={true}
               />
             )}
           </DialogContent>
@@ -1384,6 +1461,17 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
   const formatEnum = (value: string) => {
     if (!value) return "";
     return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatProjectName = (value: string) => {
+    if (!value) return "";
+    // Check for translation first
+    if (value === 'SHADMAN_GREENS') {
+      const translated = t('projects.shadmanGreens');
+      if (translated && !translated.startsWith('projects.')) return translated;
+    }
+    // Fallback to formatting the enum value
+    return formatEnum(value);
   };
 
   const formatPaymentMethod = (method: string) => {
@@ -1473,7 +1561,7 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
             <tbody>
               <tr>
                 <td style={{ padding: '10px', width: '30%', borderRight: '1px solid #ddd', fontWeight: '600' }}>Project Name:</td>
-                <td style={{ padding: '10px' }}>{voucher.plot?.project || 'Shadman Greens'}</td>
+                <td style={{ padding: '10px' }}>{formatProjectName(voucher.plot?.project || 'SHADMAN_GREENS')}</td>
               </tr>
               <tr>
                 <td style={{ padding: '10px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Plot No:</td>
@@ -1519,7 +1607,19 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
               {voucher.bankName && (
                 <tr>
                   <td style={{ padding: '12px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Bank Name:</td>
-                  <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{voucher.bankName}</td>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{formatEnum(voucher.bankName)}</td>
+                </tr>
+              )}
+              {voucher.accountNumber && (
+                <tr>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Account Number:</td>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{voucher.accountNumber}</td>
+                </tr>
+              )}
+              {voucher.slipNumber && (
+                <tr>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd', borderRight: '1px solid #ddd', fontWeight: '600' }}>Slip Number:</td>
+                  <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{voucher.slipNumber}</td>
                 </tr>
               )}
               {voucher.description && (
@@ -1577,9 +1677,6 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
       <div className="print:hidden mb-4 flex justify-between items-center border-b pb-4">
         <h2 className="text-lg font-semibold">{t('vouchers.paymentReceipt')} - {voucher.voucherNo}</h2>
         <div className="flex gap-2">
-          <Button onClick={onClose} variant="outline">
-            {t('common.close')}
-          </Button>
         </div>
       </div>
 

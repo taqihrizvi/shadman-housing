@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Receipt, Save, AlertCircle, Info } from "lucide-react";
+import { Receipt, Save, AlertCircle, Info, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI, customerAPI, formsAPI, voucherAPI } from "@/lib/api";
@@ -102,8 +102,6 @@ export default function RecordPayment() {
     queryKey: ['allBiyanaForms'],
     queryFn: async () => {
       const response = await formsAPI.getBiyanaForms();
-      console.log('All Biyana forms fetched:', response.data);
-      console.log('Pending Biyana forms:', response.data.filter((b: any) => b.status === 'PENDING'));
       return response.data;
     },
   });
@@ -117,12 +115,6 @@ export default function RecordPayment() {
     },
   });
 
-  // Debug: Log plots data when payment type is BIYANA
-  if (formData.paymentType === 'BIYANA' && plotsData) {
-    console.log('Payment type is BIYANA. Total plots fetched:', plotsData.length);
-    console.log('Plots:', plotsData.map((p: any) => ({ id: p.id, plotNo: p.plotNo, status: p.status })));
-  }
-
   // Filter plots based on payment type
   const availablePlots = plotsData?.filter((plot: any) => {
     // For BIYANA payment type: only show plots with PENDING Biyana forms
@@ -130,11 +122,6 @@ export default function RecordPayment() {
       const pendingBiyana = allBiyanaForms?.find((b: any) =>
         b.plotId === plot.id && b.status === 'PENDING'
       );
-
-      // Debug logging
-      if (pendingBiyana) {
-        console.log('Found pending Biyana for plot:', plot.plotNo, 'Form:', pendingBiyana.formNumber);
-      }
 
       return !!pendingBiyana; // Only include plots with pending Biyana forms
     }
@@ -217,10 +204,8 @@ export default function RecordPayment() {
     queryFn: async () => {
       if (!formData.plotId) return null;
       const response = await formsAPI.getSaleAgreements();
-      console.log('All agreements from API:', response.data);
       // Filter out archived agreements and get agreements for this plot
       const filtered = response.data.filter((a: any) => !a.isArchived).filter((a: any) => {
-        console.log('Checking agreement:', a.plotId, '===', formData.plotId, 'status:', a.status, 'isActive:', a.isActive);
         // For SALES_AGREEMENT payment type, fetch PENDING agreements
         // For other payment types (INSTALLMENT/QUARTERLY), fetch APPROVED/ACTIVE agreements
         if (formData.paymentType === 'SALES_AGREEMENT') {
@@ -228,7 +213,6 @@ export default function RecordPayment() {
         }
         return a.plotId === formData.plotId && a.status === 'APPROVED' && a.isActive === true;
       });
-      console.log('Agreements fetched for plot:', formData.plotId, 'Count:', filtered.length, 'Data:', filtered);
       return filtered;
     },
     enabled: !!formData.plotId,
@@ -287,16 +271,12 @@ export default function RecordPayment() {
 
   // Calculate pending amount and handle auto-fill based on payment type
   useEffect(() => {
-    console.log('useEffect triggered - agreements:', agreements, 'paymentType:', formData.paymentType, 'agreementsLoading:', agreementsLoading);
-
     if (agreementsLoading) {
-      console.log('Agreements still loading...');
       return;
     }
 
     if (agreements && agreements.length > 0) {
       const agreement = agreements[0]; // Latest active agreement
-      console.log('Agreement found:', agreement);
 
       // Calculate pending amount
       const pending = agreement.pendingAmount !== undefined
@@ -312,7 +292,6 @@ export default function RecordPayment() {
       // Auto-fill amount based on payment type
       if (formData.paymentType === 'SALES_AGREEMENT') {
         const downPaymentAmount = agreement.downPayment || 0;
-        console.log('Setting Sales Agreement amount:', downPaymentAmount, typeof downPaymentAmount);
         setAutoFilledAmount(downPaymentAmount);
         if (downPaymentAmount > 0) {
           setFormData(prev => ({
@@ -324,7 +303,6 @@ export default function RecordPayment() {
       }
     } else if (formData.paymentType === 'SALES_AGREEMENT') {
       // Reset if no agreement found
-      console.log('No agreement found for SALES_AGREEMENT');
       setAutoFilledAmount(null);
       setFormData(prev => ({ ...prev, amount: "", description: "" }));
     }
@@ -377,25 +355,19 @@ export default function RecordPayment() {
   useEffect(() => {
     if (formData.plotId && availablePlots) {
       const plot = availablePlots.find((p: any) => p.id === formData.plotId);
-      console.log('Selected plot ID:', formData.plotId, 'Found plot:', plot);
-      console.log('Available plots:', availablePlots.map((p: any) => ({ id: p.id, plotNo: p.plotNo })));
       setSelectedPlot(plot);
 
       // Only proceed if plot was found
       if (!plot) {
-        console.log('Plot not found in available plots, clearing selection');
         setFormData(prev => ({ ...prev, plotId: '', customerId: '' }));
         return;
       }
 
       // Auto-fill customer from plot's current owner (buyer)
-      console.log('Plot selected:', plot?.plotNo, 'buyerId:', plot?.buyerId, 'buyer:', plot?.buyer, 'status:', plot?.status);
       if (plot && plot.buyerId) {
-        console.log('Auto-filling customer from buyerId:', plot.buyerId);
         setFormData(prev => ({ ...prev, customerId: plot.buyerId }));
       } else if (plot && plot.buyer) {
         // If buyer object is included, use its ID
-        console.log('Auto-filling customer from buyer object:', plot.buyer);
         setFormData(prev => ({ ...prev, customerId: plot.buyer.id || plot.buyerId }));
       } else if (plot && plot.status === 'PENDING' && formData.paymentType === 'BIYANA') {
         // For PENDING plots with BIYANA payment type, get customer from pending Biyana form
@@ -403,13 +375,8 @@ export default function RecordPayment() {
           b.plotId === plot.id && b.status === 'PENDING'
         );
         if (pendingBiyana && pendingBiyana.customerId) {
-          console.log('Auto-filling customer from pending Biyana form:', pendingBiyana.customerId);
           setFormData(prev => ({ ...prev, customerId: pendingBiyana.customerId }));
-        } else {
-          console.log('No customer information found in pending Biyana form');
         }
-      } else {
-        console.log('No buyer information found for plot');
       }
     }
   }, [formData.plotId, availablePlots, allBiyanaForms, formData.paymentType]);
@@ -441,9 +408,13 @@ export default function RecordPayment() {
       navigate(`/vouchers/print/${voucher.id}`);
     },
     onError: (error: any) => {
+      console.error('❌ Voucher submission error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error message:', error.response?.data?.message);
+      
       toast({
         title: t('common.error'),
-        description: error.response?.data?.message || t('payments.paymentFailed'),
+        description: error.response?.data?.message || error.message || t('payments.paymentFailed'),
         variant: "destructive",
       });
     },
@@ -500,6 +471,8 @@ export default function RecordPayment() {
       paymentMethod: formData.paymentMethod,
       chequeNumber: formData.chequeNumber || undefined,
       bankName: formData.bankName || undefined,
+      accountNumber: formData.accountNumber || undefined,
+      slipNumber: formData.slipNumber || undefined,
       transactionId: formData.transactionId || undefined,
       date: new Date(formData.date).toISOString(),
       description: formData.description,
@@ -507,6 +480,7 @@ export default function RecordPayment() {
       formType: formData.paymentType,
     };
 
+    console.log('📤 Submitting payment data:', paymentData);
     createPaymentMutation.mutate(paymentData);
   };
 
@@ -853,8 +827,8 @@ export default function RecordPayment() {
                   <Save className="mr-2 h-4 w-4" />
                   {createPaymentMutation.isPending ? t('common.loading') : t('payments.recordPayment')}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/vouchers')}>
-                  {t('common.cancel')}
+                <Button type="button" variant="outline" onClick={() => navigate('/vouchers')} size="icon">
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             </form>

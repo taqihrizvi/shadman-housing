@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { FileText, Loader2, Eye, Printer } from "lucide-react";
+import { FileText, Loader2, Eye, Printer, CheckCircle, XCircle, Clock } from "lucide-react";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import { getUserData, isManager } from "@/lib/rbac";
 import { useTranslation } from 'react-i18next';
@@ -38,10 +38,14 @@ const ViewBiyanaForms = () => {
 
   // Helper function to format project names
   const formatProjectName = (value: string) => {
+    if (!value) return "";
+    // Check for translation first
     if (value === 'SHADMAN_GREENS') {
-      return t('projects.shadmanGreens');
+      const translated = t('projects.shadmanGreens');
+      if (translated && !translated.startsWith('projects.')) return translated;
     }
-    return value;
+    // Fallback to formatting the enum value
+    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
   // Helper function to format status
@@ -204,15 +208,24 @@ const ViewBiyanaForms = () => {
                         <TableCell>{formatCurrency(form.tokenAmount)}</TableCell>
                         <TableCell>{formatDate(form.date)}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={
-                              form.status === 'APPROVED' ? 'default' : 
-                              form.status === 'REJECTED' ? 'destructive' : 
-                              'secondary'
-                            }
-                          >
-                            {formatStatus(form.status)}
-                          </Badge>
+                          <div className="flex items-center justify-center">
+                            {form.status === 'APPROVED' ? (
+                              <CheckCircle 
+                                className="w-4 h-4 text-green-600"
+                                title={formatStatus(form.status)}
+                              />
+                            ) : form.status === 'REJECTED' ? (
+                              <XCircle 
+                                className="w-4 h-4 text-red-600"
+                                title={formatStatus(form.status)}
+                              />
+                            ) : (
+                              <Clock 
+                                className="w-4 h-4 text-yellow-500"
+                                title={formatStatus(form.status)}
+                              />
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">

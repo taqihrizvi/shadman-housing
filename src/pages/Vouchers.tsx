@@ -67,7 +67,7 @@ export default function Vouchers() {
     
     // Custom labels for payment types
     const labels: Record<string, string> = {
-      'INSTALLMENT': 'Monthly Installment',
+      'INSTALLMENT': 'Installment',
       'QUARTERLY': 'Quarterly Installment',
       'BIYANA': 'Biyana Payment',
       'SALES_AGREEMENT': 'Down Payment',
@@ -86,11 +86,11 @@ export default function Vouchers() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-PK", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.getMonth() + 1; // Months are 0-indexed
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   // Calculate status counts
@@ -109,7 +109,8 @@ export default function Vouchers() {
     const matchesSearch = 
       voucher.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       voucher.plot?.plotNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      voucher.voucherNo?.toLowerCase().includes(searchTerm.toLowerCase());
+      voucher.voucherNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      voucher.slipNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Payment type filter
     const matchesPaymentType = paymentTypeFilter === "ALL" || voucher.formType === paymentTypeFilter;
@@ -391,62 +392,68 @@ export default function Vouchers() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('vouchers.voucherNo')}</TableHead>
-                    <TableHead>{t('forms.customerName')}</TableHead>
-                    <TableHead>{t('inventory.plotNo')}</TableHead>
-                    <TableHead>{t('Payment Type')}</TableHead>
-                    <TableHead>{t('payments.amount')}</TableHead>
                     <TableHead>{t('payments.date')}</TableHead>
-                    <TableHead>{t('payments.paymentMethod')}</TableHead>
-                    <TableHead>{t('Status')}</TableHead>
+                    <TableHead>{t('inventory.plotNo')}</TableHead>
+                    <TableHead>{t('forms.customerName')}</TableHead>
+                    <TableHead>{t('Payment Type')}</TableHead>
+                    <TableHead>Bank & Account</TableHead>
+                    <TableHead>Slip Number</TableHead>
+                    <TableHead>{t('payments.amount')}</TableHead>
+                    <TableHead className="text-center">{t('Status')}</TableHead>
                     <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredVouchers.map((voucher: any) => (
                     <TableRow key={voucher.id}>
-                      <TableCell className="font-medium">{voucher.voucherNo}</TableCell>
-                      <TableCell>{toTitleCase(voucher.customer?.name || t('payments.notAvailable'))}</TableCell>
+                      <TableCell>{formatDate(voucher.date)}</TableCell>
                       <TableCell>{voucher.plot?.plotNo || t('payments.notAvailable')}</TableCell>
+                      <TableCell>{toTitleCase(voucher.customer?.name || t('payments.notAvailable'))}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5 text-xs font-medium">
                           {formatPaymentType(voucher.formType)}
                         </span>
                       </TableCell>
+                      <TableCell>
+                        {voucher.bankName ? (
+                          <div>
+                            <div className="font-semibold">{formatEnum(voucher.bankName)}</div>
+                            {voucher.accountNumber && (
+                              <div className="text-xs text-muted-foreground">{voucher.accountNumber}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {voucher.slipNumber || <span className="text-muted-foreground">N/A</span>}
+                      </TableCell>
                       <TableCell className="font-semibold">
                         {formatCurrency(voucher.amount)}
                       </TableCell>
-                      <TableCell>{formatDate(voucher.date)}</TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">
-                          {formatPaymentMethod(voucher.paymentMethod)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {voucher.status === 'APPROVED' ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 px-2.5 py-0.5 text-xs font-semibold">
-                            {t('status.approved')}
-                          </span>
-                        ) : voucher.status === 'REJECTED' ? (
-                          <span className="inline-flex items-center rounded-full bg-red-100 text-red-800 px-2.5 py-0.5 text-xs font-semibold">
-                            {t('status.rejected')}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-yellow-100 text-yellow-800 px-2.5 py-0.5 text-xs font-semibold">
-                            {t('status.pending')}
-                          </span>
-                        )}
+                        <div className="flex items-center justify-center">
+                          {voucher.status === 'APPROVED' ? (
+                            <CheckCircle 
+                              className="w-4 h-4 text-green-600"
+                              title="Approved"
+                            />
+                          ) : voucher.status === 'REJECTED' ? (
+                            <XCircle 
+                              className="w-4 h-4 text-red-600"
+                              title="Rejected"
+                            />
+                          ) : (
+                            <Clock 
+                              className="w-4 h-4 text-yellow-500"
+                              title="Pending"
+                            />
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handlePrint(voucher.id)}
-                            title="View Receipt"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
                           {voucher.status !== 'REJECTED' && (
                             <Button 
                               variant="ghost" 
