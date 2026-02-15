@@ -168,7 +168,7 @@ const ViewSaleAgreements = () => {
                         <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>
                         <TableCell>{formatCurrency(form.totalAmount)}</TableCell>
                         <TableCell>{formatCurrency(form.downPayment)}</TableCell>
-                        <TableCell>{formatPaymentPlan(form.installmentMonths)}</TableCell>
+                        <TableCell>{formatPaymentPlan(form.biyana?.monthlyInstallments || form.installmentMonths)}</TableCell>
                         <TableCell>{formatDate(form.agreementDate)}</TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center">
@@ -298,7 +298,7 @@ const ViewSaleAgreements = () => {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Payment Plan</label>
-                        <p className="text-base">{formatPaymentPlan(selectedForm.installmentMonths)}</p>
+                        <p className="text-base">{formatPaymentPlan(selectedForm.biyana?.monthlyInstallments || selectedForm.installmentMonths)}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Status</label>

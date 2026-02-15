@@ -826,7 +826,6 @@ export default function Approvals() {
                         <TableHead>{t('forms.customer')}</TableHead>
                         <TableHead>{t('inventory.plotNo')}</TableHead>
                         <TableHead>{t('payments.amount')}</TableHead>
-                        <TableHead>{t('payments.paymentMethod')}</TableHead>
                         <TableHead>{t('approvals.submittedBy')}</TableHead>
                         <TableHead>{t('forms.date')}</TableHead>
                         <TableHead className="text-center">{t('common.view')}</TableHead>
@@ -845,8 +844,7 @@ export default function Approvals() {
                             <div>{biyana.plot?.plotNo || '-'}</div>
                             <div className="text-xs text-muted-foreground">{biyana.plot?.project ? formatProjectName(biyana.plot.project) : '-'}</div>
                           </TableCell>
-                          <TableCell>{formatCurrency(biyana.biyanaAmount)}</TableCell>
-                          <TableCell>{formatEnum(biyana.paymentMethod)}</TableCell>
+                          <TableCell>{formatCurrency(biyana.tokenAmount)}</TableCell>
                           <TableCell>
                             <div>{biyana.createdBy?.name || '-'}</div>
                             <div className="text-xs text-muted-foreground">{biyana.createdBy?.email || '-'}</div>
