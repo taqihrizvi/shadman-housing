@@ -180,6 +180,10 @@ const Index = () => {
     return sizeMap[value] || formatEnum(value);
   };
 
+  const formatPlotType = (isCorner: boolean) => {
+    return isCorner ? "Corner Plot" : "Regular Plot";
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-PK");
@@ -1006,6 +1010,14 @@ const Index = () => {
                       <p className="font-semibold">{formatSize(selectedPlot.size)}</p>
                     </div>
                     <div>
+                      <p className="text-sm text-muted-foreground">Plot Type</p>
+                      <p className="font-semibold">
+                        <Badge variant={selectedPlot.isCornerPlot ? "secondary" : "outline"}>
+                          {formatPlotType(selectedPlot.isCornerPlot)}
+                        </Badge>
+                      </p>
+                    </div>
+                    <div>
                       <p className="text-sm text-muted-foreground">Price</p>
                       <p className="font-semibold">{formatCurrency(selectedPlot.price)}</p>
                     </div>
@@ -1787,6 +1799,7 @@ const Index = () => {
                     <TableHead>{t('inventory.plotNo')}</TableHead>
                     <TableHead>{t('inventory.project')}</TableHead>
                     <TableHead>{t('inventory.size')}</TableHead>
+                    <TableHead>Plot Type</TableHead>
                     <TableHead>{t('customers.buyer')}</TableHead>
                     <TableHead>{t('inventory.status')}</TableHead>
                     <TableHead>{t('inventory.soldDate')}</TableHead>
@@ -1804,6 +1817,11 @@ const Index = () => {
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
                         <TableCell>{formatEnum(item.project)}</TableCell>
                         <TableCell>{formatSize(item.size)}</TableCell>
+                        <TableCell>
+                          <Badge variant={item.isCornerPlot ? "secondary" : "outline"}>
+                            {formatPlotType(item.isCornerPlot)}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{toTitleCase(item.buyer?.name || "N/A")}</TableCell>
                         <TableCell>
                           <Badge 
@@ -1849,6 +1867,7 @@ const Index = () => {
             plotNo: plot.plotNo,
             phase: formatEnum(plot.project),
             size: formatSize(plot.size),
+            plotType: formatPlotType(plot.isCornerPlot),
             price: formatCurrency(plot.price),
           }));
         break;
@@ -2049,7 +2068,7 @@ const Index = () => {
   function getTableHeaders(cardType: string) {
     switch (cardType) {
       case 'available':
-        return [t('inventory.plotNo'), t('inventory.project'), t('inventory.size'), t('inventory.price')];
+        return [t('inventory.plotNo'), t('inventory.project'), t('inventory.size'), 'Plot Type', t('inventory.price')];
       case 'reserved':
         return [t('inventory.plotNo'), t('customer'), t('payments.biyanaAmount'), t('payments.date')];
       case 'salesMonth':

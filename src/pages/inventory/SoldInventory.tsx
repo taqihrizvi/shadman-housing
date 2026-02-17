@@ -319,6 +319,10 @@ export default function SoldInventory() {
     return sizeMap[value] || formatEnum(value);
   };
 
+  const formatPlotType = (isCorner: boolean) => {
+    return isCorner ? "Corner Plot" : "Regular Plot";
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in" dir={isUrdu ? 'rtl' : 'ltr'}>
@@ -409,6 +413,7 @@ export default function SoldInventory() {
                     <TableHead>{t('inventory.plotNo')}</TableHead>
                     <TableHead>{t('inventory.project')}</TableHead>
                     <TableHead>{t('inventory.size')}</TableHead>
+                    <TableHead>Plot Type</TableHead>
                     <TableHead>{t('customers.buyer')}</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>{t('inventory.soldDate')}</TableHead>
@@ -426,6 +431,11 @@ export default function SoldInventory() {
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
                         <TableCell>{formatEnum(item.project)}</TableCell>
                         <TableCell>{formatSize(item.size)}</TableCell>
+                        <TableCell>
+                          <Badge variant={item.isCornerPlot ? "secondary" : "outline"}>
+                            {formatPlotType(item.isCornerPlot)}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{toTitleCase(item.buyer?.name || "N/A")}</TableCell>
                         <TableCell>
                           <Badge 
@@ -492,6 +502,14 @@ export default function SoldInventory() {
                     <div>
                       <p className="text-sm text-muted-foreground">Size</p>
                       <p className="font-semibold">{formatSize(selectedPlot.size)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Plot Type</p>
+                      <p className="font-semibold">
+                        <Badge variant={selectedPlot.isCornerPlot ? "secondary" : "outline"}>
+                          {formatPlotType(selectedPlot.isCornerPlot)}
+                        </Badge>
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Price</p>

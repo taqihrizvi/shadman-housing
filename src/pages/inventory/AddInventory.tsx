@@ -63,9 +63,54 @@ export default function AddInventory() {
     plotNo: "",
     project: "",
     size: "",
+    perMarlaPrice: "",
+    isCornerPlot: "false",
     price: "",
     description: "",
   });
+
+  // Helper function to get marla count from size
+  const getMarlaCount = (size: string): number => {
+    const marlaMap: { [key: string]: number } = {
+      'FIVE_MARLA': 5,
+      'SEVEN_MARLA': 7,
+      'TEN_MARLA': 10,
+      'ONE_KANAL': 20, // 1 Kanal = 20 Marlas
+      'TWO_KANAL': 40, // 2 Kanal = 40 Marlas
+    };
+    return marlaMap[size] || 0;
+  };
+
+  // Calculate total price automatically when perMarlaPrice, size, or isCornerPlot changes
+  const calculateTotalPrice = () => {
+    if (!formData.perMarlaPrice || !formData.size) return "";
+    
+    const perMarla = parseFloat(formData.perMarlaPrice);
+    const marlaCount = getMarlaCount(formData.size);
+    const isCorner = formData.isCornerPlot === "true";
+    
+    // Add 10% if corner plot
+    const adjustedPerMarlaPrice = isCorner ? perMarla * 1.1 : perMarla;
+    const totalPrice = adjustedPerMarlaPrice * marlaCount;
+    
+    return totalPrice.toFixed(0);
+  };
+
+  // Update price whenever perMarlaPrice, size, or isCornerPlot changes
+  const handlePerMarlaPriceChange = (value: string) => {
+    setFormData(prev => ({ ...prev, perMarlaPrice: value }));
+  };
+
+  const handleSizeChange = (value: string) => {
+    setFormData(prev => ({ ...prev, size: value }));
+  };
+
+  const handleCornerPlotChange = (value: string) => {
+    setFormData(prev => ({ ...prev, isCornerPlot: value }));
+  };
+
+  // Effect to update price when dependencies change
+  const calculatedPrice = calculateTotalPrice();
 
   const createInventoryMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -92,12 +137,24 @@ export default function AddInventory() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const totalPrice = calculateTotalPrice();
+    if (!totalPrice) {
+      toast({
+        title: "Error",
+        description: "Please enter per marla price and select plot size",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Convert form data to API format
     const inventoryData = {
       plotNo: formData.plotNo,
       project: formData.project,
       size: formData.size,
-      price: parseFloat(formData.price),
+      perMarlaPrice: parseFloat(formData.perMarlaPrice),
+      isCornerPlot: formData.isCornerPlot === "true",
+      price: parseFloat(totalPrice),
       description: formData.description || undefined,
       status: "AVAILABLE",
     };
@@ -110,6 +167,8 @@ export default function AddInventory() {
       plotNo: "",
       project: "",
       size: "",
+      perMarlaPrice: "",
+      isCornerPlot: "false",
       price: "",
       description: "",
     });
@@ -168,7 +227,7 @@ export default function AddInventory() {
                   <Label htmlFor="size">{t('inventory.size')} *</Label>
                   <Select
                     value={formData.size}
-                    onValueChange={(value) => setFormData({ ...formData, size: value })}
+                    onValueChange={handleSizeChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={t('forms.selectOption')} />
@@ -182,16 +241,47 @@ export default function AddInventory() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="price">{t('inventory.price')} *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="perMarlaPrice">Per Marla Price *</Label>
                   <Input
-                    id="price"
+                    id="perMarlaPrice"
                     type="number"
-                    placeholder="e.g., 2500000"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    placeholder="e.g., 350000"
+                    value={formData.perMarlaPrice}
+                    onChange={(e) => handlePerMarlaPriceChange(e.target.value)}
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="isCornerPlot">Plot Type *</Label>
+                  <Select
+                    value={formData.isCornerPlot}
+                    onValueChange={handleCornerPlotChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select plot type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="false">Regular Plot</SelectItem>
+                      <SelectItem value="true">Corner Plot (+10%)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="price">Total Price (Calculated)</Label>
+                  <Input
+                    id="price"
+                    type="text"
+                    value={calculatedPrice ? `Rs ${parseFloat(calculatedPrice).toLocaleString('en-PK')}` : ""}
+                    disabled
+                    className="bg-muted font-semibold"
+                    placeholder="Will be calculated automatically"
+                  />
+                  {formData.isCornerPlot === "true" && formData.perMarlaPrice && formData.size && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Base: Rs {parseFloat(formData.perMarlaPrice).toLocaleString('en-PK')} × {getMarlaCount(formData.size)} marlas + 10% corner premium = Rs {parseFloat(calculatedPrice).toLocaleString('en-PK')}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="description">{t('inventory.description')}</Label>

@@ -160,6 +160,10 @@ export default function UnsoldInventory() {
     return sizeMap[value] || formatEnum(value);
   };
 
+  const formatPlotType = (isCorner: boolean) => {
+    return isCorner ? "Corner Plot" : "Regular Plot";
+  };
+
   const filteredInventory = (inventoryData || []).filter((item: any) => {
     if (selectedSize !== "All Sizes") {
       return item.size === selectedSize;
@@ -188,19 +192,21 @@ export default function UnsoldInventory() {
           plotNo: item.plotNo,
           project: formatProjectName(item.project),
           size: formatSize(item.size),
+          plotType: formatPlotType(item.isCornerPlot),
           price: formatCurrency(item.price),
           status: formatEnum(item.status),
         }));
-        columns = ['plotNo', 'project', 'size', 'price', 'status'];
+        columns = ['plotNo', 'project', 'size', 'plotType', 'price', 'status'];
         break;
       case 'available':
         data = filteredInventory.filter(i => i.status === "AVAILABLE").map((item: any) => ({
           plotNo: item.plotNo,
           project: formatProjectName(item.project),
           size: formatSize(item.size),
+          plotType: formatPlotType(item.isCornerPlot),
           price: formatCurrency(item.price),
         }));
-        columns = ['plotNo', 'project', 'size', 'price'];
+        columns = ['plotNo', 'project', 'size', 'plotType', 'price'];
         break;
       case 'totalValue':
         data = filteredInventory.map((item: any) => ({
@@ -392,6 +398,7 @@ export default function UnsoldInventory() {
                       <TableHead>{t('inventory.plotNo')}</TableHead>
                       <TableHead>{t('inventory.project')}</TableHead>
                       <TableHead>{t('inventory.size')}</TableHead>
+                      <TableHead>Plot Type</TableHead>
                       <TableHead>{t('inventory.price')}</TableHead>
                       <TableHead>{t('inventory.status')}</TableHead>
                       <TableHead className="text-right">{t('common.actions')}</TableHead>
@@ -403,6 +410,11 @@ export default function UnsoldInventory() {
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
                         <TableCell>{formatProjectName(item.project)}</TableCell>
                         <TableCell>{formatSize(item.size)}</TableCell>
+                        <TableCell>
+                          <Badge variant={item.isCornerPlot ? "secondary" : "outline"}>
+                            {formatPlotType(item.isCornerPlot)}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{formatCurrency(item.price)}</TableCell>
                         <TableCell>
                           <Badge 
