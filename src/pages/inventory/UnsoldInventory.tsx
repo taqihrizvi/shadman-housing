@@ -34,8 +34,15 @@ import { inventoryAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { getUserRole } from "@/lib/rbac";
 import { useTranslation } from "react-i18next";
+import { 
+  formatCurrency, 
+  formatEnum, 
+  formatProjectName, 
+  formatSize, 
+  formatPlotType 
+} from "@/utils/formatters";
+import { PROJECTS, PROJECTS_WITH_ALL } from "@/constants/projects";
 
-const projects = ["All Projects", "GREEN_VALLEY", "LAKE_VIEW", "PALM_HEIGHTS", "SUNSET_GARDENS"];
 const sizes = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
 
 export default function UnsoldInventory() {
@@ -112,6 +119,16 @@ export default function UnsoldInventory() {
     e.preventDefault();
     if (!editingItem) return;
 
+    // Prevent marking plots as SOLD or RESERVED from unsold inventory
+    if (editFormData.status === 'SOLD' || editFormData.status === 'RESERVED') {
+      toast({
+        title: "Invalid Status",
+        description: "Cannot mark plots as Sold or Reserved from this page. Plots become Reserved when Biyana is approved, and Sold when Sale Agreement is approved.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const updateData = {
       plotNo: editFormData.plotNo,
       project: editFormData.project,
@@ -122,46 +139,6 @@ export default function UnsoldInventory() {
     };
 
     updateInventoryMutation.mutate({ id: editingItem.id, data: updateData });
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatProjectName = (value: string) => {
-    if (!value) return "";
-    // Check for translation first
-    if (value === 'SHADMAN_GREENS') {
-      const translated = t('projects.shadmanGreens');
-      if (translated && !translated.startsWith('projects.')) return translated;
-    }
-    // Fallback to formatting the enum value
-    return formatEnum(value);
-  };
-
-  const formatSize = (value: string) => {
-    if (!value) return "";
-    const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': t('plotSizes.fiveMarla'),
-      'SEVEN_MARLA': t('plotSizes.sevenMarla'),
-      'TEN_MARLA': t('plotSizes.tenMarla'),
-      'ONE_KANAL': t('plotSizes.oneKanal'),
-      'TWO_KANAL': t('plotSizes.twoKanal'),
-    };
-    return sizeMap[value] || formatEnum(value);
-  };
-
-  const formatPlotType = (isCorner: boolean) => {
-    return isCorner ? "Corner Plot" : "Regular Plot";
   };
 
   const filteredInventory = (inventoryData || []).filter((item: any) => {
@@ -190,8 +167,8 @@ export default function UnsoldInventory() {
       case 'totalUnits':
         data = filteredInventory.map((item: any) => ({
           plotNo: item.plotNo,
-          project: formatProjectName(item.project),
-          size: formatSize(item.size),
+          project: formatProjectName(item.project, t),
+          size: formatSize(item.size, t),
           plotType: formatPlotType(item.isCornerPlot),
           price: formatCurrency(item.price),
           status: formatEnum(item.status),
@@ -201,8 +178,8 @@ export default function UnsoldInventory() {
       case 'available':
         data = filteredInventory.filter(i => i.status === "AVAILABLE").map((item: any) => ({
           plotNo: item.plotNo,
-          project: formatProjectName(item.project),
-          size: formatSize(item.size),
+          project: formatProjectName(item.project, t),
+          size: formatSize(item.size, t),
           plotType: formatPlotType(item.isCornerPlot),
           price: formatCurrency(item.price),
         }));
@@ -211,7 +188,7 @@ export default function UnsoldInventory() {
       case 'totalValue':
         data = filteredInventory.map((item: any) => ({
           plotNo: item.plotNo,
-          project: formatProjectName(item.project),
+          project: formatProjectName(item.project, t),
           price: formatCurrency(item.price),
         }));
         columns = ['plotNo', 'project', 'price'];
@@ -354,9 +331,9 @@ export default function UnsoldInventory() {
                     <SelectValue placeholder={t('inventory.project')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.map((project) => (
+                    {PROJECTS_WITH_ALL.map((project) => (
                       <SelectItem key={project} value={project}>
-                        {formatEnum(project)}
+                        {project === "All Projects" ? project : formatProjectName(project, t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -368,7 +345,7 @@ export default function UnsoldInventory() {
                   <SelectContent>
                     {sizes.map((size) => (
                       <SelectItem key={size} value={size}>
-                        {size === "All Sizes" ? size : formatSize(size)}
+                        {size === "All Sizes" ? size : formatSize(size, t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -408,8 +385,8 @@ export default function UnsoldInventory() {
                     {filteredInventory.map((item: any) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
-                        <TableCell>{formatProjectName(item.project)}</TableCell>
-                        <TableCell>{formatSize(item.size)}</TableCell>
+                        <TableCell>{formatProjectName(item.project, t)}</TableCell>
+                        <TableCell>{formatSize(item.size, t)}</TableCell>
                         <TableCell>
                           <Badge variant={item.isCornerPlot ? "secondary" : "outline"}>
                             {formatPlotType(item.isCornerPlot)}
@@ -477,9 +454,9 @@ export default function UnsoldInventory() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {projects.filter(p => p !== "All Projects").map((project) => (
+                      {PROJECTS.map((project) => (
                         <SelectItem key={project} value={project}>
-                          {formatProjectName(project)}
+                          {formatProjectName(project, t)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -497,7 +474,7 @@ export default function UnsoldInventory() {
                     <SelectContent>
                       {sizes.filter(s => s !== "All Sizes").map((size) => (
                         <SelectItem key={size} value={size}>
-                          {size === "All Sizes" ? size : formatSize(size)}
+                          {size === "All Sizes" ? size : formatSize(size, t)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -524,10 +501,14 @@ export default function UnsoldInventory() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="AVAILABLE">{isUrdu ? 'دستیاب' : 'Available'}</SelectItem>
-                      <SelectItem value="RESERVED">{isUrdu ? 'محفوظ شدہ' : 'Reserved'}</SelectItem>
-                      <SelectItem value="SOLD">{isUrdu ? 'فروخت شدہ' : 'Sold'}</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-sm text-muted-foreground">
+                    {editingItem?.status === 'RESERVED' 
+                      ? (isUrdu ? 'محفوظ شدہ پلاٹس کو دستیاب پر واپس تبدیل کر سکتے ہیں۔' : 'You can change Reserved plots back to Available.')
+                      : (isUrdu ? 'پلاٹ خودکار طور پر محفوظ/فروخت شدہ ہو جاتے ہیں جب فارم منظور ہوتے ہیں۔' : 'Plots are automatically marked Reserved/Sold when forms are approved.')
+                    }
+                  </p>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="edit-description">Description</Label>

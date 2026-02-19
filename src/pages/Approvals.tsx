@@ -12,35 +12,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, FileCheck, Wallet, Eye, Check, X } from "lucide-react";
+import { CheckCircle, XCircle, Clock, FileCheck, Wallet, Eye, Check, X, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
 import { voucherAPI } from "@/lib/api";
+import { 
+  formatCurrency, 
+  formatDate as formatDateUtil,
+  formatDateWithOptions,
+  formatEnum, 
+  formatProjectName as formatProjectNameUtil,
+  formatPaymentMethod as formatPaymentMethodUtil,
+  formatPaymentType as formatPaymentTypeUtil,
+  formatSize as formatSizeUtil
+} from "@/utils/formatters";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-PK', {
-    style: 'currency',
-    currency: 'PKR',
-    minimumFractionDigits: 0,
-  }).format(amount);
-};
-
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('en-PK', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-};
-
-const formatEnum = (value: string) => {
-  if (!value) return "";
-  return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-};
 
 export default function Approvals() {
   const { t, i18n } = useTranslation();
@@ -61,29 +50,12 @@ export default function Approvals() {
     }
   }, [searchParams]);
 
-  // Helper function to format project names
-  const formatProjectName = (value: string) => {
-    if (!value) return "";
-    // Check for translation first
-    if (value === 'SHADMAN_GREENS') {
-      const translated = t('projects.shadmanGreens');
-      if (translated && !translated.startsWith('projects.')) return translated;
-    }
-    // Fallback to formatting the enum value
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  // Helper function to format payment method
-  const formatPaymentMethod = (method: string) => {
-    if (!method) return "";
-    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
-  };
-
-  // Helper function to format payment type
-  const formatPaymentType = (type: string) => {
-    if (!type) return "";
-    return t(`payments.paymentTypes.${type}`) || formatEnum(type);
-  };
+  // Local wrappers for formatters that need translation context
+  const formatDate = (date: string) => formatDateWithOptions(date, 'en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
+  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
+  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
+  const formatPaymentType = (type: string) => formatPaymentTypeUtil(type, t);
+  const formatSize = (value: string) => formatSizeUtil(value, t);
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showDialog, setShowDialog] = useState(false);
@@ -98,19 +70,6 @@ export default function Approvals() {
   const [isPrintPaymentOpen, setIsPrintPaymentOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
-
-  // Helper function to format size
-  const formatSize = (value: string) => {
-    if (!value) return "";
-    const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': t('plotSizes.fiveMarla'),
-      'SEVEN_MARLA': t('plotSizes.sevenMarla'),
-      'TEN_MARLA': t('plotSizes.tenMarla'),
-      'ONE_KANAL': t('plotSizes.oneKanal'),
-      'TWO_KANAL': t('plotSizes.twoKanal'),
-    };
-    return sizeMap[value] || value;
-  };
 
   // Print handler functions
   const handlePrintBiyana = (biyana: any) => {
@@ -576,6 +535,8 @@ export default function Approvals() {
     },
   });
 
+
+
   const handleApprove = (item: any, type: 'biyana' | 'payment' | 'agreement' | 'transfer') => {
     setSelectedItem(item);
     setApprovalType(type);
@@ -622,6 +583,8 @@ export default function Approvals() {
     }
   };
 
+
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -645,21 +608,21 @@ export default function Approvals() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-yellow-500" title={t('status.pending')} />
+                      <Clock className="w-4 h-4 text-yellow-500" aria-label={t('status.pending')} />
                       <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
                     </div>
                     <span className="text-sm font-semibold">{stats.forms.pending}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" title={t('status.approved')} />
+                      <CheckCircle className="w-4 h-4 text-green-600" aria-label={t('status.approved')} />
                       <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
                     </div>
                     <span className="text-sm font-semibold text-green-600">{stats.forms.approved}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-red-600" title={t('status.rejected')} />
+                      <XCircle className="w-4 h-4 text-red-600" aria-label={t('status.rejected')} />
                       <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
                     </div>
                     <span className="text-sm font-semibold text-red-600">{stats.forms.rejected}</span>
@@ -680,21 +643,21 @@ export default function Approvals() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-yellow-500" title={t('status.pending')} />
+                      <Clock className="w-4 h-4 text-yellow-500" aria-label={t('status.pending')} />
                       <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
                     </div>
                     <span className="text-sm font-semibold">{stats.agreements?.pending || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" title={t('status.approved')} />
+                      <CheckCircle className="w-4 h-4 text-green-600" aria-label={t('status.approved')} />
                       <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
                     </div>
                     <span className="text-sm font-semibold text-green-600">{stats.agreements?.approved || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-red-600" title={t('status.rejected')} />
+                      <XCircle className="w-4 h-4 text-red-600" aria-label={t('status.rejected')} />
                       <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
                     </div>
                     <span className="text-sm font-semibold text-red-600">{stats.agreements?.rejected || 0}</span>
@@ -715,21 +678,21 @@ export default function Approvals() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-yellow-500" title={t('status.pending')} />
+                      <Clock className="w-4 h-4 text-yellow-500" aria-label={t('status.pending')} />
                       <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
                     </div>
                     <span className="text-sm font-semibold">{stats.transfers?.pending || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" title={t('status.approved')} />
+                      <CheckCircle className="w-4 h-4 text-green-600" aria-label={t('status.approved')} />
                       <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
                     </div>
                     <span className="text-sm font-semibold text-green-600">{stats.transfers?.approved || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-red-600" title={t('status.rejected')} />
+                      <XCircle className="w-4 h-4 text-red-600" aria-label={t('status.rejected')} />
                       <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
                     </div>
                     <span className="text-sm font-semibold text-red-600">{stats.transfers?.rejected || 0}</span>
@@ -750,21 +713,21 @@ export default function Approvals() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-yellow-500" title={t('status.pending')} />
+                      <Clock className="w-4 h-4 text-yellow-500" aria-label={t('status.pending')} />
                       <span className="text-xs text-muted-foreground">{t('status.pending')}</span>
                     </div>
                     <span className="text-sm font-semibold">{stats.payments.pending}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" title={t('status.approved')} />
+                      <CheckCircle className="w-4 h-4 text-green-600" aria-label={t('status.approved')} />
                       <span className="text-xs text-muted-foreground">{t('status.approved')}</span>
                     </div>
                     <span className="text-sm font-semibold text-green-600">{stats.payments.approved}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-red-600" title={t('status.rejected')} />
+                      <XCircle className="w-4 h-4 text-red-600" aria-label={t('status.rejected')} />
                       <span className="text-xs text-muted-foreground">{t('status.rejected')}</span>
                     </div>
                     <span className="text-sm font-semibold text-red-600">{stats.payments.rejected}</span>
@@ -880,6 +843,7 @@ export default function Approvals() {
                               >
                                 <X className="h-4 w-4" />
                               </Button>
+
                             </div>
                           </TableCell>
                         </TableRow>
@@ -980,6 +944,7 @@ export default function Approvals() {
                               >
                                 <X className="h-4 w-4" />
                               </Button>
+
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1075,6 +1040,7 @@ export default function Approvals() {
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
+
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1255,7 +1221,7 @@ export default function Approvals() {
                   <div className="text-sm text-muted-foreground">
                     {formatCurrency(
                       approvalType === 'biyana' 
-                        ? selectedItem.biyanaAmount 
+                        ? selectedItem.tokenAmount 
                         : approvalType === 'transfer'
                         ? selectedItem.transferFee
                         : approvalType === 'agreement'
@@ -1356,6 +1322,8 @@ export default function Approvals() {
           </DialogContent>
         </Dialog>
 
+
+
         {/* Biyana Print Dialog */}
         <Dialog open={isPrintBiyanaOpen} onOpenChange={setIsPrintBiyanaOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1439,48 +1407,11 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
   const isUrdu = i18n.language === 'ur';
   const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-PK", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatProjectName = (value: string) => {
-    if (!value) return "";
-    // Check for translation first
-    if (value === 'SHADMAN_GREENS') {
-      const translated = t('projects.shadmanGreens');
-      if (translated && !translated.startsWith('projects.')) return translated;
-    }
-    // Fallback to formatting the enum value
-    return formatEnum(value);
-  };
-
-  const formatPaymentMethod = (method: string) => {
-    if (!method) return "";
-    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
-  };
-
-  const formatPaymentType = (type: string) => {
-    if (!type) return "";
-    return t(`payments.paymentTypes.${type}`) || formatEnum(type);
-  };
+  // Local wrappers for formatters
+  const formatDate = (dateString: string) => formatDateWithOptions(dateString, 'en-PK', { year: 'numeric', month: 'long', day: 'numeric' });
+  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
+  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
+  const formatPaymentType = (type: string) => formatPaymentTypeUtil(type, t);
 
   const renderReceiptContent = () => (
     <div className="receipt-copy" style={{ position: 'relative', padding: '40px 60px' }}>

@@ -601,6 +601,24 @@ export default function BiyanaForm() {
                         <Label>{isUrdu ? 'مرلے' : 'Marla (Size)'}</Label>
                         <Input value={formatSize(selectedPlot.size)} disabled className="bg-muted" />
                       </div>
+                      <div className="space-y-2">
+                        <Label>{t('printableForms.plotType')}</Label>
+                        <Input 
+                          value={selectedPlot.isCornerPlot ? t('printableForms.cornerPlot') : t('printableForms.regularPlot')} 
+                          disabled 
+                          className="bg-muted" 
+                        />
+                      </div>
+                      {selectedPlot.isCornerPlot && (
+                        <div className="space-y-2">
+                          <Label className="text-orange-600">{t('printableForms.cornerPlotPremium')}</Label>
+                          <Input 
+                            value="+10% included in price" 
+                            disabled 
+                            className="bg-orange-50 text-orange-700 font-semibold border-orange-300" 
+                          />
+                        </div>
+                      )}
                     </>
                   )}
                   <div className="space-y-2">
@@ -645,7 +663,7 @@ export default function BiyanaForm() {
                     <Input
                       id="tokenAmount"
                       type="number"
-                      placeholder={isUrdu ? 'ٹوکن رقم درج کریں' : 'Enter token amount'}
+                      placeholder={isUrdu ? 'بیعانہ رقم درج کریں' : 'Enter biyana amount'}
                       value={formData.tokenAmount}
                       onChange={(e) => handleTokenAmountChange(e.target.value)}
                       required

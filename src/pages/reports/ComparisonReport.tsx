@@ -31,6 +31,9 @@ import {
   Legend,
 } from "recharts";
 import { useState } from "react";
+import { PROJECTS_WITH_ALL } from "@/constants/projects";
+import { formatProjectName } from "@/utils/formatters";
+import { useTranslation } from "react-i18next";
 
 const comparisonData = [
   { project: "Green Valley", sold: 45, unsold: 15, total: 60 },
@@ -54,9 +57,8 @@ const pieData = [
   { name: "Unsold", value: 44, color: "hsl(38, 92%, 50%)" },
 ];
 
-const projects = ["All Projects", "Green Valley", "Lake View", "Palm Heights", "Sunset Gardens"];
-
 export default function ComparisonReport() {
+  const { t } = useTranslation();
   const [selectedProject, setSelectedProject] = useState("All Projects");
 
   const totalSold = comparisonData.reduce((sum, p) => sum + p.sold, 0);
@@ -81,9 +83,9 @@ export default function ComparisonReport() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {projects.map((project) => (
+                {PROJECTS_WITH_ALL.map((project) => (
                   <SelectItem key={project} value={project}>
-                    {project}
+                    {project === "All Projects" ? project : formatProjectName(project, t)}
                   </SelectItem>
                 ))}
               </SelectContent>

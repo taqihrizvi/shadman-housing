@@ -18,46 +18,16 @@ import { toast } from "@/hooks/use-toast";
 import { PackagePlus, Save, RotateCcw } from "lucide-react";
 import { inventoryAPI } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { formatEnum, formatSize, formatProjectName, getMarlaCount } from "@/utils/formatters";
+import { PROJECTS } from "@/constants/projects";
 
-const projects = ["SHADMAN_GREENS"];
 const sizes = ["FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
 const blocks = ["Block A", "Block B", "Block C", "Block D"];
-
-const formatEnum = (value: string) => {
-  return value
-    .split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-    .join(' ');
-};
-
-const formatSize = (value: string) => {
-  if (!value) return "";
-  const sizeMap: { [key: string]: string } = {
-    'FIVE_MARLA': '5 Marla',
-    'SEVEN_MARLA': '7 Marla',
-    'TEN_MARLA': '10 Marla',
-    'ONE_KANAL': '1 Kanal',
-    'TWO_KANAL': '2 Kanal',
-  };
-  return sizeMap[value] || formatEnum(value);
-};
 
 export default function AddInventory() {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
   const navigate = useNavigate();
-
-  // Helper function to format project names
-  const formatProjectName = (value: string) => {
-    if (!value) return "";
-    // Check for translation first
-    if (value === 'SHADMAN_GREENS') {
-      const translated = t('projects.shadmanGreens');
-      if (translated && !translated.startsWith('projects.')) return translated;
-    }
-    // Fallback to formatting the enum value
-    return formatEnum(value);
-  };
 
   const [formData, setFormData] = useState({
     plotNo: "",
@@ -68,18 +38,6 @@ export default function AddInventory() {
     price: "",
     description: "",
   });
-
-  // Helper function to get marla count from size
-  const getMarlaCount = (size: string): number => {
-    const marlaMap: { [key: string]: number } = {
-      'FIVE_MARLA': 5,
-      'SEVEN_MARLA': 7,
-      'TEN_MARLA': 10,
-      'ONE_KANAL': 20, // 1 Kanal = 20 Marlas
-      'TWO_KANAL': 40, // 2 Kanal = 40 Marlas
-    };
-    return marlaMap[size] || 0;
-  };
 
   // Calculate total price automatically when perMarlaPrice, size, or isCornerPlot changes
   const calculateTotalPrice = () => {
@@ -215,9 +173,9 @@ export default function AddInventory() {
                       <SelectValue placeholder={t('forms.selectOption')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {projects.map((project) => (
+                      {PROJECTS.map((project) => (
                         <SelectItem key={project} value={project}>
-                          {formatProjectName(project)}
+                          {formatProjectName(project, t)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -235,7 +193,7 @@ export default function AddInventory() {
                     <SelectContent>
                       {sizes.map((size) => (
                         <SelectItem key={size} value={size}>
-                          {formatSize(size)}
+                          {formatSize(size, t)}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -18,8 +18,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Receipt, Search, Printer, Eye, CheckCircle, Clock, XCircle, FilterX } from "lucide-react";
+import { Receipt, Search, Printer, Eye, CheckCircle, Clock, XCircle, FilterX, Archive } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import {
+  formatCurrency,
+  formatEnum,
+  formatPaymentMethod as formatPaymentMethodUtil,
+  formatPaymentType as formatPaymentTypeUtil,
+  formatDate as formatDateUtil
+} from "@/utils/formatters";
 
 
 export default function Vouchers() {
@@ -33,6 +40,17 @@ export default function Vouchers() {
   const [endDate, setEndDate] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
+  // Local wrappers for formatters
+  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
+  const formatPaymentType = (type: string) => formatPaymentTypeUtil(type, t);
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   // Fetch vouchers
   const { data: vouchersData, isLoading } = useQuery({
     queryKey: ['vouchers'],
@@ -42,68 +60,33 @@ export default function Vouchers() {
     },
   });
 
+  // Fetch archived vouchers
+  const { data: archivedVouchersData, isLoading: isLoadingArchived } = useQuery({
+    queryKey: ['archivedVouchers'],
+    queryFn: async () => {
+      const response = await voucherAPI.getArchived({ type: 'RECEIPT' });
+      return response.data;
+    },
+    enabled: activeTab === 'archived', // Only fetch when archived tab is active
+  });
+
   const vouchers = vouchersData || [];
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatPaymentMethod = (method: string) => {
-    if (!method) return "";
-    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
-  };
-
-  const formatPaymentType = (type: string) => {
-    if (!type) return "";
-    
-    // Custom labels for payment types
-    const labels: Record<string, string> = {
-      'INSTALLMENT': 'Installment',
-      'QUARTERLY': 'Quarterly Installment',
-      'BIYANA': 'Biyana Payment',
-      'SALES_AGREEMENT': 'Down Payment',
-      'TRANSFER_FEE': 'Transfer Fee'
-    };
-    
-    // Try translation first
-    const translated = t(`payments.paymentTypes.${type}`);
-    
-    // If translation returns the key itself (no translation found), use custom label or formatEnum
-    if (translated && !translated.startsWith('payments.paymentTypes.')) {
-      return translated;
-    }
-    
-    return labels[type] || formatEnum(type);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.getMonth() + 1; // Months are 0-indexed
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+  const archivedVouchers = archivedVouchersData || [];
 
   // Calculate status counts
   const pendingCount = vouchers.filter((v: any) => v.status === 'PENDING').length;
   const approvedCount = vouchers.filter((v: any) => v.status === 'APPROVED').length;
   const rejectedCount = vouchers.filter((v: any) => v.status === 'REJECTED').length;
+  const archivedCount = archivedVouchers.length;
 
-  const filteredVouchers = vouchers.filter((voucher: any) => {
-    // Tab filter
+  const filteredVouchers = (activeTab === 'archived' ? archivedVouchers : vouchers).filter((voucher: any) => {
+    // Tab filter (only apply to non-archived tabs)
     let matchesTab = true;
-    if (activeTab === 'approved') matchesTab = voucher.status === 'APPROVED';
-    else if (activeTab === 'pending') matchesTab = voucher.status === 'PENDING';
-    else if (activeTab === 'rejected') matchesTab = voucher.status === 'REJECTED';
+    if (activeTab !== 'archived') {
+      if (activeTab === 'approved') matchesTab = voucher.status === 'APPROVED';
+      else if (activeTab === 'pending') matchesTab = voucher.status === 'PENDING';
+      else if (activeTab === 'rejected') matchesTab = voucher.status === 'REJECTED';
+    }
     
     // Search filter
     const matchesSearch = 
@@ -163,7 +146,7 @@ export default function Vouchers() {
           </Button>
         </div>
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-6">
           <Card 
             className={`border-l-4 border-l-primary cursor-pointer transition-all hover:shadow-lg ${activeTab === 'all' ? 'ring-2 ring-primary' : ''}`}
             onClick={() => setActiveTab('all')}
@@ -224,6 +207,22 @@ export default function Vouchers() {
                 </div>
                 <div className="rounded-xl bg-red-100 p-3">
                   <XCircle className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card 
+            className={`border-l-4 border-l-gray-500 cursor-pointer transition-all hover:shadow-lg ${activeTab === 'archived' ? 'ring-2 ring-gray-500' : ''}`}
+            onClick={() => setActiveTab('archived')}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Archived Vouchers</p>
+                  <p className="text-3xl font-bold text-gray-600">{activeTab === 'archived' ? archivedCount : '...'}</p>
+                </div>
+                <div className="rounded-xl bg-gray-100 p-3">
+                  <Archive className="h-6 w-6 text-gray-600" />
                 </div>
               </div>
             </CardContent>
@@ -349,7 +348,7 @@ export default function Vouchers() {
 
         {/* Receipts Table with Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 h-auto">
+          <TabsList className="grid w-full grid-cols-5 h-auto">
             <TabsTrigger value="all" className="px-6 py-3">
               All Vouchers
               <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-semibold">
@@ -374,10 +373,24 @@ export default function Vouchers() {
                 {rejectedCount}
               </span>
             </TabsTrigger>
+            <TabsTrigger value="archived" className="px-6 py-3">
+              Archived
+              <span className="ml-2 rounded-full bg-gray-100 text-gray-800 px-2 py-0.5 text-xs font-semibold">
+                {activeTab === 'archived' ? archivedCount : '...'}
+              </span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab}>
             <Card variant="elevated">
+              {activeTab === 'archived' && (
+                <CardHeader>
+                  <CardTitle>Archived Vouchers</CardTitle>
+                  <CardDescription>
+                    Vouchers archived due to plot status changes (e.g., Reserved → Available)
+                  </CardDescription>
+                </CardHeader>
+              )}
               <CardHeader>
                 <CardTitle>{t('vouchers.title')}</CardTitle>
               </CardHeader>
@@ -435,20 +448,17 @@ export default function Vouchers() {
                       <TableCell>
                         <div className="flex items-center justify-center">
                           {voucher.status === 'APPROVED' ? (
-                            <CheckCircle 
-                              className="w-4 h-4 text-green-600"
-                              title="Approved"
-                            />
+                            <span title="Approved">
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                            </span>
                           ) : voucher.status === 'REJECTED' ? (
-                            <XCircle 
-                              className="w-4 h-4 text-red-600"
-                              title="Rejected"
-                            />
+                            <span title="Rejected">
+                              <XCircle className="w-4 h-4 text-red-600" />
+                            </span>
                           ) : (
-                            <Clock 
-                              className="w-4 h-4 text-yellow-500"
-                              title="Pending"
-                            />
+                            <span title="Pending">
+                              <Clock className="w-4 h-4 text-yellow-500" />
+                            </span>
                           )}
                         </div>
                       </TableCell>

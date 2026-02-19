@@ -35,6 +35,14 @@ import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm
 import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
+import { 
+  formatCurrency, 
+  formatDate, 
+  formatEnum, 
+  formatPaymentMethod, 
+  formatSize, 
+  formatPlotType 
+} from "@/utils/formatters";
 
 const statusOptions = ["All Status", "SOLD", "TRANSFERRED"];
 const sizeOptions = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
@@ -42,6 +50,11 @@ const sizeOptions = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE
 export default function SoldInventory() {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
+  
+  // Local wrappers for formatters that need translation context
+  const formatSizeLocal = (value: string) => formatSize(value, t);
+  const formatPaymentMethodLocal = (method: string) => formatPaymentMethod(method, t);
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [selectedSize, setSelectedSize] = useState("All Sizes");
@@ -175,9 +188,10 @@ export default function SoldInventory() {
       plot: {
         plotNo: plot.plotNo || "",
         project: plot.project || "",
-        size: formatSize(plot.size || ""),
+        size: formatSizeLocal(plot.size || ""),
         block: plot.block || "",
         price: plot.price || 0,
+        isCornerPlot: plot.isCornerPlot || false,
       },
       pricePerMarla: biyana.pricePerMarla,
       totalAmount: biyana.totalAmount,
@@ -219,7 +233,7 @@ export default function SoldInventory() {
       plot: {
         plotNo: plot.plotNo || "",
         project: plot.project || "",
-        size: formatSize(plot.size || ""),
+        size: formatSizeLocal(plot.size || ""),
         block: plot.block || "",
         price: plot.price || 0,
       },
@@ -284,45 +298,6 @@ export default function SoldInventory() {
     setIsPrintOpen(true);
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-PK");
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatPaymentMethod = (method: string) => {
-    if (!method) return "";
-    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
-  };
-
-  const formatSize = (value: string) => {
-    if (!value) return "";
-    const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': '5 Marla',
-      'SEVEN_MARLA': '7 Marla',
-      'TEN_MARLA': '10 Marla',
-      'ONE_KANAL': '1 Kanal',
-      'TWO_KANAL': '2 Kanal',
-    };
-    return sizeMap[value] || formatEnum(value);
-  };
-
-  const formatPlotType = (isCorner: boolean) => {
-    return isCorner ? "Corner Plot" : "Regular Plot";
-  };
-
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in" dir={isUrdu ? 'rtl' : 'ltr'}>
@@ -370,7 +345,7 @@ export default function SoldInventory() {
                 <SelectContent>
                   {sizeOptions.map((size) => (
                     <SelectItem key={size} value={size}>
-                      {size === "All Sizes" ? "All Sizes" : formatSize(size)}
+                      {size === "All Sizes" ? "All Sizes" : formatSizeLocal(size)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -430,7 +405,7 @@ export default function SoldInventory() {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
                         <TableCell>{formatEnum(item.project)}</TableCell>
-                        <TableCell>{formatSize(item.size)}</TableCell>
+                        <TableCell>{formatSizeLocal(item.size)}</TableCell>
                         <TableCell>
                           <Badge variant={item.isCornerPlot ? "secondary" : "outline"}>
                             {formatPlotType(item.isCornerPlot)}
@@ -501,7 +476,7 @@ export default function SoldInventory() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Size</p>
-                      <p className="font-semibold">{formatSize(selectedPlot.size)}</p>
+                      <p className="font-semibold">{formatSizeLocal(selectedPlot.size)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Plot Type</p>

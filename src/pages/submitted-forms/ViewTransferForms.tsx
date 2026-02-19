@@ -20,28 +20,36 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { FileOutput, Loader2, Eye, Printer, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { toTitleCase } from "@/lib/utils";
+import { FileOutput, Loader2, Eye, Printer, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import PrintableTransferForm from "../forms/PrintableTransferForm";
+import {
+  formatCurrency,
+  formatDate as formatDateUtil,
+  formatDateWithOptions,
+  formatEnum,
+  formatSize as formatSizeUtil,
+  formatProjectName as formatProjectNameUtil
+} from "@/utils/formatters";
 
 const ViewTransferForms = () => {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isPrintView, setIsPrintView] = useState(false);
 
-  // Helper function to format project names
-  const formatProjectName = (value: string) => {
-    if (!value) return "";
-    // Check for translation first
-    if (value === 'SHADMAN_GREENS') {
-      const translated = t('projects.shadmanGreens');
-      if (translated && !translated.startsWith('projects.')) return translated;
-    }
-    // Fallback to formatting the enum value
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
+  // Local wrappers for formatters
+  const formatDate = (dateString: string) => formatDateWithOptions(dateString, 'en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
+  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
+  const formatSize = (value: string) => formatSizeUtil(value, t);
+
+
 
   // Helper function to get status display and styling
   const getStatusInfo = (status: string) => {
@@ -76,40 +84,6 @@ const ViewTransferForms = () => {
       return response.data;
     },
   });
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-PK", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatSize = (value: string) => {
-    if (!value) return "";
-    const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': t('plotSizes.fiveMarla'),
-      'SEVEN_MARLA': t('plotSizes.sevenMarla'),
-      'TEN_MARLA': t('plotSizes.tenMarla'),
-      'ONE_KANAL': t('plotSizes.oneKanal'),
-      'TWO_KANAL': t('plotSizes.twoKanal'),
-    };
-    return sizeMap[value] || formatEnum(value);
-  };
 
   const handleViewDetails = (form: any) => {
     setSelectedForm(form);
@@ -183,17 +157,17 @@ const ViewTransferForms = () => {
                             {form.status === 'APPROVED' || form.status === 'COMPLETED' ? (
                               <CheckCircle 
                                 className="w-4 h-4 text-green-600"
-                                title={getStatusInfo(form.status).label}
+                                aria-label={getStatusInfo(form.status).label}
                               />
                             ) : form.status === 'REJECTED' ? (
                               <XCircle 
                                 className="w-4 h-4 text-red-600"
-                                title={getStatusInfo(form.status).label}
+                                aria-label={getStatusInfo(form.status).label}
                               />
                             ) : (
                               <Clock 
                                 className="w-4 h-4 text-yellow-500"
-                                title={getStatusInfo(form.status).label}
+                                aria-label={getStatusInfo(form.status).label}
                               />
                             )}
                           </div>
@@ -217,6 +191,7 @@ const ViewTransferForms = () => {
                             >
                               <Printer className="h-4 w-4" />
                             </Button>
+
                           </div>
                         </TableCell>
                       </TableRow>

@@ -7,6 +7,14 @@ import { Printer, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDate as formatDateUtil,
+  formatEnum,
+  formatProjectName as formatProjectNameUtil,
+  formatPaymentMethod as formatPaymentMethodUtil,
+  formatPaymentType as formatPaymentTypeUtil
+} from "@/utils/formatters";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -28,66 +36,11 @@ export default function PrintableVoucher() {
     enabled: !!voucherId,
   });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-PK", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatProjectName = (value: string) => {
-    if (!value) return "";
-    // Check for translation first
-    if (value === 'SHADMAN_GREENS') {
-      const translated = t('projects.shadmanGreens');
-      if (translated && !translated.startsWith('projects.')) return translated;
-    }
-    // Fallback to formatting the enum value
-    return formatEnum(value);
-  };
-
-  const formatPaymentMethod = (method: string) => {
-    if (!method) return "";
-    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
-  };
-
-  const formatPaymentType = (type: string) => {
-    if (!type) return "";
-    
-    // Custom labels for payment types
-    const labels: Record<string, string> = {
-      'INSTALLMENT': 'Monthly Installment',
-      'QUARTERLY': 'Quarterly Installment',
-      'BIYANA': 'Biyana Payment',
-      'SALES_AGREEMENT': 'Down Payment',
-      'TRANSFER_FEE': 'Transfer Fee'
-    };
-    
-    // Try translation first
-    const translated = t(`payments.paymentTypes.${type}`);
-    
-    // If translation returns the key itself (no translation found), use custom label or formatEnum
-    if (translated && !translated.startsWith('payments.paymentTypes.')) {
-      return translated;
-    }
-    
-    return labels[type] || formatEnum(type);
-  };
+  // Local wrappers for formatters
+  const formatDate = (dateString: string) => formatDateUtil(dateString, 'en-PK', { year: 'numeric', month: 'long', day: 'numeric' });
+  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
+  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
+  const formatPaymentType = (type: string) => formatPaymentTypeUtil(type, t);
 
   const handlePrint = () => {
     window.print();

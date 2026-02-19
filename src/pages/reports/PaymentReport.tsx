@@ -21,6 +21,7 @@ import {
 import { Download, Search, DollarSign, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { formatCurrency } from "@/utils/formatters";
 
 const paymentData = [
   {
@@ -94,14 +95,6 @@ const statusColors = {
 export default function PaymentReport() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
 
   const filteredData = paymentData.filter((item) => {
     const matchesSearch =

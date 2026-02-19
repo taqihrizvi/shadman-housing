@@ -192,6 +192,10 @@ export const formsAPI = {
     return apiRequest<{ success: boolean; data: any[] }>('/forms/biyana');
   },
 
+  getArchivedBiyanaForms: async () => {
+    return apiRequest<{ success: boolean; data: any[] }>('/forms/biyana/archived');
+  },
+
   createBiyana: async (data: any) => {
     return apiRequest<{ success: boolean; data: any }>('/forms/biyana', {
       method: 'POST',
@@ -225,6 +229,10 @@ export const formsAPI = {
   getTransferForms: async (params?: any) => {
     const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
     return apiRequest<{ success: boolean; data: any[] }>(`/transfer${queryString}`);
+  },
+
+  getArchivedTransferForms: async () => {
+    return apiRequest<{ success: boolean; data: any[] }>('/transfer/archived');
   },
 
   getTransferById: async (id: string) => {
@@ -268,6 +276,11 @@ export const voucherAPI = {
 
   getById: async (id: string) => {
     return apiRequest<{ success: boolean; data: any }>(`/vouchers/${id}`);
+  },
+
+  getArchived: async (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiRequest<{ success: boolean; data: any[]; pagination: any }>(`/vouchers/archived/all${queryString}`);
   },
 
   create: async (data: any) => {

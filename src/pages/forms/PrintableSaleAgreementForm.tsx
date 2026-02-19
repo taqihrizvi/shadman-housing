@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDate as formatDateUtil,
+  formatEnum,
+  formatProjectName as formatProjectNameUtil,
+  formatSize as formatSizeUtil
+} from "@/utils/formatters";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -62,59 +69,13 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
   const isUrdu = i18n.language === 'ur';
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
+  // Local wrappers for formatters
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("en-PK");
+    return formatDateUtil(dateString, 'en-PK');
   };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatProjectName = (value: string) => {
-    if (!value) return "";
-    if (isUrdu) {
-      if (value === 'SHADMAN_GREENS') return 'شادمان گرینز';
-    } else {
-      // Check for translation first
-      if (value === 'SHADMAN_GREENS') {
-        const translated = t('projects.shadmanGreens');
-        if (translated && !translated.startsWith('projects.')) return translated;
-      }
-    }
-    return formatEnum(value);
-  };
-
-  const formatPlotSize = (value: string) => {
-    if (!value) return "";
-    if (isUrdu) {
-      const sizeMap: { [key: string]: string } = {
-        'FIVE_MARLA': 'پانچ مرلہ',
-        'SEVEN_MARLA': 'سات مرلہ',
-        'TEN_MARLA': 'دس مرلہ',
-        'ONE_KANAL': 'ایک کنال',
-        'TWO_KANAL': 'دو کنال',
-      };
-      return sizeMap[value] || formatEnum(value);
-    }
-    const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': '5 Marla',
-      'SEVEN_MARLA': '7 Marla',
-      'TEN_MARLA': '10 Marla',
-      'ONE_KANAL': '1 Kanal',
-      'TWO_KANAL': '2 Kanal',
-    };
-    return sizeMap[value] || formatEnum(value);
-  };
+  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
+  const formatPlotSize = (value: string) => formatSizeUtil(value, t);
 
   const handlePrint = () => {
     if (!contentRef.current) return;

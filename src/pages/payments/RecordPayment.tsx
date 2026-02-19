@@ -19,6 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI, customerAPI, formsAPI, voucherAPI } from "@/lib/api";
 import { useTranslation } from 'react-i18next';
+import { formatCurrency, formatEnum, formatPaymentType } from "@/utils/formatters";
 
 const paymentMethods = ["BANK_DEPOSIT", "BANK_TRANSFER", "CHEQUE", "ONLINE"];
 const paymentTypes = ["INSTALLMENT", "QUARTERLY", "BIYANA", "SALES_AGREEMENT", "TRANSFER_FEE"];
@@ -484,41 +485,7 @@ export default function RecordPayment() {
     createPaymentMutation.mutate(paymentData);
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const getPaymentTypeLabel = (type: string) => {
-    // Define custom labels for payment types
-    const labels: Record<string, string> = {
-      'INSTALLMENT': 'Installment Payment',
-      'QUARTERLY': 'Quarterly Payment',
-      'BIYANA': 'Biyana Payment',
-      'SALES_AGREEMENT': 'Down Payment',
-      'TRANSFER_FEE': 'Transfer Fee',
-    };
-    
-    // Try translation first, fallback to custom label, then to formatted type
-    const key = `payments.paymentTypes.${type}` as const;
-    const translated = t(key);
-    
-    // If translation exists and is different from the key, use it
-    if (translated !== key) {
-      return translated;
-    }
-    
-    // Otherwise use custom label or format the type
-    return labels[type] || type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
+  const getPaymentTypeLabel = (type: string) => formatPaymentType(type, t);
 
   const isAmountReadOnly = formData.paymentType === 'BIYANA' || formData.paymentType === 'SALES_AGREEMENT' || formData.paymentType === 'TRANSFER_FEE';
 

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
+import { formatCurrency, formatDate as formatDateUtil, formatDateWithOptions, formatEnum } from "@/utils/formatters";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -18,6 +19,7 @@ interface PrintableBiyanaFormProps {
       project: string;
       size: string;
       price: number;
+      isCornerPlot?: boolean;
     };
     pricePerMarla?: number;
     totalAmount?: number;
@@ -52,26 +54,9 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
     signaturePath: data.approvedBy?.signature
   });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("en-PK", {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    return formatDateWithOptions(dateString, 'en-PK', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
   // Helper function to translate duration string
@@ -288,6 +273,20 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
                           <td className="p-2 print:p-1.5">{data.plot.size}</td>
                         </tr>
                         <tr className="border-b border-black">
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.plotType')}</td>
+                          <td className="p-2 print:p-1.5">
+                            <span className={data.plot.isCornerPlot ? "font-semibold text-orange-600" : ""}>
+                              {data.plot.isCornerPlot ? t('printableForms.cornerPlot') : t('printableForms.regularPlot')}
+                            </span>
+                          </td>
+                        </tr>
+                        {data.plot.isCornerPlot && (
+                          <tr className="border-b border-black bg-orange-50">
+                            <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-orange-100 text-orange-700">{t('printableForms.cornerPlotPremium')}</td>
+                            <td className="p-2 print:p-1.5 font-semibold text-orange-700">+10%</td>
+                          </tr>
+                        )}
+                        <tr className="border-b border-black">
                           <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('printableForms.ratePerMarla')}</td>
                           <td className="p-2 print:p-1.5">{data.pricePerMarla ? formatCurrency(data.pricePerMarla) : formatCurrency(500000)}</td>
                         </tr>
@@ -311,7 +310,7 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
                     <table className="w-full text-sm print:text-xs">
                       <tbody>
                         <tr className="border-b border-black">
-                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('Token Amount Date')}</td>
+                          <td className="border-r border-black p-2 print:p-1.5 font-semibold bg-gray-100">{t('Biyana Amount Date')}</td>
                           <td className="p-2 print:p-1.5">{formatDate(data.date)}</td>
                         </tr>
                         <tr className="border-b border-black">

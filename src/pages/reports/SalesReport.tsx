@@ -29,6 +29,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { formatCurrency } from "@/utils/formatters";
 
 const monthlyData = [
   { month: "Jul", sales: 8, revenue: 16000000 },
@@ -54,17 +55,6 @@ const years = ["2024", "2023", "2022"];
 export default function SalesReport() {
   const [selectedPeriod, setSelectedPeriod] = useState("Monthly");
   const [selectedYear, setSelectedYear] = useState("2024");
-
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `PKR ${(value / 1000000).toFixed(1)}M`;
-    }
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
 
   const totalSales = salesDetails.reduce((sum, item) => sum + item.amount, 0);
   const totalCommission = salesDetails.reduce((sum, item) => sum + item.commission, 0);

@@ -21,14 +21,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { FileText, Loader2, Eye, Printer, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { FileText, Loader2, Eye, Printer, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import { getUserData, isManager } from "@/lib/rbac";
 import { useTranslation } from 'react-i18next';
+import {
+  formatCurrency,
+  formatDate as formatDateUtil,
+  formatEnum,
+  formatPaymentMethod as formatPaymentMethodUtil,
+  formatSize as formatSizeUtil,
+  formatProjectName as formatProjectNameUtil
+} from "@/utils/formatters";
 
 const ViewBiyanaForms = () => {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
@@ -36,17 +48,13 @@ const ViewBiyanaForms = () => {
   const userData = getUserData();
   const isManagerUser = isManager();
 
-  // Helper function to format project names
-  const formatProjectName = (value: string) => {
-    if (!value) return "";
-    // Check for translation first
-    if (value === 'SHADMAN_GREENS') {
-      const translated = t('projects.shadmanGreens');
-      if (translated && !translated.startsWith('projects.')) return translated;
-    }
-    // Fallback to formatting the enum value
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
+  // Local wrappers for formatters
+  const formatDate = (dateString: string) => formatDateUtil(dateString, 'en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
+  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
+  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
+  const formatSize = (value: string) => formatSizeUtil(value, t);
+
+
 
   // Helper function to format status
   const formatStatus = (status: string) => {
@@ -77,46 +85,6 @@ const ViewBiyanaForms = () => {
     return forms;
   }, [forms, isManagerUser, userData]);
 
-  const formatCurrency = (value: number) => {
-    if (!value || isNaN(value)) return "Rs 0";
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-PK", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatPaymentMethod = (method: string) => {
-    if (!method) return "";
-    return t(`payments.paymentMethods.${method}`) || formatEnum(method);
-  };
-
-  const formatSize = (value: string) => {
-    if (!value) return "";
-    const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': t('plotSizes.fiveMarla'),
-      'SEVEN_MARLA': t('plotSizes.sevenMarla'),
-      'TEN_MARLA': t('plotSizes.tenMarla'),
-      'ONE_KANAL': t('plotSizes.oneKanal'),
-      'TWO_KANAL': t('plotSizes.twoKanal'),
-    };
-    return sizeMap[value] || formatEnum(value);
-  };
-
   const handleViewDetails = (form: any) => {
     setSelectedForm(form);
     setIsDetailsOpen(true);
@@ -134,6 +102,7 @@ const ViewBiyanaForms = () => {
         size: formatSize(form.plot?.size || ""),
         block: form.plot?.block || "",
         price: form.plot?.price || 0,
+        isCornerPlot: form.plot?.isCornerPlot || false,
       },
       pricePerMarla: form.pricePerMarla,
       totalAmount: form.totalAmount,
@@ -212,17 +181,17 @@ const ViewBiyanaForms = () => {
                             {form.status === 'APPROVED' ? (
                               <CheckCircle 
                                 className="w-4 h-4 text-green-600"
-                                title={formatStatus(form.status)}
+                                aria-label={formatStatus(form.status)}
                               />
                             ) : form.status === 'REJECTED' ? (
                               <XCircle 
                                 className="w-4 h-4 text-red-600"
-                                title={formatStatus(form.status)}
+                                aria-label={formatStatus(form.status)}
                               />
                             ) : (
                               <Clock 
                                 className="w-4 h-4 text-yellow-500"
-                                title={formatStatus(form.status)}
+                                aria-label={formatStatus(form.status)}
                               />
                             )}
                           </div>
@@ -247,6 +216,7 @@ const ViewBiyanaForms = () => {
                                 <Printer className="h-4 w-4" />
                               </Button>
                             )}
+
                           </div>
                         </TableCell>
                       </TableRow>
@@ -369,6 +339,8 @@ const ViewBiyanaForms = () => {
             </DialogContent>
           </Dialog>
         )}
+
+
       </div>
     </DashboardLayout>
   );

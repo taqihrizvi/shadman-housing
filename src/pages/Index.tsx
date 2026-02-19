@@ -73,6 +73,7 @@ import { toTitleCase } from "@/lib/utils";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
 import html2pdf from "html2pdf.js";
+import { formatCurrency, formatEnum, formatSize, formatPlotType, formatDate } from "@/utils/formatters";
 
 const Index = () => {
   const { t, i18n } = useTranslation();
@@ -95,7 +96,6 @@ const Index = () => {
   const [selectedPaymentPlot, setSelectedPaymentPlot] = useState<any>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   
-  const projects = ["All Projects", "GREEN_VALLEY", "LAKE_VIEW", "PALM_HEIGHTS", "SUNSET_GARDENS"];
   const statusOptions = ["All Status", "SOLD", "TRANSFERRED"];
   
   // Fetch dashboard stats from API
@@ -153,41 +153,8 @@ const Index = () => {
     },
   });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-PK", {
-      style: "currency",
-      currency: "PKR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatEnum = (value: string) => {
-    if (!value) return "";
-    if (value === 'SHADMAN_GREENS') return t('projects.shadmanGreens');
-    return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const formatSize = (value: string) => {
-    if (!value) return "";
-    const sizeMap: { [key: string]: string } = {
-      'FIVE_MARLA': t('plotSizes.fiveMarla'),
-      'SEVEN_MARLA': t('plotSizes.sevenMarla'),
-      'TEN_MARLA': t('plotSizes.tenMarla'),
-      'ONE_KANAL': t('plotSizes.oneKanal'),
-      'TWO_KANAL': t('plotSizes.twoKanal'),
-    };
-    return sizeMap[value] || formatEnum(value);
-  };
-
-  const formatPlotType = (isCorner: boolean) => {
-    return isCorner ? "Corner Plot" : "Regular Plot";
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-PK");
-  };
+  // Wrapper functions to automatically apply translation context
+  const formatSizeLocal = (value: string) => formatSize(value, t);
 
   const getPlotTransfer = (plotId: string) => {
     return transfersData?.filter((t: any) => t.plotId === plotId)
@@ -252,8 +219,10 @@ const Index = () => {
       plot: {
         plotNo: plot.plotNo || "",
         project: plot.project || "",
-        size: formatSize(plot.size || ""),
+        size: formatSize(plot.size || "", t),
+        block: plot.block || "",
         price: plot.price || 0,
+        isCornerPlot: plot.isCornerPlot || false,
       },
       pricePerMarla: biyana.pricePerMarla,
       totalAmount: biyana.totalAmount,
@@ -350,7 +319,7 @@ const Index = () => {
                 <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
                   <td style="padding: 12px; font-weight: 600; color: #1a5a4a; font-size: 14px;">${plot.plotNo}</td>
                   <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatEnum(plot.project)}</td>
-                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size)}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size, t)}</td>
                   <td style="padding: 12px; text-align: right; font-weight: 600; color: #1a5a4a; font-size: 14px;">${formatCurrency(plot.price)}</td>
                 </tr>
               `).join('')}
@@ -389,7 +358,7 @@ const Index = () => {
                   <td style="padding: 12px; font-weight: 600; color: #1a5a4a; font-size: 14px;">${plot.plotNo}</td>
                   <td style="padding: 12px; color: #1a5a4a; font-weight: 600; font-size: 14px;">${toTitleCase(plot.customer?.name || 'N/A')}</td>
                   <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatEnum(plot.project)}</td>
-                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size)}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size, t)}</td>
                   <td style="padding: 12px; text-align: right; font-weight: 600; color: #1a5a4a; font-size: 14px;">${formatCurrency(plot.price)}</td>
                 </tr>
               `).join('')}
@@ -430,7 +399,7 @@ const Index = () => {
                   <td style="padding: 12px; font-weight: 600; color: #1a5a4a; font-size: 14px;">${plot.plotNo}</td>
                   <td style="padding: 12px; color: #1a5a4a; font-weight: 600; font-size: 14px;">${toTitleCase(plot.buyer?.name || 'N/A')}</td>
                   <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatEnum(plot.project)}</td>
-                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size)}</td>
+                  <td style="padding: 12px; color: #4b5563; font-size: 14px;">${formatSize(plot.size, t)}</td>
                   <td style="padding: 12px; font-size: 14px;">
                     <span style="background: ${plot.status === 'TRANSFERRED' ? '#fef3c7' : '#d4e9e0'}; color: ${plot.status === 'TRANSFERRED' ? '#d97706' : '#1a5a4a'}; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">${getPlotStatus(plot)}</span>
                   </td>
@@ -1007,7 +976,7 @@ const Index = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Size</p>
-                      <p className="font-semibold">{formatSize(selectedPlot.size)}</p>
+                      <p className="font-semibold">{formatSize(selectedPlot.size, t)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Plot Type</p>
@@ -1816,7 +1785,7 @@ const Index = () => {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
                         <TableCell>{formatEnum(item.project)}</TableCell>
-                        <TableCell>{formatSize(item.size)}</TableCell>
+                        <TableCell>{formatSize(item.size, t)}</TableCell>
                         <TableCell>
                           <Badge variant={item.isCornerPlot ? "secondary" : "outline"}>
                             {formatPlotType(item.isCornerPlot)}
@@ -1866,7 +1835,7 @@ const Index = () => {
           .map((plot: any) => ({
             plotNo: plot.plotNo,
             phase: formatEnum(plot.project),
-            size: formatSize(plot.size),
+            size: formatSize(plot.size, t),
             plotType: formatPlotType(plot.isCornerPlot),
             price: formatCurrency(plot.price),
           }));
