@@ -31,14 +31,14 @@ export const formatEnum = (value: string): string => {
  */
 export const formatProjectName = (value: string, t: TFunction): string => {
   if (!value) return "";
-  
+
   // Get translation key for the project
   const translationKey = getProjectTranslationKey(value);
   if (translationKey) {
     const translated = t(translationKey);
     if (translated && !translated.startsWith('projects.')) return translated;
   }
-  
+
   // Fallback to formatting the enum value
   return formatEnum(value);
 };
@@ -48,7 +48,7 @@ export const formatProjectName = (value: string, t: TFunction): string => {
  */
 export const formatSize = (value: string, t: TFunction): string => {
   if (!value) return "";
-  
+
   const sizeMap: { [key: string]: string } = {
     'FIVE_MARLA': t('plotSizes.fiveMarla'),
     'SEVEN_MARLA': t('plotSizes.sevenMarla'),
@@ -56,7 +56,7 @@ export const formatSize = (value: string, t: TFunction): string => {
     'ONE_KANAL': t('plotSizes.oneKanal'),
     'TWO_KANAL': t('plotSizes.twoKanal'),
   };
-  
+
   return sizeMap[value] || formatEnum(value);
 };
 
@@ -93,13 +93,13 @@ export const formatDateWithOptions = (
   options?: Intl.DateTimeFormatOptions
 ): string => {
   if (!dateString) return "N/A";
-  
+
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   };
-  
+
   return new Date(dateString).toLocaleDateString(locale, options || defaultOptions);
 };
 
@@ -121,7 +121,7 @@ export const getMarlaCount = (size: string): number => {
     'ONE_KANAL': 20,
     'TWO_KANAL': 40,
   };
-  
+
   return marlaMap[size] || 0;
 };
 
@@ -132,10 +132,52 @@ export const formatPaymentPlan = (installmentMonths?: number, installmentType?: 
   if (!installmentMonths || installmentMonths === 0) {
     return "Full Payment";
   }
-  
+
   if (installmentType === 'QUARTERLY') {
     return `${installmentMonths} Quarters Installment`;
   }
-  
+
   return `${installmentMonths} Months Installment`;
+};
+
+/**
+ * Format plot numbers to automatically uppercase letters, ensure exactly 1 alphabet at start,
+ * and dash separate numbers. Example: a101 -> A-101, ab 101 -> A-101, 101 -> empty
+ */
+export const formatPlotNumberInput = (value: string): string => {
+  if (!value) return "";
+
+  let cleanValue = value.toUpperCase();
+
+  // Remove spaces and non-alphanumeric characters except existing dashes
+  cleanValue = cleanValue.replace(/[^A-Z0-9-]/g, '');
+
+  // Ensure exactly 1 alphabet at the start, and no other alphabets
+  if (/^[A-Z]/.test(cleanValue)) {
+    // If it starts with an alphabet, keep the first one, strip out the rest of the alphabets
+    const firstChar = cleanValue.charAt(0);
+    const rest = cleanValue.substring(1).replace(/[A-Z]/g, '');
+    cleanValue = firstChar + rest;
+  } else {
+    // If it does NOT start with an alphabet, we must strip out everything because it MUST start 
+    // with exactly 1 alphabet. Or, if they pasted something weird, look for the first alphabet.
+    const firstAlphabetMatch = cleanValue.match(/[A-Z]/);
+    if (firstAlphabetMatch) {
+      // Found an alphabet somewhere inside, move it to the front
+      const firstChar = firstAlphabetMatch[0];
+      const rest = cleanValue.replace(/[A-Z]/g, '');
+      cleanValue = firstChar + rest;
+    } else {
+      // No alphabet found anywhere, so prevent typing numbers altogether.
+      cleanValue = '';
+    }
+  }
+
+  // Auto-insert a dash between the letter and numbers if missing
+  cleanValue = cleanValue.replace(/^([A-Z])([0-9]+)/, '$1-$2');
+
+  // Ensure no multiple dashes
+  cleanValue = cleanValue.replace(/-+/g, '-');
+
+  return cleanValue;
 };

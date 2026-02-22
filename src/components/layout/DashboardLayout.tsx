@@ -17,12 +17,14 @@ import {
   X,
   Building2,
   LogOut,
+  User,
   ClipboardCheck,
-  Clock,
+  Users,
   ChevronDown,
   ChevronRight,
   Calculator,
   Archive,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -189,6 +191,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       roles: ['ADMIN'],
     },
     {
+      titleKey: "nav.users",
+      href: "/users",
+      icon: <UserCog className="h-5 w-5" />,
+      roles: ['ADMIN'],
+    },
+    {
       titleKey: "nav.archive",
       href: "/archive",
       icon: <Archive className="h-5 w-5" />,
@@ -228,7 +236,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Auto-expand parent when on a child route
   useEffect(() => {
     const currentPath = location.pathname;
-    const parentItem = navigation.find(item => 
+    const parentItem = navigation.find(item =>
       item.children?.some(child => child.href === currentPath)
     );
     if (parentItem) {
@@ -348,11 +356,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div key={item.href}>
             <NavLink item={item} />
             {item.children && item.children.length > 0 && sidebarOpen && (
-              <div 
+              <div
                 className={cn(
                   "overflow-hidden transition-all duration-300 ease-in-out",
-                  expandedItems.includes(item.href) 
-                    ? "max-h-96 opacity-100 mt-1" 
+                  expandedItems.includes(item.href)
+                    ? "max-h-96 opacity-100 mt-1"
                     : "max-h-0 opacity-0"
                 )}
               >
@@ -384,6 +392,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Badge variant={userRole === 'ADMIN' ? 'default' : userRole === 'MANAGER' ? 'secondary' : 'outline'} className="text-xs">
                 {userRole}
               </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 ml-1 text-sidebar-foreground hover:bg-sidebar-accent"
+                onClick={() => navigate('/profile')}
+                title={t('nav.profile', 'Profile Settings')}
+              >
+                <User className="h-3 w-3" />
+              </Button>
             </div>
             <p className="text-xs text-sidebar-foreground/60 truncate">{userData?.email || ''}</p>
           </div>
@@ -460,7 +477,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <main
         className={cn(
           "min-h-screen transition-all duration-300 pt-16 lg:pt-0",
-          isUrdu 
+          isUrdu
             ? (sidebarOpen ? "lg:mr-64" : "lg:mr-20")
             : (sidebarOpen ? "lg:ml-64" : "lg:ml-20")
         )}

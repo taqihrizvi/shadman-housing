@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,37 +20,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { FileSignature, Loader2, Eye, Printer, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
+
+
+import { FileSignature, Loader2, Eye, Printer, CheckCircle, XCircle, Clock } from "lucide-react";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import { useTranslation } from 'react-i18next';
 import { toTitleCase } from "@/lib/utils";
-import {
-  formatCurrency,
-  formatDate as formatDateUtil,
-  formatPaymentPlan as formatPaymentPlanUtil,
-  formatEnum,
-  formatSize as formatSizeUtil,
-  formatProjectName as formatProjectNameUtil
-} from "@/utils/formatters";
+import { useFormatters } from "@/hooks/useFormatters";
 
 const ViewSaleAgreements = () => {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
 
-  // Local wrappers for formatters
-  const formatDate = (dateString: string) => formatDateUtil(dateString, 'en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatPaymentPlan = (installmentMonths: number) => formatPaymentPlanUtil(installmentMonths, t);
-  const formatSize = (value: string) => formatSizeUtil(value, t);
 
+  const { formatDateShort: formatDate, formatProjectName, formatPaymentPlan, formatSize, formatCurrency, formatEnum } = useFormatters();
 
 
   // Helper function to format status
@@ -116,7 +103,7 @@ const ViewSaleAgreements = () => {
                     <TableRow>
                       <TableHead>{t('forms.agreementNo')}</TableHead>
                       <TableHead>{t('forms.customerName')}</TableHead>
-                      <TableHead>{t('customers.cnic')}</TableHead>
+
                       <TableHead>{t('inventory.plotNo')}</TableHead>
                       <TableHead>{t('inventory.project')}</TableHead>
                       <TableHead>{t('forms.totalAmount')}</TableHead>
@@ -132,7 +119,7 @@ const ViewSaleAgreements = () => {
                       <TableRow key={form.id}>
                         <TableCell className="font-medium">{form.agreementNumber}</TableCell>
                         <TableCell>{toTitleCase(form.customer?.name || 'N/A')}</TableCell>
-                        <TableCell>{form.customer?.cnic || 'N/A'}</TableCell>
+
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
                         <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>
                         <TableCell>{formatCurrency(form.totalAmount)}</TableCell>
@@ -142,17 +129,17 @@ const ViewSaleAgreements = () => {
                         <TableCell>
                           <div className="flex items-center justify-center">
                             {form.status === 'APPROVED' ? (
-                              <CheckCircle 
+                              <CheckCircle
                                 className="w-4 h-4 text-green-600"
                                 aria-label={t('status.approved')}
                               />
                             ) : form.status === 'REJECTED' ? (
-                              <XCircle 
+                              <XCircle
                                 className="w-4 h-4 text-red-600"
                                 aria-label={t('status.rejected')}
                               />
                             ) : (
-                              <Clock 
+                              <Clock
                                 className="w-4 h-4 text-yellow-500"
                                 aria-label={t('status.pending')}
                               />
@@ -310,8 +297,8 @@ const ViewSaleAgreements = () => {
           <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
             <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
               <DialogTitle className="sr-only">Print Sale Agreement</DialogTitle>
-              <PrintableSaleAgreementForm 
-                data={printData} 
+              <PrintableSaleAgreementForm
+                data={printData}
                 onClose={() => setIsPrintOpen(false)}
               />
             </DialogContent>

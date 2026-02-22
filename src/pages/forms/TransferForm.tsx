@@ -32,7 +32,7 @@ export default function TransferForm() {
   const [toCustomerId, setToCustomerId] = useState("");
   const [totalPaidAmount, setTotalPaidAmount] = useState<number>(0);
   const [validationError, setValidationError] = useState<string>("");
-  
+
   const [formData, setFormData] = useState({
     // Property
     plotId: "",
@@ -96,10 +96,10 @@ export default function TransferForm() {
   // Handle plot selection
   const handlePlotSelect = async (plotId: string) => {
     setFormData({ ...formData, plotId });
-    
+
     const plot = plotsData?.find((p: any) => p.id === plotId);
     setSelectedPlot(plot);
-    
+
     // Fetch current owner (buyer) details
     if (plot?.buyerId) {
       setFromCustomerId(plot.buyerId);
@@ -108,21 +108,21 @@ export default function TransferForm() {
     // Calculate total paid amount (biyana token + down payment + approved installment vouchers)
     if (plot) {
       let totalPaid = 0;
-      
+
       // Get biyana token amount for this plot (approved only)
-      const plotBiyana = biyanaForms?.find((b: any) => 
-        b.plotId === plotId && 
+      const plotBiyana = biyanaForms?.find((b: any) =>
+        b.plotId === plotId &&
         b.status === 'APPROVED'
       );
       const biyanaTokenAmount = plotBiyana?.tokenAmount || 0;
-      
+
       // Get sale agreement down payment (approved only)
-      const plotAgreement = saleAgreements?.find((a: any) => 
-        a.plotId === plotId && 
-        a.isActive && 
+      const plotAgreement = saleAgreements?.find((a: any) =>
+        a.plotId === plotId &&
+        a.isActive &&
         a.status === 'APPROVED'
       );
-      
+
       // Validate that plot has an approved sale agreement
       if (!plotAgreement) {
         toast({
@@ -134,20 +134,20 @@ export default function TransferForm() {
         setFormData({ ...formData, plotId: "" });
         return;
       }
-      
+
       const downPayment = plotAgreement?.downPayment || 0;
-      
+
       // Get approved installment vouchers for this plot (INSTALLMENT or QUARTERLY formType only)
       const plotVouchers = vouchersData || [];
-      const approvedInstallmentVouchers = plotVouchers.filter((v: any) => 
-        v.status === 'APPROVED' && 
+      const approvedInstallmentVouchers = plotVouchers.filter((v: any) =>
+        v.status === 'APPROVED' &&
         (v.formType === 'INSTALLMENT' || v.formType === 'QUARTERLY')
       );
       const installmentTotal = approvedInstallmentVouchers.reduce((sum: number, v: any) => sum + (v.amount || 0), 0);
-      
+
       totalPaid = biyanaTokenAmount + downPayment + installmentTotal;
       setTotalPaidAmount(totalPaid);
-      
+
       console.log('Total Paid Calculation:', {
         biyanaToken: biyanaTokenAmount,
         downPayment: downPayment,
@@ -192,7 +192,7 @@ export default function TransferForm() {
         title: "Transfer Form Submitted",
         description: "Transfer form has been submitted successfully and is pending approval.",
       });
-      
+
       // Reset form
       setFormData({
         plotId: "",
@@ -213,7 +213,7 @@ export default function TransferForm() {
       setSelectedPlot(null);
       setFromCustomerId("");
       setToCustomerId("");
-      
+
       // Redirect to approvals page
       navigate('/approvals');
     },
@@ -231,7 +231,7 @@ export default function TransferForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(""); // Clear previous errors
-    
+
     if (!fromCustomerId) {
       const errorMsg = "Please select a plot with a current owner";
       setValidationError(errorMsg);
@@ -295,11 +295,11 @@ export default function TransferForm() {
     // First, create or find the new owner customer
     try {
       let newOwnerId = toCustomerId;
-      
+
       // Check if customer exists by CNIC
       const existingCustomers = await customerAPI.getAll({ search: newOwnerData.cnic });
       const existingCustomer = existingCustomers.data.find((c: any) => c.cnic === newOwnerData.cnic);
-      
+
       if (existingCustomer) {
         newOwnerId = existingCustomer.id;
         setToCustomerId(existingCustomer.id);
@@ -363,7 +363,7 @@ export default function TransferForm() {
             {isUrdu ? 'فارم جمع کروانے سے پہلے تمام معلومات کی درستگی کی تصدیق یقینی بنائیں' : 'Please ensure to verify all information before submitting the form'}
           </p>
         </div>
-        
+
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('forms.transferForm')}</h1>
         </div>
@@ -420,7 +420,7 @@ export default function TransferForm() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {selectedPlot && (
                     <div className="p-4 bg-muted rounded-lg">
                       <h4 className="font-semibold mb-2">{t('forms.plotDetails')}</h4>
@@ -466,25 +466,25 @@ export default function TransferForm() {
                           <Label className="text-sm font-semibold text-blue-900">Total Amount Paid by Current Owner</Label>
                           <p className="text-2xl font-bold text-blue-600 mt-1">Rs {totalPaidAmount.toLocaleString()}</p>
                           <p className="text-xs text-blue-700 mt-2">Transfer amount must equal this exact amount</p>
-                          
+
                           {/* Payment Breakdown */}
                           <div className="mt-3 pt-3 border-t border-blue-200">
                             <p className="text-xs font-semibold text-blue-900 mb-2">Payment Breakdown:</p>
                             <div className="space-y-1 text-xs text-blue-800">
                               {(() => {
-                                const plotBiyana = biyanaForms?.find((b: any) => 
+                                const plotBiyana = biyanaForms?.find((b: any) =>
                                   b.plotId === formData.plotId && b.status === 'APPROVED'
                                 );
-                                const plotAgreement = saleAgreements?.find((a: any) => 
+                                const plotAgreement = saleAgreements?.find((a: any) =>
                                   a.plotId === formData.plotId && a.isActive && a.status === 'APPROVED'
                                 );
                                 const plotVouchers = vouchersData || [];
-                                const approvedInstallmentVouchers = plotVouchers.filter((v: any) => 
-                                  v.status === 'APPROVED' && 
+                                const approvedInstallmentVouchers = plotVouchers.filter((v: any) =>
+                                  v.status === 'APPROVED' &&
                                   (v.formType === 'INSTALLMENT' || v.formType === 'QUARTERLY')
                                 );
                                 const installmentTotal = approvedInstallmentVouchers.reduce((sum: number, v: any) => sum + (v.amount || 0), 0);
-                                
+
                                 return (
                                   <>
                                     <div className="flex justify-between">
@@ -621,7 +621,7 @@ export default function TransferForm() {
                     />
                     {totalPaidAmount > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        Required amount: Rs {totalPaidAmount.toLocaleString()} 
+                        Required amount: Rs {totalPaidAmount.toLocaleString()}
                       </p>
                     )}
                   </div>

@@ -1,15 +1,9 @@
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
-import {
-  formatCurrency,
-  formatDate as formatDateUtil,
-  formatEnum,
-  formatProjectName as formatProjectNameUtil,
-  formatSize as formatSizeUtil
-} from "@/utils/formatters";
+import { useFormatters } from "@/hooks/useFormatters";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -41,6 +35,10 @@ interface PrintableSaleAgreementFormProps {
       name: string;
       signature?: string;
     };
+    approvedBy?: {
+      name: string;
+      signature?: string;
+    };
     witnesses?: Array<{
       name: string;
       cnic: string;
@@ -69,13 +67,7 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
   const isUrdu = i18n.language === 'ur';
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Local wrappers for formatters
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "";
-    return formatDateUtil(dateString, 'en-PK');
-  };
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatPlotSize = (value: string) => formatSizeUtil(value, t);
+  const { formatDateShort: formatDate, formatProjectName, formatSize: formatPlotSize, formatCurrency, formatEnum } = useFormatters();
 
   const handlePrint = () => {
     if (!contentRef.current) return;
@@ -145,7 +137,7 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
     `);
 
     printWindow.document.close();
-    
+
     // Wait for content and fonts to load, then trigger print dialog
     printWindow.onload = () => {
       setTimeout(() => {
@@ -161,14 +153,14 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
   const quarterlyInstallments = data.biyana?.quarterlyInstallments || 0;
   const installmentType = data.biyana?.installmentType || 'MONTHLY_ONLY';
   const tenPercentAmount = data.plot.price * 0.10;
-  
+
   // Calculate due payment (same as SaleAgreementForm)
   const duePayment = totalAmount - data.downPayment - biyanaAmount;
-  
+
   // Calculate installments using the same logic as SaleAgreementForm
   let calculatedMonthlyAmount = 0;
   let calculatedQuarterlyAmount = 0;
-  
+
   if (duePayment > 0 && installmentMonths > 0) {
     if (installmentType === 'MONTHLY_ONLY') {
       // Monthly only: divide due payment by number of months and round up
@@ -177,17 +169,17 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
       // Monthly + Quarterly: calculate using original ratio from Biyana form
       const originalQuarterlyAmt = data.biyana?.quarterlyInstallmentAmount || 0;
       const originalMonthlyAmt = data.biyana?.monthlyInstallmentAmount || 0;
-      
+
       if (originalMonthlyAmt > 0 && originalQuarterlyAmt > 0) {
         const originalMonthlyTotal = originalMonthlyAmt * installmentMonths;
         const originalQuarterlyTotal = originalQuarterlyAmt * quarterlyInstallments;
         const originalTotal = originalMonthlyTotal + originalQuarterlyTotal;
-        
+
         // Calculate ratio and apply to new due payment
         const monthlyRatio = originalMonthlyTotal / originalTotal;
         const newMonthlyTotal = duePayment * monthlyRatio;
         calculatedMonthlyAmount = Math.ceil(newMonthlyTotal / installmentMonths);
-        
+
         // Quarterly gets the remainder
         const remainingForQuarterly = duePayment - newMonthlyTotal;
         calculatedQuarterlyAmount = Math.ceil(remainingForQuarterly / quarterlyInstallments);
@@ -197,11 +189,11 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
       }
     }
   }
-  
+
   // Use calculated amounts or fall back to data amounts
   const monthlyAmount = calculatedMonthlyAmount || data.biyana?.monthlyInstallmentAmount || data.monthlyAmount;
   const quarterlyAmount = calculatedQuarterlyAmount || data.biyana?.quarterlyInstallmentAmount || 0;
-  
+
   // Calculate remaining balance for display
   const remainingBalance = duePayment;
 
@@ -211,11 +203,16 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
       <div className="print:hidden sticky top-0 z-50 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t('printableForms.saleAgreementDeed')} - {data.agreementNumber}</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {!hidePrintButton && (
               <Button onClick={handlePrint} variant="outline">
                 <Printer className="mr-2 h-4 w-4" />
                 {t('printableForms.printDocument')}
+              </Button>
+            )}
+            {onClose && (
+              <Button onClick={onClose} variant="ghost" size="icon">
+                <X className="h-5 w-5" />
               </Button>
             )}
           </div>
@@ -224,36 +221,37 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
 
       {/* Printable Content */}
       <div ref={contentRef} className="bg-white print:p-0" dir={isUrdu ? 'rtl' : 'ltr'} lang={isUrdu ? 'ur' : 'en'}>
-          {/* Letterhead Header */}
-          <div className="letterhead-header w-full" style={{ marginBottom: '20px' }}>
-            <img src="/letterhead header.png" alt="Header" className="w-full" style={{ display: 'block', width: '100%', maxWidth: '100%' }} />
+        {/* Letterhead Header */}
+        <div className="letterhead-header w-full" style={{ marginBottom: '20px' }}>
+          <img src="/letterhead header.png" alt="Header" className="w-full" style={{ display: 'block', width: '100%', maxWidth: '100%' }} />
+        </div>
+
+        <div className="p-6 print:p-4 page-content" style={{ position: 'relative' }}>
+          {/* Logo Watermark */}
+          <div className="watermark-logo" style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            opacity: 0.15,
+            zIndex: 0,
+            pointerEvents: 'none',
+            width: '600px',
+            height: '600px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <img src="/Logo.png" alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
           </div>
-          
-          <div className="p-6 print:p-4 page-content" style={{ position: 'relative' }}>
-            {/* Logo Watermark */}
-            <div className="watermark-logo" style={{ 
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              opacity: 0.15,
-              zIndex: 0,
-              pointerEvents: 'none',
-              width: '600px',
-              height: '600px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <img src="/Logo.png" alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-            </div>
-            
-            <div style={{ position: 'relative', zIndex: 1 }}>
+
+          <div style={{ position: 'relative', zIndex: 1 }}>
             {/* Form Title */}
             <div className="mb-8 print:mb-4" style={{ textAlign: 'center' }}>
               <h1 className="text-3xl print:text-2xl font-bold mb-2 print:mb-1" style={{ textAlign: 'center', fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>{t('printableForms.saleAgreementDeed')}</h1>
               <p className="text-sm print:text-xs mt-2 print:mt-1" style={{ textAlign: 'center' }}>{t('printableForms.agreementNo')}: {data.agreementNumber}</p>
               <p className="text-sm print:text-xs" style={{ textAlign: 'center' }}>{t('printableForms.date')}: {formatDate(data.agreementDate)}</p>
+              <p className="text-sm print:text-xs text-muted-foreground mt-1" style={{ textAlign: 'center' }}>Created by: {data.createdBy?.name || 'System'}</p>
             </div>
 
             <div className="relative">
@@ -270,7 +268,7 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
                     <span className="font-semibold whitespace-nowrap w-40">{t('printableForms.receivedFrom')}:</span>
                     <div className="border-b-2 border-black px-3 py-1 flex-1">{data.customer.name}</div>
                   </div>
-                  
+
                   <div className="flex items-baseline gap-3">
                     <span className="font-semibold whitespace-nowrap w-40">{t('printableForms.sonOf')}:</span>
                     <div className="border-b-2 border-black px-3 py-1 flex-1">{data.customer.fatherName}</div>
@@ -454,7 +452,7 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
 
             {/* Affidavit */}
             <h2 className="text-lg print:text-base font-bold mt-6 print:mt-3 mb-3 print:mb-2 break-after-avoid" style={{ textAlign: 'center', fontFamily: isUrdu ? "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif" : "'Outfit', sans-serif" }}>{t('printableForms.affidavit')}</h2>
-            
+
             <div className="mb-4 print:mb-2 text-sm print:text-xs leading-relaxed print:leading-snug text-justify break-inside-avoid">
               <p>
                 {isUrdu ? (
@@ -473,9 +471,9 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
                 {data.status === 'APPROVED' ? (
                   <div className="flex flex-col items-center">
                     <div className="w-full border-b-2 border-black h-16 print:h-12 mb-2 print:mb-1 flex items-center justify-center">
-                      <img 
-                        src={data.createdBy?.signature ? `${API_BASE_URL}${data.createdBy.signature}` : `${API_BASE_URL}/signatures/admin-signature.png`} 
-                        alt={t('printableForms.firstParty')} 
+                      <img
+                        src={data.approvedBy?.signature ? `${API_BASE_URL}${data.approvedBy.signature}` : `${API_BASE_URL}/signatures/admin-signature.png`}
+                        alt={t('printableForms.firstParty')}
                         className="max-h-12 print:max-h-8 max-w-[120px] print:max-w-[100px] object-contain"
                         onLoad={() => console.log('✅ Signature loaded')}
                         onError={(e) => {
@@ -485,7 +483,7 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
                       />
                     </div>
                     <p className="font-bold text-sm print:text-xs">{t('printableForms.firstParty')}</p>
-                    <p className="text-xs print:text-[10px] mt-1 print:mt-0">({data.createdBy?.name || 'Admin'})</p>
+                    <p className="text-xs print:text-[10px] mt-1 print:mt-0">({data.approvedBy?.name || 'Admin'})</p>
                   </div>
                 ) : (
                   <>
@@ -552,12 +550,12 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
               </div>
             </div>
           </div>
-          </div>
-          
-          {/* Letterhead Footer */}
-          <div className="letterhead-footer w-full">
-            <img src="/letterhead footer.png" alt="Footer" className="w-full" style={{ display: 'block', width: '100%', maxWidth: '100%' }} />
-          </div>
+        </div>
+
+        {/* Letterhead Footer */}
+        <div className="letterhead-footer w-full">
+          <img src="/letterhead footer.png" alt="Footer" className="w-full" style={{ display: 'block', width: '100%', maxWidth: '100%' }} />
+        </div>
       </div>
 
       <style>{`

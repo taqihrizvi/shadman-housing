@@ -30,24 +30,34 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getAuthToken();
-  
+
   console.log('API Request:', endpoint, 'Token:', token ? 'Present' : 'Missing');
-  
+
+  const headers: any = {
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options.headers,
+  };
+
+  // Only set Content-Type to application/json if body is not FormData
+  if (!(options.body instanceof FormData)) {
+    // Check if Content-Type is not already provided in options.headers
+    const hasContentType = options.headers && Object.keys(options.headers).some(k => k.toLowerCase() === 'content-type');
+    if (!hasContentType) {
+      headers['Content-Type'] = 'application/json';
+    }
+  }
+
   const config: RequestInit = {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
+    headers,
   };
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    
+
     // Log response status for debugging
     console.log('API Response:', endpoint, 'Status:', response.status);
-    
+
     // Handle 401 Unauthorized - Token expired or invalid
     if (response.status === 401) {
       console.log('🔒 Token expired or invalid - logging out');
@@ -56,7 +66,7 @@ async function apiRequest<T>(
       window.location.href = '/login';
       throw new Error('Session expired. Please login again.');
     }
-    
+
     // Try to parse response as JSON
     let data;
     try {
@@ -69,7 +79,7 @@ async function apiRequest<T>(
     if (!response.ok) {
       console.error('API Error:', data);
       // Include validation errors if present
-      const errorMessage = data.errors 
+      const errorMessage = data.errors
         ? `${data.message}: ${data.errors.map((e: any) => e.msg || e.message).join(', ')}`
         : (data.message || `Request failed with status ${response.status}`);
       throw new Error(errorMessage);
@@ -102,7 +112,7 @@ export const authAPI = {
   },
 
   register: async (userData: any) => {
-    const response = await apiRequest<{ success: boolean; data: { token: string; [key: string]: any } }>('/auth/register', {
+    const response = await apiRequest<{ success: boolean; data: { token: string;[key: string]: any } }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -114,6 +124,13 @@ export const authAPI = {
 
   getCurrentUser: async () => {
     return apiRequest<{ success: boolean; data: any }>('/auth/me');
+  },
+
+  updatePassword: async (data: any) => {
+    return apiRequest<{ success: boolean; message: string }>('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 };
 
@@ -326,6 +343,35 @@ export const reportsAPI = {
   },
 };
 
+// Users API (Admin only)
+export const usersAPI = {
+  getAll: async () => {
+    return apiRequest<{ success: boolean; data: any[] }>('/users');
+  },
+
+  create: async (userData: any) => {
+    const isFormData = userData instanceof FormData;
+    return apiRequest<{ success: boolean; data: any }>('/users', {
+      method: 'POST',
+      body: isFormData ? userData : JSON.stringify(userData),
+    });
+  },
+
+  update: async (id: string, userData: any) => {
+    const isFormData = userData instanceof FormData;
+    return apiRequest<{ success: boolean; data: any }>(`/users/${id}`, {
+      method: 'PUT',
+      body: isFormData ? userData : JSON.stringify(userData),
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest<{ success: boolean; message: string }>(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 export default {
   auth: authAPI,
   inventory: inventoryAPI,
@@ -333,4 +379,5 @@ export default {
   forms: formsAPI,
   voucher: voucherAPI,
   reports: reportsAPI,
+  users: usersAPI,
 };

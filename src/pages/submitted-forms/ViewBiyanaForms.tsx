@@ -21,26 +21,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { FileText, Loader2, Eye, Printer, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
+
+
+import { FileText, Loader2, Eye, Printer, CheckCircle, XCircle, Clock } from "lucide-react";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import { getUserData, isManager } from "@/lib/rbac";
 import { useTranslation } from 'react-i18next';
-import {
-  formatCurrency,
-  formatDate as formatDateUtil,
-  formatEnum,
-  formatPaymentMethod as formatPaymentMethodUtil,
-  formatSize as formatSizeUtil,
-  formatProjectName as formatProjectNameUtil
-} from "@/utils/formatters";
+import { useFormatters } from "@/hooks/useFormatters";
 
 const ViewBiyanaForms = () => {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
@@ -48,12 +39,8 @@ const ViewBiyanaForms = () => {
   const userData = getUserData();
   const isManagerUser = isManager();
 
-  // Local wrappers for formatters
-  const formatDate = (dateString: string) => formatDateUtil(dateString, 'en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
-  const formatSize = (value: string) => formatSizeUtil(value, t);
 
+  const { formatDateShort: formatDate, formatProjectName, formatPaymentMethod, formatSize, formatCurrency, formatEnum } = useFormatters();
 
 
   // Helper function to format status
@@ -61,7 +48,7 @@ const ViewBiyanaForms = () => {
     const statusLower = status?.toLowerCase() || 'pending';
     return t(`status.${statusLower}`);
   };
-  
+
   const { data: forms, isLoading } = useQuery({
     queryKey: ['biyanaForms'],
     queryFn: async () => {
@@ -75,12 +62,12 @@ const ViewBiyanaForms = () => {
   // Filter forms based on user role
   const filteredForms = useMemo(() => {
     if (!forms) return [];
-    
+
     // If manager, only show forms they created
     if (isManagerUser && userData) {
       return forms.filter((form: any) => form.createdById === userData.id);
     }
-    
+
     // Admin sees all forms
     return forms;
   }, [forms, isManagerUser, userData]);
@@ -119,6 +106,7 @@ const ViewBiyanaForms = () => {
       agreementNumber: form.id,
       status: form.status,
       approvedBy: form.approvedBy,
+      createdBy: form.createdBy,
     };
     setPrintData(data);
     setIsPrintOpen(true);
@@ -157,7 +145,7 @@ const ViewBiyanaForms = () => {
                     <TableRow>
                       <TableHead>{t('forms.formNo')}</TableHead>
                       <TableHead>{t('forms.customerName')}</TableHead>
-                      <TableHead>{t('customers.cnic')}</TableHead>
+
                       <TableHead>{t('inventory.plotNo')}</TableHead>
                       <TableHead>{t('inventory.project')}</TableHead>
                       <TableHead>{t('forms.amount')}</TableHead>
@@ -171,7 +159,7 @@ const ViewBiyanaForms = () => {
                       <TableRow key={form.id}>
                         <TableCell className="font-medium">{form.formNumber}</TableCell>
                         <TableCell>{toTitleCase(form.customer?.name || 'N/A')}</TableCell>
-                        <TableCell>{form.customer?.cnic || 'N/A'}</TableCell>
+
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
                         <TableCell>{formatProjectName(form.plot?.project || 'N/A')}</TableCell>
                         <TableCell>{formatCurrency(form.tokenAmount)}</TableCell>
@@ -179,17 +167,17 @@ const ViewBiyanaForms = () => {
                         <TableCell>
                           <div className="flex items-center justify-center">
                             {form.status === 'APPROVED' ? (
-                              <CheckCircle 
+                              <CheckCircle
                                 className="w-4 h-4 text-green-600"
                                 aria-label={formatStatus(form.status)}
                               />
                             ) : form.status === 'REJECTED' ? (
-                              <XCircle 
+                              <XCircle
                                 className="w-4 h-4 text-red-600"
                                 aria-label={formatStatus(form.status)}
                               />
                             ) : (
-                              <Clock 
+                              <Clock
                                 className="w-4 h-4 text-yellow-500"
                                 aria-label={formatStatus(form.status)}
                               />
@@ -332,8 +320,8 @@ const ViewBiyanaForms = () => {
           <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
             <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
               <DialogTitle className="sr-only">Print Biyana Form</DialogTitle>
-              <PrintableBiyanaFormSimple 
-                data={printData} 
+              <PrintableBiyanaFormSimple
+                data={printData}
                 onClose={() => setIsPrintOpen(false)}
               />
             </DialogContent>

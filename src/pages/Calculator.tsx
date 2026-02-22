@@ -16,10 +16,7 @@ import { Calculator as CalcIcon, RefreshCw } from "lucide-react";
 import { inventoryAPI } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
-const formatEnum = (value: string) => {
-  if (!value) return "";
-  return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-};
+import { formatEnum } from "@/utils/formatters";
 
 const formatSize = (value: string) => {
   if (!value) return "";
@@ -36,18 +33,18 @@ const formatSize = (value: string) => {
 export default function Calculator() {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
-  
+
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
   const [plotId, setPlotId] = useState("");
   const [totalPrice, setTotalPrice] = useState("");
   const [downPayment, setDownPayment] = useState("");
   const [remainingAmount, setRemainingAmount] = useState("");
-  
+
   // Payment plan options
   const [paymentDuration, setPaymentDuration] = useState(""); // months
   const [paymentFrequency, setPaymentFrequency] = useState<"monthly" | "quarterly">("monthly");
   const [quarterlyExtra, setQuarterlyExtra] = useState(""); // Extra amount for quarterly
-  
+
   // Calculated results
   const [monthlyInstallment, setMonthlyInstallment] = useState("");
   const [quarterlyInstallment, setQuarterlyInstallment] = useState("");
@@ -68,7 +65,7 @@ export default function Calculator() {
     const plot = availablePlots?.find((p: any) => p.id === plotId);
     setSelectedPlot(plot);
     setPlotId(plotId);
-    
+
     if (plot) {
       setTotalPrice(plot.price.toString());
       // Reset calculations
@@ -103,7 +100,7 @@ export default function Calculator() {
       const monthly = remaining / months;
       setMonthlyInstallment(monthly.toFixed(2));
       setTotalMonthlyPayments(months.toString());
-      
+
       // Clear quarterly
       setQuarterlyInstallment("");
       setTotalQuarterlyPayments("");
@@ -112,15 +109,15 @@ export default function Calculator() {
       const numberOfQuarters = Math.ceil(months / 3);
       const totalQuarterlyAmount = extraPerQuarter * numberOfQuarters;
       const totalToPayMonthly = remaining - totalQuarterlyAmount;
-      
+
       if (totalToPayMonthly < 0) {
-        alert(isUrdu 
-          ? "سہ ماہی رقم بہت زیادہ ہے! براہ کرم کم کریں۔" 
+        alert(isUrdu
+          ? "سہ ماہی رقم بہت زیادہ ہے! براہ کرم کم کریں۔"
           : "Quarterly amount is too high! Please reduce it."
         );
         return;
       }
-      
+
       const monthly = totalToPayMonthly / months;
       setMonthlyInstallment(monthly.toFixed(2));
       setQuarterlyInstallment(extraPerQuarter.toFixed(2));
@@ -155,8 +152,8 @@ export default function Calculator() {
             {isUrdu ? 'قسط کیلکولیٹر' : 'Installment Calculator'}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {isUrdu 
-              ? 'پلاٹ منتخب کریں اور ماہانہ اقساط کا حساب لگائیں' 
+            {isUrdu
+              ? 'پلاٹ منتخب کریں اور ماہانہ اقساط کا حساب لگائیں'
               : 'Select a plot and calculate monthly installment amounts'}
           </p>
         </div>
@@ -171,8 +168,8 @@ export default function Calculator() {
                 <div>
                   <CardTitle>{isUrdu ? 'قسط کیلکولیٹر' : 'Payment Calculator'}</CardTitle>
                   <CardDescription>
-                    {isUrdu 
-                      ? 'مختلف منصوبوں کے ساتھ اقساط کا حساب لگائیں' 
+                    {isUrdu
+                      ? 'مختلف منصوبوں کے ساتھ اقساط کا حساب لگائیں'
                       : 'Calculate installments with different plans'}
                   </CardDescription>
                 </div>
@@ -292,8 +289,8 @@ export default function Calculator() {
                     <Label htmlFor="paymentFrequency">
                       {isUrdu ? 'ادائیگی کی قسم' : 'Payment Type'}
                     </Label>
-                    <Select 
-                      value={paymentFrequency} 
+                    <Select
+                      value={paymentFrequency}
                       onValueChange={(value: "monthly" | "quarterly") => {
                         setPaymentFrequency(value);
                         if (value === "monthly") {
@@ -329,15 +326,15 @@ export default function Calculator() {
                       onChange={(e) => setQuarterlyExtra(e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {isUrdu 
-                        ? 'یہ رقم ہر 3 ماہ میں ادا کی جائے گی (ماہانہ قسط کے علاوہ)' 
+                      {isUrdu
+                        ? 'یہ رقم ہر 3 ماہ میں ادا کی جائے گی (ماہانہ قسط کے علاوہ)'
                         : 'This amount will be paid every 3 months (in addition to monthly installment)'}
                     </p>
                   </div>
                 )}
 
-                <Button 
-                  onClick={calculateInstallments} 
+                <Button
+                  onClick={calculateInstallments}
                   className="w-full"
                   disabled={!paymentDuration || (paymentFrequency === "quarterly" && !quarterlyExtra)}
                 >
@@ -365,8 +362,8 @@ export default function Calculator() {
                         Rs {parseFloat(monthlyInstallment).toLocaleString()}
                       </p>
                       <p className="text-sm text-green-600 mt-2">
-                        {isUrdu 
-                          ? `کل ${totalMonthlyPayments} اقساط` 
+                        {isUrdu
+                          ? `کل ${totalMonthlyPayments} اقساط`
                           : `Total ${totalMonthlyPayments} payments`}
                       </p>
                     </CardContent>
@@ -384,8 +381,8 @@ export default function Calculator() {
                           Rs {parseFloat(quarterlyInstallment).toLocaleString()}
                         </p>
                         <p className="text-sm text-blue-600 mt-2">
-                          {isUrdu 
-                            ? `کل ${totalQuarterlyPayments} سہ ماہی ادائیگیاں` 
+                          {isUrdu
+                            ? `کل ${totalQuarterlyPayments} سہ ماہی ادائیگیاں`
                             : `Total ${totalQuarterlyPayments} quarterly payments`}
                         </p>
                       </CardContent>

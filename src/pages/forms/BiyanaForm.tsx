@@ -19,12 +19,9 @@ import { inventoryAPI, customerAPI, formsAPI } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
 
-const formatEnum = (value: string) => {
-  if (!value) return "";
-  return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-};
+import { formatEnum } from "@/utils/formatters";
 
-const formatSize = (value: string) => {
+const formatSizeDisplay = (value: string) => {
   if (!value) return "";
   const sizeMap: { [key: string]: string } = {
     'FIVE_MARLA': '5 Marla',
@@ -67,7 +64,7 @@ export default function BiyanaForm() {
   useEffect(() => {
     const remaining = parseFloat(formData.totalRemaining) || 0;
     const months = parseInt(formData.monthlyInstallments) || 0;
-    
+
     if (remaining > 0 && months > 0 && formData.installmentType === "MONTHLY_ONLY") {
       const monthlyAmount = (remaining / months).toFixed(2);
       // Only update if different to avoid infinite loop
@@ -98,7 +95,7 @@ export default function BiyanaForm() {
         // Try to find existing customer by CNIC
         const customersResponse = await customerAPI.getAll({ search: data.cnic });
         const existingCustomer = customersResponse.data.find((c: any) => c.cnic === data.cnic);
-        
+
         if (existingCustomer) {
           customerId = existingCustomer.id;
         } else {
@@ -172,20 +169,20 @@ export default function BiyanaForm() {
   const handlePlotSelect = (plotId: string) => {
     const plot = availablePlots?.find((p: any) => p.id === plotId);
     setSelectedPlot(plot);
-    
+
     if (plot) {
       // Get marla value from size
       const sizeInMarla = getSizeInMarla(plot.size);
       const pricePerMarla = sizeInMarla > 0 ? (plot.price / sizeInMarla).toFixed(2) : "0";
       const totalAmount = plot.price.toString();
-      
+
       // Calculate remaining if token and downpayment already entered
       const tokenAmount = parseFloat(formData.tokenAmount) || 0;
       const downPayment = parseFloat(formData.downPayment) || 0;
       const totalRemaining = (plot.price - tokenAmount - downPayment).toString();
-      
-      setFormData({ 
-        ...formData, 
+
+      setFormData({
+        ...formData,
         plotId,
         pricePerMarla,
         totalAmount,
@@ -195,7 +192,7 @@ export default function BiyanaForm() {
       setFormData({ ...formData, plotId });
     }
   };
-  
+
   // Convert plot size enum to marla number
   const getSizeInMarla = (size: string): number => {
     const sizeMap: { [key: string]: number } = {
@@ -207,26 +204,26 @@ export default function BiyanaForm() {
     };
     return sizeMap[size] || 0;
   };
-  
+
   // Calculate months between two dates
   const calculateMonthsBetween = (startDate: string, endDate: string): number => {
     if (!startDate || !endDate) return 0;
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
-    const months = (end.getFullYear() - start.getFullYear()) * 12 + 
-                   (end.getMonth() - start.getMonth());
-    
+
+    const months = (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
+
     return Math.max(0, months);
   };
-  
+
   // Handle last installment date change and auto-calculate months
   const handleLastInstallmentDateChange = (lastDate: string) => {
     const months = calculateMonthsBetween(formData.date, lastDate);
     const years = Math.floor(months / 12);
     const remainingMonths = months % 12;
-    
+
     let duration = "";
     if (years > 0) {
       duration = `${years} ${years === 1 ? t('printableForms.year') : t('printableForms.years')}`;
@@ -236,7 +233,7 @@ export default function BiyanaForm() {
     } else {
       duration = `${months} ${months === 1 ? t('printableForms.month') : t('printableForms.months')}`;
     }
-    
+
     // Calculate installments based on type
     let updatedData = {
       ...formData,
@@ -244,7 +241,7 @@ export default function BiyanaForm() {
       monthlyInstallments: months.toString(),
       agreementDuration: duration,
     };
-    
+
     // Auto-calculate installment amounts
     if (formData.installmentType === "MONTHLY_ONLY") {
       const remaining = parseFloat(formData.totalRemaining) || 0;
@@ -263,24 +260,24 @@ export default function BiyanaForm() {
       const totalQuarterlyPayments = quarters * quarterlyAmount;
       const remainingAfterQuarterly = remaining - totalQuarterlyPayments;
       const monthlyAmount = months > 0 ? (remainingAfterQuarterly / months).toFixed(2) : "0";
-      
+
       updatedData = {
         ...updatedData,
         quarterlyInstallments: quarters.toString(),
         monthlyInstallmentAmount: monthlyAmount,
       };
     }
-    
+
     setFormData(updatedData);
   };
-  
+
   // Handle installment type change
   const handleInstallmentTypeChange = (type: string) => {
     const months = parseInt(formData.monthlyInstallments) || 0;
     const remaining = parseFloat(formData.totalRemaining) || 0;
-    
+
     let updatedData = { ...formData, installmentType: type };
-    
+
     if (type === "MONTHLY_ONLY") {
       // Calculate monthly-only installment
       const monthlyAmount = months > 0 ? (remaining / months).toFixed(2) : "0";
@@ -299,28 +296,28 @@ export default function BiyanaForm() {
         quarterlyInstallmentAmount: "0",
       };
     }
-    
+
     setFormData(updatedData);
   };
-  
+
   // Handle quarterly installment amount change (bidirectional calculation)
   const handleQuarterlyAmountChange = (quarterlyAmount: string) => {
     const months = parseInt(formData.monthlyInstallments) || 0;
     const remaining = parseFloat(formData.totalRemaining) || 0;
     const quarters = parseInt(formData.quarterlyInstallments) || 0;
     const qAmount = parseFloat(quarterlyAmount) || 0;
-    
+
     const totalQuarterlyPayments = quarters * qAmount;
     const remainingAfterQuarterly = remaining - totalQuarterlyPayments;
     const monthlyAmount = months > 0 ? (remainingAfterQuarterly / months).toFixed(2) : "0";
-    
+
     setFormData({
       ...formData,
       quarterlyInstallmentAmount: quarterlyAmount,
       monthlyInstallmentAmount: monthlyAmount,
     });
   };
-  
+
   // Handle monthly installment amount change (bidirectional calculation)
   const handleMonthlyAmountChange = (monthlyAmount: string) => {
     if (formData.installmentType === "MONTHLY_ONLY") {
@@ -331,42 +328,42 @@ export default function BiyanaForm() {
       });
       return;
     }
-    
+
     // For MONTHLY_AND_QUARTERLY, recalculate quarterly amount
     const months = parseInt(formData.monthlyInstallments) || 0;
     const remaining = parseFloat(formData.totalRemaining) || 0;
     const quarters = parseInt(formData.quarterlyInstallments) || 0;
     const mAmount = parseFloat(monthlyAmount) || 0;
-    
+
     const totalMonthlyPayments = months * mAmount;
     const remainingForQuarterly = remaining - totalMonthlyPayments;
     const quarterlyAmount = quarters > 0 ? (remainingForQuarterly / quarters).toFixed(2) : "0";
-    
+
     setFormData({
       ...formData,
       monthlyInstallmentAmount: monthlyAmount,
       quarterlyInstallmentAmount: quarterlyAmount,
     });
   };
-  
+
   // Handle down payment change and auto-calculate remaining
   const handleDownPaymentChange = (value: string) => {
     const downPayment = parseFloat(value) || 0;
     const tokenAmount = parseFloat(formData.tokenAmount) || 0;
     const totalAmount = parseFloat(formData.totalAmount) || 0;
     const totalRemaining = totalAmount > 0 ? (totalAmount - tokenAmount - downPayment).toString() : "";
-    
+
     // Recalculate installments if we have a last installment date
-    let updatedData = { 
-      ...formData, 
+    let updatedData = {
+      ...formData,
       downPayment: value,
-      totalRemaining 
+      totalRemaining
     };
-    
+
     if (formData.lastInstallmentDate) {
       const months = parseInt(formData.monthlyInstallments) || 0;
       const remaining = parseFloat(totalRemaining) || 0;
-      
+
       if (formData.installmentType === "MONTHLY_ONLY") {
         const monthlyAmount = months > 0 ? (remaining / months).toFixed(2) : "0";
         updatedData = {
@@ -379,14 +376,14 @@ export default function BiyanaForm() {
         const totalQuarterlyPayments = quarters * quarterlyAmount;
         const remainingAfterQuarterly = remaining - totalQuarterlyPayments;
         const monthlyAmount = months > 0 ? (remainingAfterQuarterly / months).toFixed(2) : "0";
-        
+
         updatedData = {
           ...updatedData,
           monthlyInstallmentAmount: monthlyAmount,
         };
       }
     }
-    
+
     setFormData(updatedData);
   };
 
@@ -396,18 +393,18 @@ export default function BiyanaForm() {
     const downPayment = parseFloat(formData.downPayment) || 0;
     const totalAmount = parseFloat(formData.totalAmount) || 0;
     const totalRemaining = totalAmount > 0 ? (totalAmount - tokenAmount - downPayment).toString() : "";
-    
+
     // Recalculate installments if we have a last installment date
-    let updatedData = { 
-      ...formData, 
+    let updatedData = {
+      ...formData,
       tokenAmount: value,
-      totalRemaining 
+      totalRemaining
     };
-    
+
     if (formData.lastInstallmentDate) {
       const months = parseInt(formData.monthlyInstallments) || 0;
       const remaining = parseFloat(totalRemaining) || 0;
-      
+
       if (formData.installmentType === "MONTHLY_ONLY") {
         const monthlyAmount = months > 0 ? (remaining / months).toFixed(2) : "0";
         updatedData = {
@@ -420,20 +417,20 @@ export default function BiyanaForm() {
         const totalQuarterlyPayments = quarters * quarterlyAmount;
         const remainingAfterQuarterly = remaining - totalQuarterlyPayments;
         const monthlyAmount = months > 0 ? (remainingAfterQuarterly / months).toFixed(2) : "0";
-        
+
         updatedData = {
           ...updatedData,
           monthlyInstallmentAmount: monthlyAmount,
         };
       }
     }
-    
+
     setFormData(updatedData);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate CNIC format
     if (!/^\d{13}$/.test(formData.cnic)) {
       toast({
@@ -453,7 +450,7 @@ export default function BiyanaForm() {
       });
       return;
     }
-    
+
     createBiyanaMutation.mutate(formData);
   };
 
@@ -471,7 +468,7 @@ export default function BiyanaForm() {
             {isUrdu ? 'فارم جمع کروانے سے پہلے تمام معلومات کی درستگی کی تصدیق یقینی بنائیں' : 'Please ensure to verify all information before submitting the form'}
           </p>
         </div>
-        
+
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('forms.biyanaForm')}</h1>
         </div>
@@ -589,7 +586,7 @@ export default function BiyanaForm() {
                       <SelectContent>
                         {availablePlots?.map((plot: any) => (
                           <SelectItem key={plot.id} value={plot.id}>
-                            {plot.plotNo} - {formatEnum(plot.project)} ({formatSize(plot.size)})
+                            {plot.plotNo} - {formatEnum(plot.project)} ({formatSizeDisplay(plot.size)})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -599,23 +596,23 @@ export default function BiyanaForm() {
                     <>
                       <div className="space-y-2">
                         <Label>{isUrdu ? 'مرلے' : 'Marla (Size)'}</Label>
-                        <Input value={formatSize(selectedPlot.size)} disabled className="bg-muted" />
+                        <Input value={formatSizeDisplay(selectedPlot.size)} disabled className="bg-muted" />
                       </div>
                       <div className="space-y-2">
                         <Label>{t('printableForms.plotType')}</Label>
-                        <Input 
-                          value={selectedPlot.isCornerPlot ? t('printableForms.cornerPlot') : t('printableForms.regularPlot')} 
-                          disabled 
-                          className="bg-muted" 
+                        <Input
+                          value={selectedPlot.isCornerPlot ? t('printableForms.cornerPlot') : t('printableForms.regularPlot')}
+                          disabled
+                          className="bg-muted"
                         />
                       </div>
                       {selectedPlot.isCornerPlot && (
                         <div className="space-y-2">
                           <Label className="text-orange-600">{t('printableForms.cornerPlotPremium')}</Label>
-                          <Input 
-                            value="+10% included in price" 
-                            disabled 
-                            className="bg-orange-50 text-orange-700 font-semibold border-orange-300" 
+                          <Input
+                            value="+10% included in price"
+                            disabled
+                            className="bg-orange-50 text-orange-700 font-semibold border-orange-300"
                           />
                         </div>
                       )}
@@ -739,7 +736,7 @@ export default function BiyanaForm() {
                 <h3 className="text-lg font-semibold border-b pb-2">
                   {isUrdu ? 'اقساط کی تفصیلات' : 'Installment Details'}
                 </h3>
-                
+
                 {/* Installment Type Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="installmentType">
@@ -762,7 +759,7 @@ export default function BiyanaForm() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label htmlFor="monthlyInstallments">
@@ -777,7 +774,7 @@ export default function BiyanaForm() {
                       className="bg-muted"
                     />
                   </div>
-                  
+
                   {formData.installmentType === "MONTHLY_AND_QUARTERLY" && (
                     <div className="space-y-2">
                       <Label htmlFor="quarterlyInstallments">
@@ -793,7 +790,7 @@ export default function BiyanaForm() {
                       />
                     </div>
                   )}
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="monthlyInstallmentAmount">
                       {isUrdu ? 'ماہانہ قسط رقم' : 'Monthly Installment Amount'}
@@ -808,7 +805,7 @@ export default function BiyanaForm() {
                       className={formData.installmentType === "MONTHLY_ONLY" ? "bg-muted" : ""}
                     />
                   </div>
-                  
+
                   {formData.installmentType === "MONTHLY_AND_QUARTERLY" && (
                     <div className="space-y-2">
                       <Label htmlFor="quarterlyInstallmentAmount">

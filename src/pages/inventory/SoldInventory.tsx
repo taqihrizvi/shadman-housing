@@ -28,20 +28,32 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Search, Filter, Download, Eye, FileText, Receipt, DollarSign, ChevronDown, ChevronUp, Printer, ArrowRightLeft } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { inventoryAPI, formsAPI, voucherAPI } from "@/lib/api";
+import { getUserRole } from "@/lib/rbac";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
-import { 
-  formatCurrency, 
-  formatDate, 
-  formatEnum, 
-  formatPaymentMethod, 
-  formatSize, 
-  formatPlotType 
+import {
+  formatCurrency,
+  formatDate,
+  formatEnum,
+  formatPaymentMethod,
+  formatSize,
+  formatPlotType
 } from "@/utils/formatters";
 
 const statusOptions = ["All Status", "SOLD", "TRANSFERRED"];
@@ -50,11 +62,11 @@ const sizeOptions = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE
 export default function SoldInventory() {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
-  
+
   // Local wrappers for formatters that need translation context
   const formatSizeLocal = (value: string) => formatSize(value, t);
   const formatPaymentMethodLocal = (method: string) => formatPaymentMethod(method, t);
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [selectedSize, setSelectedSize] = useState("All Sizes");
@@ -67,6 +79,10 @@ export default function SoldInventory() {
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
   const [formType, setFormType] = useState<'biyana' | 'saleAgreement' | 'transfer'>('biyana');
+  const [isMakeAvailableDialogOpen, setIsMakeAvailableDialogOpen] = useState(false);
+  const [plotToMakeAvailable, setPlotToMakeAvailable] = useState<any>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch sold inventory from API
   // Fetch sold and transferred inventory from API
@@ -76,17 +92,17 @@ export default function SoldInventory() {
       // Fetch both SOLD and TRANSFERRED plots
       const soldParams: any = { status: 'SOLD' };
       const transferredParams: any = { status: 'TRANSFERRED' };
-      
+
       if (searchTerm) {
         soldParams.search = searchTerm;
         transferredParams.search = searchTerm;
       }
-      
+
       const [soldResponse, transferredResponse] = await Promise.all([
         inventoryAPI.getAll(soldParams),
         inventoryAPI.getAll(transferredParams)
       ]);
-      
+
       // Combine both results
       return [...soldResponse.data, ...transferredResponse.data];
     },
@@ -163,13 +179,13 @@ export default function SoldInventory() {
     if (plot.status === 'TRANSFERRED') {
       return 'TRANSFERRED';
     }
-    
+
     // Check if this is a recently transferred plot that's now SOLD
     const transfer = getPlotTransfer(plot.id);
     if (transfer && transfer.status === 'COMPLETED') {
       return 'SOLD (Transferred)';
     }
-    
+
     return 'SOLD';
   };
 
@@ -179,7 +195,7 @@ export default function SoldInventory() {
       alert("No Biyana form found for this plot");
       return;
     }
-    
+
     const data = {
       customerName: plot.buyer?.name || "",
       fatherHusbandName: biyana.fatherHusbandName || plot.buyer?.fatherName || "",
@@ -220,7 +236,7 @@ export default function SoldInventory() {
       alert("No Sale Agreement found for this plot");
       return;
     }
-    
+
     const biyana = getPlotBiyana(plot.id);
     const data = {
       customer: {
@@ -271,7 +287,7 @@ export default function SoldInventory() {
       alert("No Transfer form found for this plot");
       return;
     }
-    
+
     const data = {
       transferNumber: transfer.transferNumber,
       transferDate: transfer.transferDate,
@@ -296,6 +312,36 @@ export default function SoldInventory() {
     setPrintData(data);
     setFormType('transfer');
     setIsPrintOpen(true);
+  };
+
+  const makeAvailableMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await inventoryAPI.update(id, { status: 'AVAILABLE' });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Plot status updated to AVAILABLE. Related forms have been archived.",
+      });
+      setIsMakeAvailableDialogOpen(false);
+      setPlotToMakeAvailable(null);
+      queryClient.invalidateQueries({ queryKey: ['soldInventory'] });
+      queryClient.invalidateQueries({ queryKey: ['unsoldInventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update plot status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleMakeAvailable = () => {
+    if (plotToMakeAvailable) {
+      makeAvailableMutation.mutate(plotToMakeAvailable.id);
+    }
   };
 
   return (
@@ -382,66 +428,88 @@ export default function SoldInventory() {
               }
 
               return (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('inventory.plotNo')}</TableHead>
-                    <TableHead>{t('inventory.project')}</TableHead>
-                    <TableHead>{t('inventory.size')}</TableHead>
-                    <TableHead>Plot Type</TableHead>
-                    <TableHead>{t('customers.buyer')}</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>{t('inventory.soldDate')}</TableHead>
-                    <TableHead>{t('inventory.price')}</TableHead>
-                    <TableHead className="text-right">{t('common.actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.map((item: any) => {
-                    const plotStatus = getPlotStatus(item);
-                    const isTransferred = item.status === 'TRANSFERRED';
-                    
-                    return (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.plotNo}</TableCell>
-                        <TableCell>{formatEnum(item.project)}</TableCell>
-                        <TableCell>{formatSizeLocal(item.size)}</TableCell>
-                        <TableCell>
-                          <Badge variant={item.isCornerPlot ? "secondary" : "outline"}>
-                            {formatPlotType(item.isCornerPlot)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{toTitleCase(item.buyer?.name || "N/A")}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={isTransferred ? "secondary" : "default"}
-                            className={isTransferred ? "bg-purple-100 text-purple-800" : ""}
-                          >
-                            {plotStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatDate(item.soldDate)}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(item.price)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleViewDetails(item);
-                            }}
-                            title="View Details"
-                            className="cursor-pointer"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('inventory.plotNo')}</TableHead>
+                      <TableHead>{t('inventory.project')}</TableHead>
+                      <TableHead>{t('inventory.size')}</TableHead>
+                      <TableHead>Plot Type</TableHead>
+                      <TableHead>{t('customers.buyer')}</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>{t('inventory.soldDate')}</TableHead>
+                      <TableHead>{t('inventory.price')}</TableHead>
+                      <TableHead className="text-right">{t('common.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredData.map((item: any) => {
+                      const plotStatus = getPlotStatus(item);
+                      const isTransferred = item.status === 'TRANSFERRED';
+                      const isAdmin = getUserRole() === 'ADMIN';
+
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.plotNo}</TableCell>
+                          <TableCell>{formatEnum(item.project)}</TableCell>
+                          <TableCell>{formatSizeLocal(item.size)}</TableCell>
+                          <TableCell>
+                            <Badge variant={item.isCornerPlot ? "secondary" : "outline"}>
+                              {formatPlotType(item.isCornerPlot)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{toTitleCase(item.buyer?.name || "N/A")}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={isTransferred ? "secondary" : "default"}
+                              className={isTransferred ? "bg-purple-100 text-purple-800" : ""}
+                            >
+                              {plotStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatDate(item.soldDate)}</TableCell>
+                          <TableCell className="font-semibold">{formatCurrency(item.price)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleViewDetails(item);
+                                }}
+                                title="View Details"
+                                className="cursor-pointer"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+
+                              {isAdmin && !isTransferred && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setPlotToMakeAvailable(item);
+                                    setIsMakeAvailableDialogOpen(true);
+                                  }}
+                                  title="Make Available (Admin Only)"
+                                  className="cursor-pointer text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                >
+                                  <ArrowRightLeft className="h-4 w-4" />
+                                </Button>
+                              )}
+
+
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               );
             })()}
           </CardContent>
@@ -507,18 +575,18 @@ export default function SoldInventory() {
                 {(() => {
                   const transfer = getPlotTransfer(selectedPlot.id);
                   const isTransferred = selectedPlot.status === 'TRANSFERRED';
-                  
+
                   return transfer ? (
                     <>
                       <div>
-                        <div 
+                        <div
                           className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
                           onClick={() => setShowTransferDetails(!showTransferDetails)}
                         >
                           <h3 className="text-lg font-semibold flex items-center gap-2">
                             <ArrowRightLeft className="h-5 w-5 text-purple-600" />
                             Plot Transfer
-                            <Badge variant={isTransferred ? "secondary" : "default"} 
+                            <Badge variant={isTransferred ? "secondary" : "default"}
                               className={isTransferred ? "bg-purple-100 text-purple-800" : ""}>
                               {isTransferred ? "TRANSFERRED" : "COMPLETED"}
                             </Badge>
@@ -590,18 +658,18 @@ export default function SoldInventory() {
                                 </div>
                               </div>
                             </div>
-                            
+
                             {isTransferred ? (
                               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                                 <p className="text-sm text-amber-800">
-                                  <strong>⚠️ Transfer In Progress:</strong> This plot has been transferred to {transfer.toCustomer?.name}. 
+                                  <strong>⚠️ Transfer In Progress:</strong> This plot has been transferred to {transfer.toCustomer?.name}.
                                   A new sale agreement must be created and approved for the new owner to complete the transfer and change status to SOLD.
                                 </p>
                               </div>
                             ) : (
                               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                                 <p className="text-sm text-green-800">
-                                  <strong>✓ Transfer Completed:</strong> This plot was transferred from {transfer.fromCustomer?.name} to {transfer.toCustomer?.name}. 
+                                  <strong>✓ Transfer Completed:</strong> This plot was transferred from {transfer.fromCustomer?.name} to {transfer.toCustomer?.name}.
                                   {t('payments.saleAgreementDetails')}
                                 </p>
                               </div>
@@ -620,7 +688,7 @@ export default function SoldInventory() {
                   const biyana = getPlotBiyana(selectedPlot.id);
                   return (
                     <div>
-                      <div 
+                      <div
                         className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
                         onClick={() => setShowBiyanaDetails(!showBiyanaDetails)}
                       >
@@ -663,18 +731,18 @@ export default function SoldInventory() {
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">{t('payments.paymentMethod')}</p>
-                              <p className="font-semibold">{formatPaymentMethod(biyana.paymentMethod)}</p>
+                              <p className="font-semibold">{formatPaymentMethodLocal(biyana.paymentMethod)}</p>
                             </div>
-                          {biyana.remarks && (
-                            <div className="col-span-2">
-                              <p className="text-sm text-muted-foreground">Remarks</p>
-                              <p className="text-sm">{biyana.remarks}</p>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground p-4 border rounded-lg">No Biyana form found</p>
-                      ))}
+                            {biyana.remarks && (
+                              <div className="col-span-2">
+                                <p className="text-sm text-muted-foreground">Remarks</p>
+                                <p className="text-sm">{biyana.remarks}</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground p-4 border rounded-lg">No Biyana form found</p>
+                        ))}
                     </div>
                   );
                 })()}
@@ -694,10 +762,10 @@ export default function SoldInventory() {
                   // Pending calculation should subtract all payments (biyana + down payment + installments)
                   const totalReceived = downPayment + biyanaAmount + paymentsTotal;
                   const calculatedPending = saleAgreement?.totalAmount ? saleAgreement.totalAmount - totalReceived : 0;
-                  
+
                   return (
                     <div>
-                      <div 
+                      <div
                         className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
                         onClick={() => setShowSaleAgreementDetails(!showSaleAgreementDetails)}
                       >
@@ -725,58 +793,58 @@ export default function SoldInventory() {
                       </div>
                       {showSaleAgreementDetails && (
                         saleAgreement ? (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
-                            <div>
-                              <p className="text-sm text-muted-foreground">{t('payments.agreementNumber')}</p>
-                              <p className="font-semibold">{saleAgreement.agreementNumber}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Customer</p>
-                              <p className="font-semibold">{toTitleCase(saleAgreement.customer?.name || "N/A")}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Total Amount</p>
-                              <p className="font-semibold text-blue-600">{formatCurrency(saleAgreement.totalAmount)}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Down Payment</p>
-                              <p className="font-semibold text-green-600">{formatCurrency(saleAgreement.downPayment)}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Total Paid (Installments)</p>
-                              <p className="font-semibold text-green-600">
-                                {formatCurrency(calculatedTotalPaid)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Pending Amount</p>
-                              <p className="font-semibold text-orange-600">
-                                {formatCurrency(calculatedPending)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Date</p>
-                              <p className="font-semibold">{saleAgreement.agreementDate ? formatDate(saleAgreement.agreementDate) : 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Payment Plan</p>
-                              <p className="font-semibold">{saleAgreement.installmentMonths !== null ? 
-                                (saleAgreement.installmentMonths === 0 ? t('payments.fullPayment') : 
-                                 `${saleAgreement.installmentMonths} Months Installment`) 
-                                : 'N/A'}</p>
-                            </div>
-                            {saleAgreement.remarks && (
-                              <div className="col-span-2">
-                                <p className="text-sm text-muted-foreground">Remarks</p>
-                                <p className="text-sm">{saleAgreement.remarks}</p>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
+                              <div>
+                                <p className="text-sm text-muted-foreground">{t('payments.agreementNumber')}</p>
+                                <p className="font-semibold">{saleAgreement.agreementNumber}</p>
                               </div>
-                            )}
+                              <div>
+                                <p className="text-sm text-muted-foreground">Customer</p>
+                                <p className="font-semibold">{toTitleCase(saleAgreement.customer?.name || "N/A")}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Total Amount</p>
+                                <p className="font-semibold text-blue-600">{formatCurrency(saleAgreement.totalAmount)}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Down Payment</p>
+                                <p className="font-semibold text-green-600">{formatCurrency(saleAgreement.downPayment)}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Total Paid (Installments)</p>
+                                <p className="font-semibold text-green-600">
+                                  {formatCurrency(calculatedTotalPaid)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Pending Amount</p>
+                                <p className="font-semibold text-orange-600">
+                                  {formatCurrency(calculatedPending)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Date</p>
+                                <p className="font-semibold">{saleAgreement.agreementDate ? formatDate(saleAgreement.agreementDate) : 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Payment Plan</p>
+                                <p className="font-semibold">{saleAgreement.installmentMonths !== null ?
+                                  (saleAgreement.installmentMonths === 0 ? t('payments.fullPayment') :
+                                    `${saleAgreement.installmentMonths} Months Installment`)
+                                  : 'N/A'}</p>
+                              </div>
+                              {saleAgreement.remarks && (
+                                <div className="col-span-2">
+                                  <p className="text-sm text-muted-foreground">Remarks</p>
+                                  <p className="text-sm">{saleAgreement.remarks}</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground p-4 border rounded-lg">No Sale Agreement found</p>
-                      ))}
+                        ) : (
+                          <p className="text-sm text-muted-foreground p-4 border rounded-lg">No Sale Agreement found</p>
+                        ))}
                     </div>
                   );
                 })()}
@@ -789,7 +857,7 @@ export default function SoldInventory() {
                   const totalPaid = payments.reduce((sum: number, p: any) => sum + p.amount, 0);
                   return (
                     <div>
-                      <div 
+                      <div
                         className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
                         onClick={() => setShowPaymentDetails(!showPaymentDetails)}
                       >
@@ -803,44 +871,44 @@ export default function SoldInventory() {
                       {showPaymentDetails && (
                         payments.length > 0 ? (
                           <div className="space-y-3">
-                          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <p className="text-sm text-green-700">{t('payments.totalPaidInstallments')}</p>
-                            <p className="text-2xl font-bold text-green-700">{formatCurrency(totalPaid)}</p>
-                          </div>
-                          <div className="border rounded-lg overflow-hidden">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>{t('vouchers.voucherNo')}</TableHead>
-                                  <TableHead>Date</TableHead>
-                                  <TableHead>{t('payments.amount')}</TableHead>
-                                  <TableHead>Method</TableHead>
-                                  <TableHead>Description</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {payments.map((payment: any) => (
-                                  <TableRow key={payment.id}>
-                                    <TableCell className="font-medium">{payment.voucherNo}</TableCell>
-                                    <TableCell>{formatDate(payment.date)}</TableCell>
-                                    <TableCell className="font-semibold text-green-600">
-                                      {formatCurrency(payment.amount)}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline">{formatPaymentMethod(payment.paymentMethod)}</Badge>
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {payment.description || "N/A"}
-                                    </TableCell>
+                            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                              <p className="text-sm text-green-700">{t('payments.totalPaidInstallments')}</p>
+                              <p className="text-2xl font-bold text-green-700">{formatCurrency(totalPaid)}</p>
+                            </div>
+                            <div className="border rounded-lg overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>{t('vouchers.voucherNo')}</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>{t('payments.amount')}</TableHead>
+                                    <TableHead>Method</TableHead>
+                                    <TableHead>Description</TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
+                                </TableHeader>
+                                <TableBody>
+                                  {payments.map((payment: any) => (
+                                    <TableRow key={payment.id}>
+                                      <TableCell className="font-medium">{payment.voucherNo}</TableCell>
+                                      <TableCell>{formatDate(payment.date)}</TableCell>
+                                      <TableCell className="font-semibold text-green-600">
+                                        {formatCurrency(payment.amount)}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline">{formatPaymentMethodLocal(payment.paymentMethod)}</Badge>
+                                      </TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {payment.description || "N/A"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground p-4 border rounded-lg">{t('payments.noPaymentsRecorded')}</p>
-                      ))}
+                        ) : (
+                          <p className="text-sm text-muted-foreground p-4 border rounded-lg">{t('payments.noPaymentsRecorded')}</p>
+                        ))}
                     </div>
                   );
                 })()}
@@ -854,31 +922,65 @@ export default function SoldInventory() {
           <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
             <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-y-auto">
               <DialogTitle className="sr-only">
-                {formType === 'biyana' ? 'Print Biyana Form' : 
-                 formType === 'saleAgreement' ? 'Print Sale Agreement' : 
-                 'Print Transfer Form'}
+                {formType === 'biyana' ? 'Print Biyana Form' :
+                  formType === 'saleAgreement' ? 'Print Sale Agreement' :
+                    'Print Transfer Form'}
               </DialogTitle>
               {formType === 'biyana' && (
-                <PrintableBiyanaFormSimple 
-                  data={printData} 
+                <PrintableBiyanaFormSimple
+                  data={printData}
                   onClose={() => setIsPrintOpen(false)}
                 />
               )}
               {formType === 'saleAgreement' && (
-                <PrintableSaleAgreementForm 
-                  data={printData} 
+                <PrintableSaleAgreementForm
+                  data={printData}
                   onClose={() => setIsPrintOpen(false)}
                 />
               )}
               {formType === 'transfer' && (
-                <PrintableTransferForm 
-                  data={printData} 
+                <PrintableTransferForm
+                  data={printData}
                   onClose={() => setIsPrintOpen(false)}
                 />
               )}
             </DialogContent>
           </Dialog>
         )}
+        {/* Make Available Confirmation Dialog */}
+        <AlertDialog open={isMakeAvailableDialogOpen} onOpenChange={setIsMakeAvailableDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Make Plot Available?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to change the status of Plot <strong>{plotToMakeAvailable?.plotNo}</strong> from SOLD to AVAILABLE?
+                <br /><br />
+                <span className="text-red-500 font-semibold">Warning:</span> This action will automatically:
+                <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <li>Archive all Sale Agreements for this plot</li>
+                  <li>Archive all Biyana forms for this plot</li>
+                  <li>Archive all Payment Vouchers for this plot</li>
+                  <li>Remove the current buyer association</li>
+                </ul>
+                <br />
+                This action cannot be undone efficiently.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setIsMakeAvailableDialogOpen(false);
+                setPlotToMakeAvailable(null);
+              }}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleMakeAvailable}
+                className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                disabled={makeAvailableMutation.isPending}
+              >
+                {makeAvailableMutation.isPending ? "Updating..." : "Confirm & Make Available"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

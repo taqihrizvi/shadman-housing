@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,23 +22,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI, voucherAPI } from "@/lib/api";
-import { Archive as ArchiveIcon, Loader2, Eye, Printer, Search, ArrowRightLeft, Receipt, FileText } from "lucide-react";
-import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
+import { Archive as ArchiveIcon, Loader2, Eye, Search, ArrowRightLeft, Receipt, FileText } from "lucide-react";
+
 import { useTranslation } from 'react-i18next';
 import { toTitleCase } from "@/lib/utils";
-import {
-  formatCurrency,
-  formatDate as formatDateUtil,
-  formatPaymentPlan as formatPaymentPlanUtil,
-  formatSize as formatSizeUtil,
-  formatProjectName as formatProjectNameUtil,
-  formatEnum as formatEnumUtil,
-} from "@/utils/formatters";
+import { useFormatters } from "@/hooks/useFormatters";
 
 const Archive = () => {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("agreements");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAgreement, setSelectedAgreement] = useState<any>(null);
@@ -50,14 +41,8 @@ const Archive = () => {
   const [isBiyanaDetailsOpen, setIsBiyanaDetailsOpen] = useState(false);
   const [isVoucherDetailsOpen, setIsVoucherDetailsOpen] = useState(false);
   const [isTransferDetailsOpen, setIsTransferDetailsOpen] = useState(false);
-  const [isPrintOpen, setIsPrintOpen] = useState(false);
-  const [printData, setPrintData] = useState<any>(null);
 
-  const formatDate = (dateString: string) => formatDateUtil(dateString, 'en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatPaymentPlan = (installmentMonths: number) => formatPaymentPlanUtil(installmentMonths, t);
-  const formatSize = (value: string) => formatSizeUtil(value, t);
-  const formatEnum = (value: string) => formatEnumUtil(value, t);
+  const { formatDateShort: formatDate, formatProjectName, formatPaymentPlan, formatSize, formatEnum, formatCurrency } = useFormatters();
 
   const { data: archivedAgreements, isLoading: loadingAgreements } = useQuery({
     queryKey: ['archivedSaleAgreements'],
@@ -126,15 +111,7 @@ const Archive = () => {
     setIsAgreementDetailsOpen(true);
   };
 
-  const handlePrintAgreement = async (form: any) => {
-    try {
-      const response = await formsAPI.getSaleAgreementById(form.id);
-      setPrintData(response.data);
-      setIsPrintOpen(true);
-    } catch (error) {
-      console.error('Error fetching form details:', error);
-    }
-  };
+
 
   const handleViewBiyana = (form: any) => {
     setSelectedBiyana(form);
@@ -144,10 +121,6 @@ const Archive = () => {
   const handleViewVoucher = (v: any) => {
     setSelectedVoucher(v);
     setIsVoucherDetailsOpen(true);
-  };
-
-  const handlePrintVoucher = (id: string) => {
-    navigate(`/vouchers/print/${id}`);
   };
 
   const handleViewTransfer = (form: any) => {
@@ -172,45 +145,47 @@ const Archive = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-            <TabsTrigger value="agreements" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Sale Agreements
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                {archivedAgreements?.length ?? 0}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="biyana" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Biyana Forms
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                {activeTab === 'biyana' ? (archivedBiyana?.length ?? 0) : '...'}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="transfers" className="flex items-center gap-2">
-              <ArrowRightLeft className="h-4 w-4" />
-              Transfer Forms
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                {activeTab === 'transfers' ? archivedTransfers.length : '...'}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="vouchers" className="flex items-center gap-2">
-              <Receipt className="h-4 w-4" />
-              Vouchers
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                {activeTab === 'vouchers' ? archivedVouchers.length : '...'}
-              </span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <TabsList className="inline-flex flex-wrap items-center justify-start gap-2 h-auto w-full md:w-auto bg-muted/50 p-1 rounded-lg">
+              <TabsTrigger value="agreements" className="flex items-center gap-2 px-4 py-2">
+                <FileText className="h-4 w-4" />
+                Sale Agreements
+                <span className="rounded-full bg-background/50 px-2 py-0.5 text-xs">
+                  {archivedAgreements?.length ?? 0}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="biyana" className="flex items-center gap-2 px-4 py-2">
+                <FileText className="h-4 w-4" />
+                Biyana Forms
+                <span className="rounded-full bg-background/50 px-2 py-0.5 text-xs">
+                  {activeTab === 'biyana' ? (archivedBiyana?.length ?? 0) : '...'}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="transfers" className="flex items-center gap-2 px-4 py-2">
+                <ArrowRightLeft className="h-4 w-4" />
+                Transfer Forms
+                <span className="rounded-full bg-background/50 px-2 py-0.5 text-xs">
+                  {activeTab === 'transfers' ? archivedTransfers.length : '...'}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="vouchers" className="flex items-center gap-2 px-4 py-2">
+                <Receipt className="h-4 w-4" />
+                Vouchers
+                <span className="rounded-full bg-background/50 px-2 py-0.5 text-xs">
+                  {activeTab === 'vouchers' ? archivedVouchers.length : '...'}
+                </span>
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <div className="relative w-full lg:w-72 shrink-0">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-10 w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Tab: Sale Agreements */}
@@ -236,7 +211,6 @@ const Archive = () => {
                         <TableRow>
                           <TableHead>{t('forms.agreementNo')}</TableHead>
                           <TableHead>{t('forms.customerName')}</TableHead>
-                          <TableHead>{t('customers.cnic')}</TableHead>
                           <TableHead>{t('inventory.plotNo')}</TableHead>
                           <TableHead>{t('inventory.project')}</TableHead>
                           <TableHead>{t('payments.totalAmount')}</TableHead>
@@ -251,7 +225,6 @@ const Archive = () => {
                           <TableRow key={form.id}>
                             <TableCell className="font-medium">{form.agreementNumber}</TableCell>
                             <TableCell>{toTitleCase(form.customer?.name || t('payments.notAvailable'))}</TableCell>
-                            <TableCell>{form.customer?.cnic || t('payments.notAvailable')}</TableCell>
                             <TableCell>{form.plot?.plotNo || t('payments.notAvailable')}</TableCell>
                             <TableCell>{formatProjectName(form.plot?.project) || t('payments.notAvailable')}</TableCell>
                             <TableCell>{formatCurrency(form.totalAmount)}</TableCell>
@@ -272,16 +245,9 @@ const Archive = () => {
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button variant="outline" size="sm" onClick={() => handleViewAgreement(form)}>
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => handlePrintAgreement(form)}>
-                                  <Printer className="h-4 w-4 mr-1" />
-                                  Print
-                                </Button>
-                              </div>
+                              <Button variant="ghost" size="icon" onClick={() => handleViewAgreement(form)} title="View Details">
+                                <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -316,7 +282,6 @@ const Archive = () => {
                         <TableRow>
                           <TableHead>Form No</TableHead>
                           <TableHead>{t('forms.customerName')}</TableHead>
-                          <TableHead>{t('customers.cnic')}</TableHead>
                           <TableHead>{t('inventory.plotNo')}</TableHead>
                           <TableHead>{t('inventory.project')}</TableHead>
                           <TableHead>Token Amount</TableHead>
@@ -330,7 +295,6 @@ const Archive = () => {
                           <TableRow key={form.id}>
                             <TableCell className="font-medium">{form.formNumber}</TableCell>
                             <TableCell>{toTitleCase(form.customer?.name || '-')}</TableCell>
-                            <TableCell>{form.customer?.cnic || '-'}</TableCell>
                             <TableCell>{form.plot?.plotNo || '-'}</TableCell>
                             <TableCell>{formatProjectName(form.plot?.project) || '-'}</TableCell>
                             <TableCell>{formatCurrency(form.tokenAmount)}</TableCell>
@@ -342,9 +306,8 @@ const Archive = () => {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="outline" size="sm" onClick={() => handleViewBiyana(form)}>
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
+                              <Button variant="ghost" size="icon" onClick={() => handleViewBiyana(form)} title="View Details">
+                                <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -406,9 +369,8 @@ const Archive = () => {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="outline" size="sm" onClick={() => handleViewTransfer(form)}>
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
+                              <Button variant="ghost" size="icon" onClick={() => handleViewTransfer(form)} title="View Details">
+                                <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -468,16 +430,9 @@ const Archive = () => {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button variant="outline" size="sm" onClick={() => handleViewVoucher(v)}>
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => handlePrintVoucher(v.id)}>
-                                  <Printer className="h-4 w-4 mr-1" />
-                                  Print
-                                </Button>
-                              </div>
+                              <Button variant="ghost" size="icon" onClick={() => handleViewVoucher(v)} title="View Details">
+                                <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -553,6 +508,43 @@ const Archive = () => {
                     </div>
                   </div>
                 </div>
+                {selectedAgreement.vouchers && selectedAgreement.vouchers.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Voucher Details</h4>
+                    <div className="space-y-4">
+                      {selectedAgreement.vouchers.map((voucher: any, index: number) => (
+                        <div key={index} className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-3 rounded-md border">
+                          <div>
+                            <span className="text-muted-foreground block text-xs">Voucher No</span>
+                            <span className="font-medium">{voucher.voucherNo}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-xs">Method</span>
+                            <span className="font-medium">{formatEnum(voucher.paymentMethod || '')}</span>
+                          </div>
+                          {voucher.bankName && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Bank</span>
+                              <span className="font-medium">{formatEnum(voucher.bankName)}</span>
+                            </div>
+                          )}
+                          {voucher.accountNumber && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Account No</span>
+                              <span className="font-medium">{voucher.accountNumber}</span>
+                            </div>
+                          )}
+                          {voucher.slipNumber && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Slip No</span>
+                              <span className="font-medium">{voucher.slipNumber}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="border-t pt-4">
                   <Badge variant="secondary" className="bg-amber-100 text-amber-900 border-amber-200">
                     <ArchiveIcon className="mr-1 h-3 w-3" />
@@ -621,6 +613,43 @@ const Archive = () => {
                     </div>
                   </div>
                 </div>
+                {selectedBiyana.vouchers && selectedBiyana.vouchers.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Voucher Details</h4>
+                    <div className="space-y-4">
+                      {selectedBiyana.vouchers.map((voucher: any, index: number) => (
+                        <div key={index} className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-3 rounded-md border">
+                          <div>
+                            <span className="text-muted-foreground block text-xs">Voucher No</span>
+                            <span className="font-medium">{voucher.voucherNo}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-xs">Method</span>
+                            <span className="font-medium">{formatEnum(voucher.paymentMethod || '')}</span>
+                          </div>
+                          {voucher.bankName && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Bank</span>
+                              <span className="font-medium">{formatEnum(voucher.bankName)}</span>
+                            </div>
+                          )}
+                          {voucher.accountNumber && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Account No</span>
+                              <span className="font-medium">{voucher.accountNumber}</span>
+                            </div>
+                          )}
+                          {voucher.slipNumber && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Slip No</span>
+                              <span className="font-medium">{voucher.slipNumber}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="border-t pt-4">
                   <Badge variant="secondary" className="bg-amber-100 text-amber-900 border-amber-200">
                     <ArchiveIcon className="mr-1 h-3 w-3" />
@@ -658,6 +687,24 @@ const Archive = () => {
                     <p className="text-sm text-muted-foreground">Type</p>
                     <p className="font-semibold">{formatEnum(selectedVoucher.formType || '')}</p>
                   </div>
+                  {selectedVoucher.bankName && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Bank</p>
+                      <p className="font-semibold">{formatEnum(selectedVoucher.bankName)}</p>
+                    </div>
+                  )}
+                  {selectedVoucher.accountNumber && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Account No</p>
+                      <p className="font-semibold">{selectedVoucher.accountNumber}</p>
+                    </div>
+                  )}
+                  {selectedVoucher.slipNumber && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Slip No</p>
+                      <p className="font-semibold">{selectedVoucher.slipNumber}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm text-muted-foreground">Date</p>
                     <p className="font-semibold">{formatDate(selectedVoucher.date)}</p>
@@ -725,6 +772,43 @@ const Archive = () => {
                     </div>
                   )}
                 </div>
+                {selectedTransfer.vouchers && selectedTransfer.vouchers.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-3">Voucher Details</h4>
+                    <div className="space-y-4">
+                      {selectedTransfer.vouchers.map((voucher: any, index: number) => (
+                        <div key={index} className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-3 rounded-md border">
+                          <div>
+                            <span className="text-muted-foreground block text-xs">Voucher No</span>
+                            <span className="font-medium">{voucher.voucherNo}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-xs">Method</span>
+                            <span className="font-medium">{formatEnum(voucher.paymentMethod || '')}</span>
+                          </div>
+                          {voucher.bankName && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Bank</span>
+                              <span className="font-medium">{formatEnum(voucher.bankName)}</span>
+                            </div>
+                          )}
+                          {voucher.accountNumber && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Account No</span>
+                              <span className="font-medium">{voucher.accountNumber}</span>
+                            </div>
+                          )}
+                          {voucher.slipNumber && (
+                            <div>
+                              <span className="text-muted-foreground block text-xs">Slip No</span>
+                              <span className="font-medium">{voucher.slipNumber}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="border-t pt-4">
                   <Badge variant="secondary" className="bg-amber-100 text-amber-900 border-amber-200">
                     <ArchiveIcon className="mr-1 h-3 w-3" />
@@ -736,15 +820,7 @@ const Archive = () => {
           </DialogContent>
         </Dialog>
 
-        {isPrintOpen && printData && (
-          <PrintableSaleAgreementForm
-            data={printData}
-            onClose={() => {
-              setIsPrintOpen(false);
-              setPrintData(null);
-            }}
-          />
-        )}
+
       </div>
     </DashboardLayout>
   );

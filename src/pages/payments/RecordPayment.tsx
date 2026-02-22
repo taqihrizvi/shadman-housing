@@ -187,10 +187,10 @@ export default function RecordPayment() {
     setAutoFilledAmount(null);
     setTopError(null);
     setDuplicateVoucherWarning(null);
-    
+
     // Update payment type and clear plot/customer selections
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       paymentType: value,
       plotId: '',
       customerId: '',
@@ -261,9 +261,9 @@ export default function RecordPayment() {
   // Update duplicate warning based on existing vouchers
   useEffect(() => {
     if (existingVouchers && existingVouchers.length > 0) {
-      const voucherType = formData.paymentType === 'BIYANA' ? 'Biyana' : 
-                          formData.paymentType === 'SALES_AGREEMENT' ? 'Sales Agreement' :
-                          'Transfer Fee';
+      const voucherType = formData.paymentType === 'BIYANA' ? 'Biyana' :
+        formData.paymentType === 'SALES_AGREEMENT' ? 'Sales Agreement' :
+          'Transfer Fee';
       setDuplicateVoucherWarning(`${voucherType} voucher for this plot already exists (${existingVouchers[0].voucherNo})`);
     } else {
       setDuplicateVoucherWarning(null);
@@ -292,6 +292,11 @@ export default function RecordPayment() {
 
       // Auto-fill amount based on payment type
       if (formData.paymentType === 'SALES_AGREEMENT') {
+        console.log('🔍 Debug: Checking SALES_AGREEMENT auto-fill', {
+          agreement,
+          downPayment: agreement.downPayment,
+          agreementNumber: agreement.agreementNumber
+        });
         const downPaymentAmount = agreement.downPayment || 0;
         setAutoFilledAmount(downPaymentAmount);
         if (downPaymentAmount > 0) {
@@ -300,6 +305,8 @@ export default function RecordPayment() {
             amount: String(downPaymentAmount),
             description: `Sales Agreement Down Payment - ${agreement.agreementNumber}`
           }));
+        } else {
+          console.warn('⚠️ Debug: Downpayment is 0 or missing for agreement', agreement.agreementNumber);
         }
       }
     } else if (formData.paymentType === 'SALES_AGREEMENT') {
@@ -412,7 +419,7 @@ export default function RecordPayment() {
       console.error('❌ Voucher submission error:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error message:', error.response?.data?.message);
-      
+
       toast({
         title: t('common.error'),
         description: error.response?.data?.message || error.message || t('payments.paymentFailed'),

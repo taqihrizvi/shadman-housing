@@ -34,12 +34,13 @@ import { inventoryAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { getUserRole } from "@/lib/rbac";
 import { useTranslation } from "react-i18next";
-import { 
-  formatCurrency, 
-  formatEnum, 
-  formatProjectName, 
-  formatSize, 
-  formatPlotType 
+import {
+  formatCurrency,
+  formatEnum,
+  formatProjectName,
+  formatSize,
+  formatPlotType,
+  formatPlotNumberInput
 } from "@/utils/formatters";
 import { PROJECTS, PROJECTS_WITH_ALL } from "@/constants/projects";
 
@@ -151,7 +152,7 @@ export default function UnsoldInventory() {
   const totalValue = filteredInventory.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
 
   const getCardTitle = (cardType: string) => {
-    switch(cardType) {
+    switch (cardType) {
       case 'totalUnits': return t('inventory.unsoldInventory');
       case 'available': return t('inventory.available');
       case 'totalValue': return t('inventory.totalValue');
@@ -163,7 +164,7 @@ export default function UnsoldInventory() {
     let data: any[] = [];
     let columns: string[] = [];
 
-    switch(cardType) {
+    switch (cardType) {
       case 'totalUnits':
         data = filteredInventory.map((item: any) => ({
           plotNo: item.plotNo,
@@ -260,7 +261,7 @@ export default function UnsoldInventory() {
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card 
+          <Card
             className="border-l-4 border-l-warning cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => setSelectedCard('totalUnits')}
           >
@@ -276,7 +277,7 @@ export default function UnsoldInventory() {
               </div>
             </CardContent>
           </Card>
-          <Card 
+          <Card
             className="border-l-4 border-l-success cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => setSelectedCard('available')}
           >
@@ -294,7 +295,7 @@ export default function UnsoldInventory() {
               </div>
             </CardContent>
           </Card>
-          <Card 
+          <Card
             className="border-l-4 border-l-accent cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => setSelectedCard('totalValue')}
           >
@@ -394,20 +395,20 @@ export default function UnsoldInventory() {
                         </TableCell>
                         <TableCell>{formatCurrency(item.price)}</TableCell>
                         <TableCell>
-                          <Badge 
+                          <Badge
                             variant={
-                              item.status === "AVAILABLE" ? "default" : 
-                              item.status === "PENDING" ? "secondary" : 
-                              "outline"
+                              item.status === "AVAILABLE" ? "default" :
+                                item.status === "PENDING" ? "secondary" :
+                                  "outline"
                             }
                           >
                             {formatEnum(item.status)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => handleEdit(item)}
                             disabled={isManager}
                           >
@@ -440,7 +441,7 @@ export default function UnsoldInventory() {
                   <Input
                     id="edit-plotNo"
                     value={editFormData.plotNo}
-                    onChange={(e) => setEditFormData({ ...editFormData, plotNo: e.target.value })}
+                    onChange={(e) => setEditFormData({ ...editFormData, plotNo: formatPlotNumberInput(e.target.value) })}
                     required
                   />
                 </div>
@@ -504,7 +505,7 @@ export default function UnsoldInventory() {
                     </SelectContent>
                   </Select>
                   <p className="text-sm text-muted-foreground">
-                    {editingItem?.status === 'RESERVED' 
+                    {editingItem?.status === 'RESERVED'
                       ? (isUrdu ? 'محفوظ شدہ پلاٹس کو دستیاب پر واپس تبدیل کر سکتے ہیں۔' : 'You can change Reserved plots back to Available.')
                       : (isUrdu ? 'پلاٹ خودکار طور پر محفوظ/فروخت شدہ ہو جاتے ہیں جب فارم منظور ہوتے ہیں۔' : 'Plots are automatically marked Reserved/Sold when forms are approved.')
                     }

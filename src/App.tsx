@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useEffect } from "react";
 import { initInactivityTracker } from "./lib/inactivityTracker";
@@ -28,7 +28,9 @@ import ComparisonReport from "./pages/reports/ComparisonReport";
 import Vouchers from "./pages/Vouchers";
 import Approvals from "./pages/Approvals";
 import AdminSettings from "./pages/AdminSettings";
+import ManageUsers from "./pages/ManageUsers";
 import Archive from "./pages/Archive";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,7 +40,7 @@ const App = () => {
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    
+
     if (isAuthenticated) {
       // Initialize inactivity tracker
       const cleanup = initInactivityTracker(() => {
@@ -62,33 +64,35 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-            <Routes>
+          <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'VIEWER']}><Index /></ProtectedRoute>} />
-          <Route path="/calculator" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Calculator /></ProtectedRoute>} />
-          <Route path="/inventory/sold" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><SoldInventory /></ProtectedRoute>} />
-          <Route path="/inventory/unsold" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><UnsoldInventory /></ProtectedRoute>} />
-          <Route path="/inventory/add" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><AddInventory /></ProtectedRoute>} />
-          <Route path="/forms/biyana" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><BiyanaForm /></ProtectedRoute>} />
-          <Route path="/forms/sale-agreement" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><SaleAgreementForm /></ProtectedRoute>} />
-          <Route path="/forms/transfer" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><TransferForm /></ProtectedRoute>} />
-          <Route path="/submitted-forms/biyana" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewBiyanaForms /></ProtectedRoute>} />
-          <Route path="/submitted-forms/sale-agreement" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewSaleAgreements /></ProtectedRoute>} />
-          <Route path="/submitted-forms/transfer" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewTransferForms /></ProtectedRoute>} />
-          <Route path="/payments/record" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><RecordPayment /></ProtectedRoute>} />
-          <Route path="/vouchers/print/:id" element={<PrintableVoucher />} />
-          <Route path="/reports/sales" element={<ProtectedRoute allowedRoles={['ADMIN']}><SalesReport /></ProtectedRoute>} />
-          <Route path="/reports/payment" element={<ProtectedRoute allowedRoles={['ADMIN']}><PaymentReport /></ProtectedRoute>} />
-          <Route path="/reports/comparison" element={<ProtectedRoute allowedRoles={['ADMIN']}><ComparisonReport /></ProtectedRoute>} />
-          <Route path="/vouchers" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Vouchers /></ProtectedRoute>} />
-          <Route path="/approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><Approvals /></ProtectedRoute>} />
-          <Route path="/archive" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Archive /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+            <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Index /></ProtectedRoute>} />
+            <Route path="/calculator" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Calculator /></ProtectedRoute>} />
+            <Route path="/inventory/sold" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><SoldInventory /></ProtectedRoute>} />
+            <Route path="/inventory/unsold" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><UnsoldInventory /></ProtectedRoute>} />
+            <Route path="/inventory/add" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><AddInventory /></ProtectedRoute>} />
+            <Route path="/forms/biyana" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><BiyanaForm /></ProtectedRoute>} />
+            <Route path="/forms/sale-agreement" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><SaleAgreementForm /></ProtectedRoute>} />
+            <Route path="/forms/transfer" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><TransferForm /></ProtectedRoute>} />
+            <Route path="/submitted-forms/biyana" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewBiyanaForms /></ProtectedRoute>} />
+            <Route path="/submitted-forms/sale-agreement" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewSaleAgreements /></ProtectedRoute>} />
+            <Route path="/submitted-forms/transfer" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewTransferForms /></ProtectedRoute>} />
+            <Route path="/payments/record" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><RecordPayment /></ProtectedRoute>} />
+            <Route path="/vouchers/print/:id" element={<PrintableVoucher />} />
+            <Route path="/reports/sales" element={<ProtectedRoute allowedRoles={['ADMIN']}><SalesReport /></ProtectedRoute>} />
+            <Route path="/reports/payment" element={<ProtectedRoute allowedRoles={['ADMIN']}><PaymentReport /></ProtectedRoute>} />
+            <Route path="/reports/comparison" element={<ProtectedRoute allowedRoles={['ADMIN']}><ComparisonReport /></ProtectedRoute>} />
+            <Route path="/vouchers" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Vouchers /></ProtectedRoute>} />
+            <Route path="/approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><Approvals /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><ManageUsers /></ProtectedRoute>} />
+            <Route path="/archive" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Archive /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Profile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 

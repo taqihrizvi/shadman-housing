@@ -21,7 +21,7 @@ const resources = {
         users: 'Users',
         logout: 'Logout',
       },
-      
+
       // Dashboard
       dashboard: {
         title: 'Dashboard',
@@ -38,7 +38,7 @@ const resources = {
         currentDistribution: 'Current distribution',
         backToGraph: 'Back to Graph',
       },
-      
+
       // Inventory
       inventory: {
         title: 'Inventory',
@@ -62,7 +62,7 @@ const resources = {
         details: 'Details',
         transactionHistory: 'Transaction History',
       },
-      
+
       // Customers
       customers: {
         title: 'Customers',
@@ -81,7 +81,7 @@ const resources = {
         buyer: 'Buyer',
         agent: 'Agent',
       },
-      
+
       // Forms
       forms: {
         title: 'Forms',
@@ -129,7 +129,7 @@ const resources = {
         paymentInfo: 'Payment Information',
         fromCustomerInfo: 'Seller Information',
         toCustomerInfo: 'Buyer Information',
-        
+
         // Transfer Form
         transferDescription: 'Transfer property ownership from one party to another',
         transferWarning: 'This form will update ownership records. Please ensure all information is accurate before submission.',
@@ -157,7 +157,7 @@ const resources = {
         saleAgreementForm: 'Sale Agreement Form',
         fillForm: 'Please fill in all required fields',
         address: 'Address',
-        
+
         // Form Fields
         customerName: 'Customer Name',
         fatherName: "Father's Name",
@@ -184,13 +184,13 @@ const resources = {
         termsConditions: 'Terms & Conditions',
         additionalTerms: 'Additional Terms',
         enterTerms: 'Any additional terms and conditions...',
-        
+
         // Actions
         submitForm: 'Submit Form',
         saveForm: 'Save Form',
         resetForm: 'Reset Form',
         viewPrintable: 'View Printable',
-        
+
         // Placeholders
         enterCustomerName: 'Enter customer name',
         enterFatherName: "Enter father's name",
@@ -202,7 +202,7 @@ const resources = {
         enterBank: 'Enter bank name',
         enterTransaction: 'Enter transaction ID',
         enterRemarks: 'Enter remarks',
-        
+
         // Options
         selectOption: 'Select an option',
         bankDeposit: 'Bank Deposit',
@@ -215,7 +215,7 @@ const resources = {
         installment24: '24 Months Installment',
         installment36: '36 Months Installment',
       },
-      
+
       // Payments
       payments: {
         title: 'Payments',
@@ -269,12 +269,14 @@ const resources = {
           QUARTERLY: 'Quarterly Payment',
           BIYANA: 'Biyana Payment',
           SALES_AGREEMENT: 'Down Payment',
+          TRANSFER_FEE: 'Transfer Fee',
         },
         paymentTypeHelp: {
           INSTALLMENT: 'Record a monthly installment payment',
           QUARTERLY: 'Record a quarterly payment (recurring every 3 months)',
           BIYANA: 'Auto-fetches amount from pending Biyana form',
           SALES_AGREEMENT: 'Auto-fetches down payment from active Sales Agreement',
+          TRANSFER_FEE: 'Record a transfer fee payment for plot transfer',
         },
         autoFilledFrom: 'Amount auto-filled from',
         biyanaForm: 'Biyana Form',
@@ -316,7 +318,7 @@ const resources = {
         totalReceivable: 'Total Receivable',
         noRecordsFound: 'No payment records found',
       },
-      
+
       // Vouchers
       vouchers: {
         title: 'Vouchers',
@@ -350,7 +352,7 @@ const resources = {
         amountInWords: 'Amount in Words',
         only: 'Only',
         receivedBy: 'Received By',
-        authorizedSignature: 'Authorized Signature',
+        authorizedSignature: 'Director Signature',
         customerSignature: 'Customer Signature',
         computerGenerated: 'This is a computer-generated receipt and is valid without signature.',
         contactOffice: 'For any queries, please contact our office.',
@@ -358,7 +360,7 @@ const resources = {
         backToPayments: 'Back to Payments',
         printReceipt: 'Print Receipt',
       },
-      
+
       // Approvals
       approvals: {
         title: 'Approvals',
@@ -397,7 +399,7 @@ const resources = {
         enterReason: 'Enter reason for rejection...',
         confirmRejection: 'Confirm Rejection',
       },
-      
+
       // Reports
       reports: {
         title: 'Reports',
@@ -408,7 +410,7 @@ const resources = {
         exportPDF: 'Export PDF',
         exportExcel: 'Export Excel',
       },
-      
+
       // Common
       common: {
         search: 'Search',
@@ -438,7 +440,7 @@ const resources = {
         back: 'Back',
         details: 'Details',
       },
-      
+
       // Notifications
       notifications: {
         title: 'Notifications',
@@ -449,7 +451,29 @@ const resources = {
         hoursAgo: 'h ago',
         daysAgo: 'd ago',
       },
-      
+
+      // Users
+      users: {
+        title: 'User Management',
+        addUser: 'Add New User',
+        editUser: 'Edit User',
+        name: 'Full Name',
+        email: 'Email',
+        password: 'Password',
+        role: 'Role',
+        status: 'Status',
+        active: 'Active',
+        inactive: 'Inactive',
+        actions: 'Actions',
+        deactivate: 'Deactivate',
+        activate: 'Activate',
+        createSuccess: 'User created successfully',
+        updateSuccess: 'User updated successfully',
+        updateStatusSuccess: 'User status updated successfully',
+        confirmDeactivate: 'Are you sure you want to deactivate this user?',
+        confirmActivate: 'Are you sure you want to activate this user?',
+      },
+
       // Status
       status: {
         pending: 'Pending',
@@ -462,12 +486,12 @@ const resources = {
         sold: 'Sold',
         reserved: 'Reserved',
       },
-      
+
       // Project Names
       projects: {
         shadmanGreens: 'Shadman Greens',
       },
-      
+
       // Plot Sizes
       plotSizes: {
         fiveMarla: '5 Marla',
@@ -476,7 +500,7 @@ const resources = {
         oneKanal: '1 Kanal',
         twoKanal: '2 Kanal',
       },
-      
+
       // Payment Methods
       paymentMethod: {
         cash: 'Cash',
@@ -514,16 +538,12 @@ const resources = {
         remarks: 'Remarks',
         importantNote: 'Important Note',
         tokenValidity: 'This biyana/advance is valid for 15 days only. The plot will be released if full payment is not made within this period.',
-        cornerPlot: 'Corner Plot',
-        cornerPlotCharge: 'Corner Plot Premium (10%)',
-        regularPlot: 'Regular Plot',
-        plotType: 'Plot Type',
         signature: 'Signature',
         customerSignature: 'Customer Signature',
-        authorizedSignature: 'Authorized Signature',
+        authorizedSignature: 'Director Signature',
         date: 'Date',
         approvedBy: 'Approved By',
-        
+
         // Additional Biyana Receipt Fields
         buyerName: 'Buyer Name',
         fatherHusbandName: 'Father/Husband Name',
@@ -553,7 +573,7 @@ const resources = {
         regularPlot: 'Regular Plot',
         plotType: 'Plot Type',
         cornerPlotPremium: 'Corner Plot Premium (10%)',
-        
+
         // Sale Agreement Form
         saleAgreementDeed: 'Sale Agreement Deed',
         agreementNo: 'Agreement No',
@@ -609,7 +629,7 @@ const resources = {
         users: 'صارفین',
         logout: 'لاگ آؤٹ',
       },
-      
+
       // Dashboard
       dashboard: {
         title: 'ڈیش بورڈ',
@@ -626,7 +646,7 @@ const resources = {
         currentDistribution: 'موجودہ تقسیم',
         backToGraph: 'گراف پر واپس',
       },
-      
+
       // Inventory
       inventory: {
         title: 'انوینٹری',
@@ -650,7 +670,7 @@ const resources = {
         details: 'تفصیلات',
         transactionHistory: 'لین دین کی تاریخ',
       },
-      
+
       // Customers
       customers: {
         title: 'گاہک',
@@ -665,9 +685,10 @@ const resources = {
         city: 'شہر',
         totalInvestment: 'کل سرمایہ کاری',
         createdAt: 'تخلیق کی تاریخ',
-        actions: 'اقدامات',        buyer: 'خریدار',
-        agent: 'ایجنٹ',      },
-      
+        actions: 'اقدامات', buyer: 'خریدار',
+        agent: 'ایجنٹ',
+      },
+
       // Forms
       forms: {
         title: 'فارمز',
@@ -715,7 +736,7 @@ const resources = {
         paymentInfo: 'ادائیگی کی معلومات',
         fromCustomerInfo: 'فروخت کنندہ کی معلومات',
         toCustomerInfo: 'خریدار کی معلومات',
-        
+
         // Transfer Form
         transferDescription: 'جائیداد کی ملکیت ایک فریق سے دوسرے فریق کو منتقل کریں',
         transferWarning: 'یہ فارم ملکیت کے ریکارڈ کو اپ ڈیٹ کرے گا۔ برائے مہربانی جمع کرانے سے پہلے تمام معلومات کی درستگی کو یقینی بنائیں۔',
@@ -744,7 +765,7 @@ const resources = {
         saleAgreementForm: 'فروخت کے معاہدے کا فارم',
         fillForm: 'برائے مہربانی تمام ضروری فیلڈز پُر کریں',
         address: 'پتہ',
-        
+
         // Form Fields
         customerName: 'گاہک کا نام',
         fatherName: 'والد کا نام',
@@ -771,13 +792,13 @@ const resources = {
         termsConditions: 'شرائط و ضوابط',
         additionalTerms: 'اضافی شرائط',
         enterTerms: 'کوئی اضافی شرائط و ضوابط...',
-        
+
         // Actions
         submitForm: 'فارم جمع کریں',
         saveForm: 'فارم محفوظ کریں',
         resetForm: 'فارم ری سیٹ کریں',
         viewPrintable: 'پرنٹ ایبل دیکھیں',
-        
+
         // Placeholders
         enterCustomerName: 'گاہک کا نام درج کریں',
         enterFatherName: 'والد کا نام درج کریں',
@@ -789,7 +810,7 @@ const resources = {
         enterBank: 'بینک کا نام درج کریں',
         enterTransaction: 'ٹرانزیکشن آئی ڈی درج کریں',
         enterRemarks: 'ریمارکس درج کریں',
-        
+
         // Options
         selectOption: 'ایک اختیار منتخب کریں',
         bankDeposit: 'بینک جمع',
@@ -802,7 +823,7 @@ const resources = {
         installment24: '24 ماہ کی قسطیں',
         installment36: '36 ماہ کی قسطیں',
       },
-      
+
       // Vouchers
       vouchers: {
         title: 'واؤچرز',
@@ -844,7 +865,7 @@ const resources = {
         backToPayments: 'ادائیگیوں پر واپس',
         printReceipt: 'رسید پرنٹ کریں',
       },
-      
+
       // Approvals
       approvals: {
         title: 'منظوریاں',
@@ -883,7 +904,7 @@ const resources = {
         enterReason: 'مسترد کرنے کی وجہ درج کریں...',
         confirmRejection: 'مسترد کرنے کی تصدیق کریں',
       },
-      
+
       // Reports
       reports: {
         title: 'رپورٹس',
@@ -894,7 +915,7 @@ const resources = {
         exportPDF: 'پی ڈی ایف میں برآمد کریں',
         exportExcel: 'ایکسل میں برآمد کریں',
       },
-      
+
       // Common
       common: {
         search: 'تلاش کریں',
@@ -924,7 +945,7 @@ const resources = {
         back: 'واپس',
         details: 'تفصیلات',
       },
-      
+
       // Notifications
       notifications: {
         title: 'اطلاعات',
@@ -935,7 +956,29 @@ const resources = {
         hoursAgo: ' گھنٹے پہلے',
         daysAgo: ' دن پہلے',
       },
-      
+
+      // Users
+      users: {
+        title: 'صارفین کا انتظام',
+        addUser: 'نیا صارف شامل کریں',
+        editUser: 'صارف میں ترمیم کریں',
+        name: 'پورا نام',
+        email: 'ای میل',
+        password: 'پاس ورڈ',
+        role: 'عہدہ',
+        status: 'حیثیت',
+        active: 'فعال',
+        inactive: 'غیر فعال',
+        actions: 'اقدامات',
+        deactivate: 'غیر فعال کریں',
+        activate: 'فعال کریں',
+        createSuccess: 'صارف کامیابی کے ساتھ تخلیق کیا گیا',
+        updateSuccess: 'صارف کی معلومات کامیابی سے اپ ڈیٹ ہوئیں',
+        updateStatusSuccess: 'صارف کی حیثیت کامیابی سے اپ ڈیٹ ہوگئی',
+        confirmDeactivate: 'کیا آپ واقعی اس صارف کو غیر فعال کرنا چاہتے ہیں؟',
+        confirmActivate: 'کیا آپ واقعی اس صارف کو فعال کرنا چاہتے ہیں؟',
+      },
+
       // Status
       status: {
         pending: 'زیرِ غور',
@@ -948,12 +991,12 @@ const resources = {
         sold: 'فروخت شدہ',
         reserved: 'محفوظ شدہ',
       },
-      
+
       // Project Names
       projects: {
         shadmanGreens: 'شادمان گرینز',
       },
-      
+
       // Payments
       payments: {
         title: 'ادائیگیاں',
@@ -1006,12 +1049,14 @@ const resources = {
           QUARTERLY: 'سہ ماہی ادائیگی',
           BIYANA: 'بیعانہ ادائیگی',
           SALES_AGREEMENT: 'ابتدائی ادائیگی',
+          TRANSFER_FEE: 'منتقلی کی فیس',
         },
         paymentTypeHelp: {
           INSTALLMENT: 'ماہانہ قسط کی ادائیگی ریکارڈ کریں',
           QUARTERLY: 'سہ ماہی ادائیگی ریکارڈ کریں (ہر 3 ماہ بعد)',
           BIYANA: 'بیعانہ فارم سے رقم خودکار طریقے سے بھری جاتی ہے',
           SALES_AGREEMENT: 'فعال فروخت معاہدے سے ابتدائی ادائیگی خودکار طریقے سے بھری جاتی ہے',
+          TRANSFER_FEE: 'پلاٹ کی منتقلی کے لیے منتقلی کی فیس ریکارڈ کریں',
         },
         autoFilledFrom: 'رقم خودکار طریقے سے بھری گئی از',
         biyanaForm: 'بیعانہ فارم',
@@ -1053,7 +1098,7 @@ const resources = {
         totalReceivable: 'کل وصولی',
         noRecordsFound: 'کوئی ادائیگی ریکارڈ نہیں ملا',
       },
-      
+
       // Plot Sizes
       plotSizes: {
         fiveMarla: '5 مرلہ',
@@ -1062,7 +1107,7 @@ const resources = {
         oneKanal: '1 کنال',
         twoKanal: '2 کنال',
       },
-      
+
       // Payment Methods
       paymentMethod: {
         cash: 'نقد',
@@ -1105,7 +1150,7 @@ const resources = {
         authorizedSignature: 'مجاز دستخط',
         date: 'تاریخ',
         approvedBy: 'منظور شدہ بذریعہ',
-        
+
         // Additional Biyana Receipt Fields
         buyerName: 'نام خریدار',
         fatherHusbandName: 'ولدیت/از دونیت',
@@ -1135,7 +1180,7 @@ const resources = {
         regularPlot: 'عام پلاٹ',
         plotType: 'پلاٹ کی قسم',
         cornerPlotPremium: 'کونے کے پلاٹ کا اضافی چارج (10%)',
-        
+
         // Sale Agreement Form  
         saleAgreementDeed: 'فروخت کا معاہدہ نامہ',
         agreementNo: 'معاہدہ نمبر',

@@ -1,15 +1,9 @@
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Printer, ArrowLeft } from "lucide-react";
+import { Printer, ArrowLeft, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
-import {
-  formatCurrency,
-  formatDate as formatDateUtil,
-  formatEnum,
-  formatProjectName as formatProjectNameUtil,
-  formatSize as formatSizeUtil
-} from "@/utils/formatters";
+import { useFormatters } from "@/hooks/useFormatters";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -61,13 +55,7 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton, 
   const isUrdu = i18n.language === 'ur';
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Local wrappers for formatters
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "";
-    return formatDateUtil(dateString, 'en-PK', { year: 'numeric', month: 'long', day: 'numeric' });
-  };
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatPlotSize = (value: string) => formatSizeUtil(value, t);
+  const { formatDateLong: formatDate, formatProjectName, formatSize: formatPlotSize, formatCurrency, formatEnum } = useFormatters();
 
   const formatTransferType = (type: string) => {
     if (!type) return "";
@@ -157,7 +145,7 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton, 
       <div className="relative z-10 p-4 max-w-4xl mx-auto">
         {/* Office Copy */}
         {renderCopy('OFFICE COPY', 'دفتری کاپی')}
-        
+
         {/* Divider with scissors line */}
         <div className="my-3 border-t-2 border-dashed border-gray-400 relative">
           <div className="absolute left-1/2 top-0 transform -translate-x-1/2 -translate-y-1/2 bg-white px-4 text-gray-500 text-[10px]">
@@ -174,7 +162,7 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton, 
   const renderCopy = (copyLabel: string, urduLabel: string) => (
     <div className="mb-2 print:mb-1.5 relative">
       {/* Logo Watermark for this copy */}
-      <div className="watermark-logo" style={{ 
+      <div className="watermark-logo" style={{
         position: 'absolute',
         top: '50%',
         left: '50%',
@@ -192,176 +180,177 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton, 
       </div>
 
       <div className="relative z-10">
-      {/* Header */}
-      <div className="text-center mb-1.5">
-        <h1 className="text-base font-bold text-gray-800 uppercase border-b-2 border-gray-800 inline-block pb-0.5 px-3">
-          TRANSFER FORM
-        </h1>
-        <p className="text-[10px] text-gray-600 mt-0.5">Shadman Greens</p>
-        <div className="mt-1.5 inline-block bg-gray-800 text-white px-3 py-0.5 text-[10px] font-semibold rounded">
-          {copyLabel}
-        </div>
-      </div>
-
-      {/* Form Number and Date */}
-      <div className="flex justify-between items-start mb-2 text-xs">
-        <div>
-          <span className="font-semibold">Form No:</span> {data.transferNumber}
-        </div>
-        <div className="text-right">
-          <span className="font-semibold">Date:</span> {formatDate(data.transferDate)}
-        </div>
-      </div>
-
-      {/* Transfer Type */}
-      <div className="mb-2 text-xs">
-        <span className="font-semibold">Type of Transfer:</span> 
-        <span className="ml-2 font-bold">{formatTransferType(data.transferType)}</span>
-      </div>
-
-      {/* Property Details */}
-      <div className="border-2 border-gray-900 mb-1.5">
-        <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
-          <h3 className="text-xs font-bold text-gray-900">PROPERTY DETAILS</h3>
-        </div>
-        <div className="p-1.5">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-            <div>
-              <span className="text-gray-600">Plot No:</span>
-              <span className="font-semibold ml-2">{data.plot.plotNo}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Project:</span>
-              <span className="font-semibold ml-2">{formatProjectName(data.plot.project)}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Size:</span>
-              <span className="font-semibold ml-2">{formatPlotSize(data.plot.size)}</span>
-            </div>
+        {/* Header */}
+        <div className="text-center mb-1.5">
+          <h1 className="text-base font-bold text-gray-800 uppercase border-b-2 border-gray-800 inline-block pb-0.5 px-3">
+            TRANSFER FORM
+          </h1>
+          <p className="text-[10px] text-gray-600 mt-0.5">Shadman Greens</p>
+          <div className="mt-1.5 inline-block bg-gray-800 text-white px-3 py-0.5 text-[10px] font-semibold rounded">
+            {copyLabel}
           </div>
         </div>
-      </div>
 
-      {/* Current Owner (From) */}
-      <div className="border-2 border-gray-900 mb-1.5">
-        <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
-          <h3 className="text-xs font-bold text-gray-900">CURRENT OWNER (TRANSFEROR)</h3>
-        </div>
-        <div className="p-1.5">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-            <div>
-              <span className="text-gray-600">Name:</span>
-              <span className="font-semibold ml-2">{toTitleCase(data.fromCustomer.name)}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Father Name:</span>
-              <span className="font-semibold ml-2">{toTitleCase(data.fromCustomer.fatherName)}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">CNIC:</span>
-              <span className="font-semibold ml-2">{data.fromCustomer.cnic}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Phone:</span>
-              <span className="font-semibold ml-2">{data.fromCustomer.phone}</span>
-            </div>
+        {/* Form Number and Date */}
+        <div className="flex justify-between items-start mb-2 text-xs">
+          <div>
+            <span className="font-semibold">Form No:</span> {data.transferNumber}
+          </div>
+          <div className="text-right">
+            <div className="mb-0.5"><span className="font-semibold">Date:</span> {formatDate(data.transferDate)}</div>
+            <div className="text-gray-500"><span className="font-semibold">Created By:</span> {data.createdBy?.name || 'System'}</div>
           </div>
         </div>
-      </div>
 
-      {/* New Owner (To) */}
-      <div className="border-2 border-gray-900 mb-1.5">
-        <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
-          <h3 className="text-xs font-bold text-gray-900">NEW OWNER (TRANSFEREE)</h3>
+        {/* Transfer Type */}
+        <div className="mb-2 text-xs">
+          <span className="font-semibold">Type of Transfer:</span>
+          <span className="ml-2 font-bold">{formatTransferType(data.transferType)}</span>
         </div>
-        <div className="p-1.5">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-            <div>
-              <span className="text-gray-600">Name:</span>
-              <span className="font-semibold ml-2">{toTitleCase(data.toCustomer.name)}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Father Name:</span>
-              <span className="font-semibold ml-2">{toTitleCase(data.toCustomer.fatherName)}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">CNIC:</span>
-              <span className="font-semibold ml-2">{data.toCustomer.cnic}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Phone:</span>
-              <span className="font-semibold ml-2">{data.toCustomer.phone}</span>
-            </div>
+
+        {/* Property Details */}
+        <div className="border-2 border-gray-900 mb-1.5">
+          <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
+            <h3 className="text-xs font-bold text-gray-900">PROPERTY DETAILS</h3>
           </div>
-        </div>
-      </div>
-
-      {/* Financial Details */}
-      <div className="border-2 border-gray-900 mb-2">
-        <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
-          <h3 className="text-xs font-bold text-gray-900">FINANCIAL DETAILS</h3>
-        </div>
-        <div className="p-1.5">
-          <div className="grid grid-cols-2 gap-x-6 text-xs">
-            <div>
-              <span className="text-gray-600">Transfer Amount:</span>
-              <span className="font-semibold ml-2">{formatCurrency(data.transferAmount)}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Transfer Fee:</span>
-              <span className="font-semibold ml-2">{formatCurrency(data.transferFee)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Signatures */}
-      <div className="grid grid-cols-2 gap-6 mt-3 mb-2">
-        <div>
-          {(data.status === 'APPROVED' || data.status === 'COMPLETED') && data.approvedBy ? (
-            <div>
-              <div className="w-full border-b-2 border-gray-900 h-12 mb-1.5 flex items-center justify-center">
-                <img
-                  src={data.approvedBy.signature 
-                    ? `${API_BASE_URL}${data.approvedBy.signature}` 
-                    : `${API_BASE_URL}/signatures/admin-signature.png`}
-                  alt="Signature"
-                  className="max-h-10 object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = `${API_BASE_URL}/signatures/admin-signature.png`;
-                  }}
-                />
+          <div className="p-1.5">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+              <div>
+                <span className="text-gray-600">Plot No:</span>
+                <span className="font-semibold ml-2">{data.plot.plotNo}</span>
               </div>
-              <p className="text-[10px] text-gray-600 text-center">Approved By</p>
-              <p className="text-xs font-semibold text-center">{data.approvedBy.name}</p>
+              <div>
+                <span className="text-gray-600">Project:</span>
+                <span className="font-semibold ml-2">{formatProjectName(data.plot.project)}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Size:</span>
+                <span className="font-semibold ml-2">{formatPlotSize(data.plot.size)}</span>
+              </div>
             </div>
-          ) : (
-            <div>
-              <div className="border-b-2 border-gray-900 h-12 mb-1.5"></div>
-              <p className="text-[10px] text-gray-600 text-center">Approved By</p>
-              <p className="text-xs font-semibold text-center">Admin User</p>
-            </div>
-          )}
+          </div>
         </div>
-        <div>
-          <div className="border-b-2 border-gray-900 h-12 mb-1.5"></div>
-          <p className="text-[10px] text-gray-600 text-center">Transferor Signature</p>
-          <p className="text-xs font-semibold text-center">{toTitleCase(data.fromCustomer.name)}</p>
-        </div>
-      </div>
 
-      {/* Notes Section */}
-      {copyLabel === 'OFFICE COPY' && (
-        <div className="border-t-2 border-gray-900 pt-2">
-          <h4 className="text-xs font-bold mb-1">Notes:</h4>
-          <ul className="text-[10px] space-y-0.5 list-none">
-            <li>a. NOC will be prepared within 48 hours.</li>
-            <li>b. Photo copy of current ID card to be attached with NOC issuance request.</li>
-            <li>c. N.D.C can only be applied by allottee.</li>
-            <li>d. Please collect Transfer Check List before proceeding for the Transfer.</li>
-          </ul>
+        {/* Current Owner (From) */}
+        <div className="border-2 border-gray-900 mb-1.5">
+          <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
+            <h3 className="text-xs font-bold text-gray-900">CURRENT OWNER (TRANSFEROR)</h3>
+          </div>
+          <div className="p-1.5">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+              <div>
+                <span className="text-gray-600">Name:</span>
+                <span className="font-semibold ml-2">{toTitleCase(data.fromCustomer.name)}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Father Name:</span>
+                <span className="font-semibold ml-2">{toTitleCase(data.fromCustomer.fatherName)}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">CNIC:</span>
+                <span className="font-semibold ml-2">{data.fromCustomer.cnic}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Phone:</span>
+                <span className="font-semibold ml-2">{data.fromCustomer.phone}</span>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* New Owner (To) */}
+        <div className="border-2 border-gray-900 mb-1.5">
+          <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
+            <h3 className="text-xs font-bold text-gray-900">NEW OWNER (TRANSFEREE)</h3>
+          </div>
+          <div className="p-1.5">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+              <div>
+                <span className="text-gray-600">Name:</span>
+                <span className="font-semibold ml-2">{toTitleCase(data.toCustomer.name)}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Father Name:</span>
+                <span className="font-semibold ml-2">{toTitleCase(data.toCustomer.fatherName)}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">CNIC:</span>
+                <span className="font-semibold ml-2">{data.toCustomer.cnic}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Phone:</span>
+                <span className="font-semibold ml-2">{data.toCustomer.phone}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Financial Details */}
+        <div className="border-2 border-gray-900 mb-2">
+          <div className={`${isApprovalView ? '' : 'bg-gray-50'} px-2 py-0.5 border-b border-gray-900`}>
+            <h3 className="text-xs font-bold text-gray-900">FINANCIAL DETAILS</h3>
+          </div>
+          <div className="p-1.5">
+            <div className="grid grid-cols-2 gap-x-6 text-xs">
+              <div>
+                <span className="text-gray-600">Transfer Amount:</span>
+                <span className="font-semibold ml-2">{formatCurrency(data.transferAmount)}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Transfer Fee:</span>
+                <span className="font-semibold ml-2">{formatCurrency(data.transferFee)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Signatures */}
+        <div className="grid grid-cols-2 gap-6 mt-3 mb-2">
+          <div>
+            {(data.status === 'APPROVED' || data.status === 'COMPLETED') && data.approvedBy ? (
+              <div>
+                <div className="w-full border-b-2 border-gray-900 h-12 mb-1.5 flex items-center justify-center">
+                  <img
+                    src={data.approvedBy.signature
+                      ? `${API_BASE_URL}${data.approvedBy.signature}`
+                      : `${API_BASE_URL}/signatures/admin-signature.png`}
+                    alt="Signature"
+                    className="max-h-10 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.src = `${API_BASE_URL}/signatures/admin-signature.png`;
+                    }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-600 text-center">Approved By</p>
+                <p className="text-xs font-semibold text-center">{data.approvedBy.name}</p>
+              </div>
+            ) : (
+              <div>
+                <div className="border-b-2 border-gray-900 h-12 mb-1.5"></div>
+                <p className="text-[10px] text-gray-600 text-center">Approved By</p>
+                <p className="text-xs font-semibold text-center">Admin User</p>
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="border-b-2 border-gray-900 h-12 mb-1.5"></div>
+            <p className="text-[10px] text-gray-600 text-center">Transferor Signature</p>
+            <p className="text-xs font-semibold text-center">{toTitleCase(data.fromCustomer.name)}</p>
+          </div>
+        </div>
+
+        {/* Notes Section */}
+        {copyLabel === 'OFFICE COPY' && (
+          <div className="border-t-2 border-gray-900 pt-2">
+            <h4 className="text-xs font-bold mb-1">Notes:</h4>
+            <ul className="text-[10px] space-y-0.5 list-none">
+              <li>a. NOC will be prepared within 48 hours.</li>
+              <li>b. Photo copy of current ID card to be attached with NOC issuance request.</li>
+              <li>c. N.D.C can only be applied by allottee.</li>
+              <li>d. Please collect Transfer Check List before proceeding for the Transfer.</li>
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -375,12 +364,19 @@ export default function PrintableTransferForm({ data, onClose, hidePrintButton, 
             <ArrowLeft className="h-4 w-4 mr-2" />
             {isUrdu ? 'واپس' : 'Back'}
           </Button>
-          {!hidePrintButton && (
-            <Button onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" />
-              {isUrdu ? 'پرنٹ کریں' : 'Print'}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {!hidePrintButton && (
+              <Button onClick={handlePrint}>
+                <Printer className="h-4 w-4 mr-2" />
+                {isUrdu ? 'پرنٹ کریں' : 'Print'}
+              </Button>
+            )}
+            {onClose && (
+              <Button onClick={onClose} variant="ghost" size="icon">
+                <X className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

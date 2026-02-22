@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
@@ -18,16 +17,8 @@ import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
 import PrintableTransferForm from "@/pages/forms/PrintableTransferForm";
 import { voucherAPI } from "@/lib/api";
-import { 
-  formatCurrency, 
-  formatDate as formatDateUtil,
-  formatDateWithOptions,
-  formatEnum, 
-  formatProjectName as formatProjectNameUtil,
-  formatPaymentMethod as formatPaymentMethodUtil,
-  formatPaymentType as formatPaymentTypeUtil,
-  formatSize as formatSizeUtil
-} from "@/utils/formatters";
+import { useFormatters } from "@/hooks/useFormatters";
+import { formatCurrency } from "@/utils/formatters";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -37,11 +28,11 @@ export default function Approvals() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   // Get initial tab from URL or default to 'forms'
   const initialTab = searchParams.get('tab') || 'forms';
   const [activeTab, setActiveTab] = useState(initialTab);
-  
+
   // Update active tab when URL changes
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -50,19 +41,15 @@ export default function Approvals() {
     }
   }, [searchParams]);
 
-  // Local wrappers for formatters that need translation context
-  const formatDate = (date: string) => formatDateWithOptions(date, 'en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
-  const formatPaymentType = (type: string) => formatPaymentTypeUtil(type, t);
-  const formatSize = (value: string) => formatSizeUtil(value, t);
+  // Formatter functions from hook
+  const { formatDateShort: formatDate, formatProjectName, formatPaymentMethod, formatPaymentType, formatSize, formatCurrency, formatEnum } = useFormatters();
 
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [approvalType, setApprovalType] = useState<'biyana' | 'payment' | 'agreement' | 'transfer'>('biyana');
-  
+
   // Print dialog states
   const [isPrintBiyanaOpen, setIsPrintBiyanaOpen] = useState(false);
   const [isPrintAgreementOpen, setIsPrintAgreementOpen] = useState(false);
@@ -73,7 +60,9 @@ export default function Approvals() {
 
   // Print handler functions
   const handlePrintBiyana = (biyana: any) => {
+    console.log('handlePrintBiyana - createdBy:', biyana.createdBy);
     const data = {
+      formNumber: biyana.formNumber,
       customerName: biyana.customer?.name || "",
       fatherHusbandName: biyana.fatherHusbandName || biyana.customer?.fatherName || "",
       cnic: biyana.customer?.cnic || "",
@@ -100,6 +89,7 @@ export default function Approvals() {
       agreementNumber: biyana.id,
       status: biyana.status,
       approvedBy: biyana.approvedBy,
+      createdBy: biyana.createdBy,
     };
     setPrintData(data);
     setIsPrintBiyanaOpen(true);
@@ -122,14 +112,14 @@ export default function Approvals() {
   const handlePrintAgreement = (agreement: any) => {
     // Extract biyana data from plot.biyanaForms array
     const biyanaData = agreement.plot?.biyanaForms?.[0];
-    
+
     // Add biyana amount to the agreement data for printable form
     const enrichedData = {
       ...agreement,
       biyanaAmount: biyanaData?.tokenAmount || 0,
       biyana: biyanaData || null,
     };
-    
+
     setPrintData(enrichedData);
     setIsPrintAgreementOpen(true);
   };
@@ -805,7 +795,6 @@ export default function Approvals() {
                           </TableCell>
                           <TableCell>
                             <div>{biyana.plot?.plotNo || '-'}</div>
-                            <div className="text-xs text-muted-foreground">{biyana.plot?.project ? formatProjectName(biyana.plot.project) : '-'}</div>
                           </TableCell>
                           <TableCell>{formatCurrency(biyana.tokenAmount)}</TableCell>
                           <TableCell>
@@ -895,7 +884,6 @@ export default function Approvals() {
                           </TableCell>
                           <TableCell>
                             <div>{agreement.plot?.plotNo || '-'}</div>
-                            <div className="text-xs text-muted-foreground">{agreement.plot?.project ? `${formatProjectName(agreement.plot.project)} - Block ${agreement.plot.block}` : '-'}</div>
                           </TableCell>
                           <TableCell>{formatCurrency(agreement.totalAmount)}</TableCell>
                           <TableCell>{formatCurrency(agreement.downPayment)}</TableCell>
@@ -1001,7 +989,6 @@ export default function Approvals() {
                             </TableCell>
                             <TableCell>
                               <div>{transfer.plot?.plotNo || '-'}</div>
-                              <div className="text-xs text-muted-foreground">{transfer.plot?.project ? formatProjectName(transfer.plot.project) : '-'}</div>
                             </TableCell>
                             <TableCell>{formatCurrency(transfer.transferFee)}</TableCell>
                             <TableCell>{transfer.transferReason}</TableCell>
@@ -1096,7 +1083,6 @@ export default function Approvals() {
                             {payment.plot ? (
                               <div>
                                 <div>{payment.plot.plotNo}</div>
-                                <div className="text-xs text-muted-foreground">{formatProjectName(payment.plot.project)}</div>
                               </div>
                             ) : (
                               <span>-</span>
@@ -1157,13 +1143,13 @@ export default function Approvals() {
             <DialogHeader>
               <DialogTitle>
                 {t('approvals.approve')}{' '}
-                {approvalType === 'biyana' 
-                  ? t('forms.biyanaForm') 
-                  : approvalType === 'transfer' 
-                  ? t('forms.transferForm') 
-                  : approvalType === 'agreement'
-                  ? t('forms.saleAgreement')
-                  : t('vouchers.title')}
+                {approvalType === 'biyana'
+                  ? t('forms.biyanaForm')
+                  : approvalType === 'transfer'
+                    ? t('forms.transferForm')
+                    : approvalType === 'agreement'
+                      ? t('forms.saleAgreement')
+                      : t('vouchers.title')}
               </DialogTitle>
               <DialogDescription>
                 {t('approvals.confirmApprove')}
@@ -1173,22 +1159,22 @@ export default function Approvals() {
               <div className="space-y-4">
                 <div>
                   <div className="text-sm font-medium">
-                    {approvalType === 'biyana' 
-                      ? t('forms.formNumber') 
+                    {approvalType === 'biyana'
+                      ? t('forms.formNumber')
                       : approvalType === 'transfer'
-                      ? t('forms.transferNumber')
-                      : approvalType === 'agreement'
-                      ? t('forms.agreementNumber')
-                      : t('vouchers.voucherNo')}
+                        ? t('forms.transferNumber')
+                        : approvalType === 'agreement'
+                          ? t('forms.agreementNumber')
+                          : t('vouchers.voucherNo')}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {approvalType === 'biyana' 
-                      ? selectedItem.formNumber 
+                    {approvalType === 'biyana'
+                      ? selectedItem.formNumber
                       : approvalType === 'transfer'
-                      ? selectedItem.transferNumber
-                      : approvalType === 'agreement'
-                      ? selectedItem.agreementNumber
-                      : selectedItem.voucherNo}
+                        ? selectedItem.transferNumber
+                        : approvalType === 'agreement'
+                          ? selectedItem.agreementNumber
+                          : selectedItem.voucherNo}
                   </div>
                 </div>
                 {approvalType === 'transfer' ? (
@@ -1208,11 +1194,23 @@ export default function Approvals() {
                       </div>
                     </div>
                   </>
-                ) : selectedItem.customer && (
-                  <div>
-                    <div className="text-sm font-medium">{t('forms.customer')}</div>
-                    <div className="text-sm text-muted-foreground">{selectedItem.customer?.name}</div>
-                  </div>
+                ) : (
+                  <>
+                    {selectedItem.customer && (
+                      <div>
+                        <div className="text-sm font-medium">{t('forms.customer')}</div>
+                        <div className="text-sm text-muted-foreground">{selectedItem.customer?.name}</div>
+                      </div>
+                    )}
+                    {selectedItem.plot && (
+                      <div>
+                        <div className="text-sm font-medium">{t('inventory.plotNo')}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {selectedItem.plot?.plotNo} {selectedItem.plot?.project ? `- ${formatProjectName(selectedItem.plot.project)}` : ''}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
                 <div>
                   <div className="text-sm font-medium">
@@ -1220,13 +1218,13 @@ export default function Approvals() {
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {formatCurrency(
-                      approvalType === 'biyana' 
-                        ? selectedItem.tokenAmount 
+                      approvalType === 'biyana'
+                        ? selectedItem.tokenAmount
                         : approvalType === 'transfer'
-                        ? selectedItem.transferFee
-                        : approvalType === 'agreement'
-                        ? selectedItem.downPayment
-                        : selectedItem.amount
+                          ? selectedItem.transferFee
+                          : approvalType === 'agreement'
+                            ? selectedItem.downPayment
+                            : selectedItem.amount
                     )}
                   </div>
                 </div>
@@ -1266,11 +1264,11 @@ export default function Approvals() {
                   <div className="text-sm font-medium">{t('forms.date')}</div>
                   <div className="text-sm text-muted-foreground">
                     {formatDate(
-                      approvalType === 'transfer' 
+                      approvalType === 'transfer'
                         ? selectedItem.transferDate
                         : approvalType === 'agreement'
-                        ? selectedItem.agreementDate
-                        : selectedItem.date
+                          ? selectedItem.agreementDate
+                          : selectedItem.date
                     )}
                   </div>
                 </div>
@@ -1290,13 +1288,13 @@ export default function Approvals() {
             <DialogHeader>
               <DialogTitle>
                 {t('approvals.reject')}{' '}
-                {approvalType === 'biyana' 
-                  ? t('forms.biyanaForm') 
-                  : approvalType === 'transfer' 
-                  ? t('forms.transferForm') 
-                  : approvalType === 'agreement'
-                  ? t('forms.saleAgreement')
-                  : t('vouchers.title')}
+                {approvalType === 'biyana'
+                  ? t('forms.biyanaForm')
+                  : approvalType === 'transfer'
+                    ? t('forms.transferForm')
+                    : approvalType === 'agreement'
+                      ? t('forms.saleAgreement')
+                      : t('vouchers.title')}
               </DialogTitle>
               <DialogDescription>
                 {t('approvals.provideReason')}
@@ -1332,9 +1330,8 @@ export default function Approvals() {
               <DialogDescription>Print preview of Biyana form</DialogDescription>
             </VisuallyHidden>
             {printData && (
-              <PrintableBiyanaFormSimple 
+              <PrintableBiyanaFormSimple
                 data={printData}
-                onClose={() => setIsPrintBiyanaOpen(false)}
                 hidePrintButton={true}
               />
             )}
@@ -1349,9 +1346,8 @@ export default function Approvals() {
               <DialogDescription>Print preview of sale agreement</DialogDescription>
             </VisuallyHidden>
             {printData && (
-              <PrintableSaleAgreementForm 
+              <PrintableSaleAgreementForm
                 data={printData}
-                onClose={() => setIsPrintAgreementOpen(false)}
                 hidePrintButton={true}
               />
             )}
@@ -1366,9 +1362,8 @@ export default function Approvals() {
               <DialogDescription>Print preview of transfer form</DialogDescription>
             </VisuallyHidden>
             {printData && (
-              <PrintableTransferForm 
+              <PrintableTransferForm
                 data={printData}
-                onClose={() => setIsPrintTransferOpen(false)}
                 hidePrintButton={true}
                 isApprovalView={true}
               />
@@ -1407,16 +1402,13 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
   const isUrdu = i18n.language === 'ur';
   const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
-  // Local wrappers for formatters
-  const formatDate = (dateString: string) => formatDateWithOptions(dateString, 'en-PK', { year: 'numeric', month: 'long', day: 'numeric' });
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
-  const formatPaymentType = (type: string) => formatPaymentTypeUtil(type, t);
+  // Formatter functions from hook
+  const { formatDateLong: formatDate, formatProjectName, formatPaymentMethod, formatPaymentType, formatEnum } = useFormatters();
 
   const renderReceiptContent = () => (
     <div className="receipt-copy" style={{ position: 'relative', padding: '40px 60px' }}>
       {/* Logo Watermark */}
-      <div className="watermark-logo" style={{ 
+      <div className="watermark-logo" style={{
         position: 'absolute',
         top: '50%',
         left: '50%',
@@ -1430,9 +1422,9 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <img 
-          src="/Logo.png" 
-          alt="Watermark" 
+        <img
+          src="/Logo.png"
+          alt="Watermark"
           style={{
             width: '100%',
             height: '100%',
@@ -1511,10 +1503,10 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
                 <td style={{ padding: '12px', width: '30%', borderRight: '1px solid #ddd', fontWeight: '600' }}>Payment Type:</td>
                 <td style={{ padding: '12px', fontWeight: 'bold' }}>
                   {voucher.formType === 'BIYANA' ? 'Biyana Payment' :
-                   voucher.formType === 'INSTALLMENT' ? 'Installment' :
-                   voucher.formType === 'QUARTERLY' ? 'Quarterly Payment' :
-                   voucher.formType === 'SALES_AGREEMENT' ? 'Sales Agreement Payment' :
-                   formatPaymentType(voucher.formType)}
+                    voucher.formType === 'INSTALLMENT' ? 'Installment' :
+                      voucher.formType === 'QUARTERLY' ? 'Quarterly Payment' :
+                        voucher.formType === 'SALES_AGREEMENT' ? 'Sales Agreement Payment' :
+                          formatPaymentType(voucher.formType)}
                 </td>
               </tr>
               <tr style={{ backgroundColor: '#fff9e6' }}>
@@ -1573,19 +1565,21 @@ function PrintableVoucherContent({ voucher, onClose }: { voucher: any; onClose: 
               {voucher.approvedBy?.signature ? (
                 <div>
                   <div style={{ borderTop: '2px solid #000', paddingTop: '8px', minHeight: '60px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                    <img 
-                      src={voucher.approvedBy.signature.startsWith('http') ? voucher.approvedBy.signature : `${API_BASE_URL}${voucher.approvedBy.signature}`}
-                      alt="Signature" 
+                    <img
+                      src={voucher.approvedBy.signature.startsWith('http')
+                        ? voucher.approvedBy.signature
+                        : `${API_BASE_URL}${voucher.approvedBy.signature.startsWith('/') ? '' : '/'}${voucher.approvedBy.signature}`}
+                      alt="Signature"
                       style={{ maxHeight: '50px', maxWidth: '140px', objectFit: 'contain' }}
                     />
                   </div>
                   <p style={{ fontWeight: 'bold', marginTop: '8px', fontSize: '14px' }}>{voucher.approvedBy?.name}</p>
-                  <p style={{ fontSize: '12px', color: '#666' }}>Authorized Signature</p>
+                  <p style={{ fontSize: '12px', color: '#666' }}>Director Signature</p>
                 </div>
               ) : (
                 <div>
                   <div style={{ borderTop: '2px solid #000', paddingTop: '8px', minHeight: '60px' }}></div>
-                  <p style={{ fontWeight: 'bold', marginTop: '8px', fontSize: '14px' }}>Authorized Signature</p>
+                  <p style={{ fontWeight: 'bold', marginTop: '8px', fontSize: '14px' }}>Director Signature</p>
                 </div>
               )}
             </div>

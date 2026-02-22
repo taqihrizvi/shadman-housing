@@ -22,12 +22,9 @@ import { toTitleCase } from "@/lib/utils";
 
 const paymentPlans = ["FULL_PAYMENT", "INSTALLMENT_12", "INSTALLMENT_24", "INSTALLMENT_36"];
 
-const formatEnum = (value: string) => {
-  if (!value) return "";
-  return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-};
+import { formatEnum } from "@/utils/formatters";
 
-const formatSize = (value: string) => {
+const formatSizeDisplay = (value: string) => {
   if (!value) return "";
   const sizeMap: { [key: string]: string } = {
     'FIVE_MARLA': '5 Marla',
@@ -64,7 +61,7 @@ export default function SaleAgreementForm() {
   const [monthlyInstallment, setMonthlyInstallment] = useState<number>(0);
   const [isTransferredPlot, setIsTransferredPlot] = useState<boolean>(false);
   const [oldSaleAgreement, setOldSaleAgreement] = useState<any>(null);
-  
+
   // Installment details from Biyana form
   const [installmentDetails, setInstallmentDetails] = useState<{
     installmentType: string;
@@ -73,7 +70,7 @@ export default function SaleAgreementForm() {
     monthlyInstallmentAmount: number;
     quarterlyInstallmentAmount: number;
   } | null>(null);
-  
+
   // Calculated installments based on current due payment
   const [calculatedMonthlyInstallment, setCalculatedMonthlyInstallment] = useState<number>(0);
   const [calculatedQuarterlyInstallment, setCalculatedQuarterlyInstallment] = useState<number>(0);
@@ -91,32 +88,32 @@ export default function SaleAgreementForm() {
         formsAPI.getTransferForms(),
         formsAPI.getSaleAgreements()
       ]);
-      
+
       // Filter transferred plots to only include those with APPROVED or COMPLETED transfer forms
       // APPROVED: Transfer approved, waiting for new sale agreement to be created
       // COMPLETED: Transfer complete, but this shouldn't show up since plot status becomes SOLD
       const transferredPlotsWithApprovedTransfer = transferredResponse.data.filter((plot: any) => {
-        const approvedTransfer = transfersResponse.data.find((transfer: any) => 
-          transfer.plotId === plot.id && 
+        const approvedTransfer = transfersResponse.data.find((transfer: any) =>
+          transfer.plotId === plot.id &&
           (transfer.status === 'APPROVED' || transfer.status === 'COMPLETED')
         );
         return approvedTransfer !== undefined;
       });
-      
+
       // Combine RESERVED plots and TRANSFERRED plots with approved transfers
       const allPlots = [...reservedResponse.data, ...transferredPlotsWithApprovedTransfer];
-      
+
       // Filter out plots that already have a pending sale agreement for their current buyer
       const filteredPlots = allPlots.filter((plot: any) => {
-        const hasPendingAgreement = agreementsResponse.data.some((agreement: any) => 
-          agreement.plotId === plot.id && 
-          agreement.customerId === plot.buyerId && 
+        const hasPendingAgreement = agreementsResponse.data.some((agreement: any) =>
+          agreement.plotId === plot.id &&
+          agreement.customerId === plot.buyerId &&
           agreement.status === 'PENDING' &&
           !agreement.isArchived
         );
         return !hasPendingAgreement;
       });
-      
+
       return filteredPlots;
     },
   });
@@ -148,7 +145,7 @@ export default function SaleAgreementForm() {
       try {
         const customersResponse = await customerAPI.getAll({ search: data.cnic });
         const existingCustomer = customersResponse.data.find((c: any) => c.cnic === data.cnic);
-        
+
         if (existingCustomer) {
           customerId = existingCustomer.id;
         } else {
@@ -203,7 +200,7 @@ export default function SaleAgreementForm() {
   const handlePlotSelect = (plotId: string) => {
     const plot = availablePlots?.find((p: any) => p.id === plotId);
     setSelectedPlot(plot);
-    
+
     // Check if this is a transferred plot
     const isTransferred = plot?.status === 'TRANSFERRED';
     setIsTransferredPlot(isTransferred);
@@ -213,52 +210,52 @@ export default function SaleAgreementForm() {
     let paymentPlanEnum = "FULL_PAYMENT";
     let totalPrice = plot?.price || 0; // Always use plot price for total amount
     let downPayment = 0;
-    
+
     if (isTransferred) {
       // For transferred plots, get buyer info from transfer form (new owner)
-      const transfer = transfersData?.find((t: any) => 
-        t.plotId === plotId && 
+      const transfer = transfersData?.find((t: any) =>
+        t.plotId === plotId &&
         (t.status === 'APPROVED' || t.status === 'COMPLETED')
       );
       console.log('Transfer Data for plot:', transfer);
       console.log('All Sale Agreements:', saleAgreementsData);
-      
+
       if (transfer) {
         customer = transfer.toCustomer; // New owner from transfer
-        
+
         // Find the old sale agreement for this plot
         // First, try to find any agreement for this plot
         const plotAgreements = saleAgreementsData?.filter((a: any) => a.plotId === plotId);
         console.log('All agreements for this plot:', plotAgreements);
-        
+
         // Try multiple search strategies
-        let oldAgreement = saleAgreementsData?.find((a: any) => 
+        let oldAgreement = saleAgreementsData?.find((a: any) =>
           a.plotId === plotId && a.isArchived === true && a.transferId === transfer.id
         );
         console.log('Search 1 (isArchived + transferId):', oldAgreement);
-        
+
         // If not found by transferId, try finding by plotId and isArchived
         if (!oldAgreement) {
-          oldAgreement = saleAgreementsData?.find((a: any) => 
+          oldAgreement = saleAgreementsData?.find((a: any) =>
             a.plotId === plotId && a.isArchived === true
           );
           console.log('Search 2 (isArchived only):', oldAgreement);
         }
-        
+
         // If still not found, try finding any locked agreement for this plot
         if (!oldAgreement) {
-          oldAgreement = saleAgreementsData?.find((a: any) => 
+          oldAgreement = saleAgreementsData?.find((a: any) =>
             a.plotId === plotId && a.isLocked === true
           );
           console.log('Search 3 (isLocked):', oldAgreement);
         }
-        
+
         // If still not found, just use the first agreement for this plot
         if (!oldAgreement && plotAgreements && plotAgreements.length > 0) {
           oldAgreement = plotAgreements[0];
           console.log('Search 4 (first agreement for plot):', oldAgreement);
         }
-        
+
         if (oldAgreement) {
           downPayment = oldAgreement.downPayment || 0;
           setOldSaleAgreement(oldAgreement);
@@ -268,7 +265,7 @@ export default function SaleAgreementForm() {
         } else {
           console.log('❌ No old sale agreement found for transferred plot');
         }
-        
+
         console.log('Transfer Form Data:', transfer);
         console.log('New Owner (toCustomer):', customer);
       }
@@ -277,11 +274,11 @@ export default function SaleAgreementForm() {
       const biyanaForm = plot?.biyanaForms?.[0];
       biyana = biyanaForm?.tokenAmount || 0;
       customer = biyanaForm?.customer;
-      
+
       console.log('Biyana Form Data:', biyanaForm);
       console.log('Monthly Installments:', biyanaForm?.monthlyInstallments);
       console.log('Down Payment from Biyana:', biyanaForm?.downPayment);
-      
+
       // Get payment plan from biyana's agreement duration
       if (biyanaForm?.monthlyInstallments) {
         const months = biyanaForm.monthlyInstallments;
@@ -290,7 +287,7 @@ export default function SaleAgreementForm() {
         else if (months === 24) paymentPlanEnum = "INSTALLMENT_24";
         else if (months === 36) paymentPlanEnum = "INSTALLMENT_36";
       }
-      
+
       // Fetch installment details from Biyana form
       if (biyanaForm) {
         setInstallmentDetails({
@@ -300,32 +297,32 @@ export default function SaleAgreementForm() {
           monthlyInstallmentAmount: biyanaForm.monthlyInstallmentAmount || 0,
           quarterlyInstallmentAmount: biyanaForm.quarterlyInstallmentAmount || 0,
         });
-        
+
         // Use downPayment from Biyana form if available
         if (biyanaForm.downPayment !== undefined && biyanaForm.downPayment !== null) {
           downPayment = biyanaForm.downPayment;
         }
       }
-      
+
       console.log('Payment Plan Display:', paymentPlanDisplay);
       totalPrice = biyanaForm?.totalAmount || plot?.price || 0;
     }
-    
+
     // For transferred plots, also fetch biyana amount (regardless of who paid)
     if (isTransferred) {
       const biyanaForm = plot?.biyanaForms?.[0];
       biyana = biyanaForm?.tokenAmount || 0;
       console.log('✅ Biyana amount for transferred plot:', biyana);
     }
-    
+
     setBiyanaAmount(biyana);
-    
+
     console.log('Setting form data with downPayment:', downPayment);
-    
+
     // Auto-populate buyer information and payment details
-    setFormData({ 
-      ...formData, 
-      plotId, 
+    setFormData({
+      ...formData,
+      plotId,
       totalPrice: totalPrice?.toString() || "",
       downPayment: downPayment?.toString() || "",
       paymentPlan: paymentPlanEnum,
@@ -357,7 +354,7 @@ export default function SaleAgreementForm() {
 
     const monthlyCount = installmentDetails.monthlyInstallments || 0;
     const quarterlyCount = installmentDetails.quarterlyInstallments || 0;
-    
+
     if (installmentDetails.installmentType === 'MONTHLY_ONLY' && monthlyCount > 0) {
       // For monthly only: divide due payment by number of months and round up
       const monthlyAmt = Math.ceil(duePayment / monthlyCount);
@@ -368,24 +365,24 @@ export default function SaleAgreementForm() {
       // For monthly + quarterly: calculate using the same logic as Biyana form
       const originalQuarterlyAmt = installmentDetails.quarterlyInstallmentAmount || 0;
       const originalMonthlyAmt = installmentDetails.monthlyInstallmentAmount || 0;
-      
+
       if (quarterlyCount > 0 && monthlyCount > 0 && originalMonthlyAmt > 0 && originalQuarterlyAmt > 0) {
         // Calculate the original ratio of monthly to total in Biyana form
         const originalMonthlyTotal = originalMonthlyAmt * monthlyCount;
         const originalQuarterlyTotal = originalQuarterlyAmt * quarterlyCount;
         const originalTotal = originalMonthlyTotal + originalQuarterlyTotal;
-        
+
         // Calculate what portion of the original total was monthly payments
         const monthlyRatio = originalMonthlyTotal / originalTotal;
-        
+
         // Apply this ratio to the new due payment
         const newMonthlyTotal = duePayment * monthlyRatio;
         const newMonthlyAmt = Math.ceil(newMonthlyTotal / monthlyCount);
-        
+
         // Quarterly gets the remainder
         const remainingForQuarterly = duePayment - newMonthlyTotal;
         const newQuarterlyAmt = Math.ceil(remainingForQuarterly / quarterlyCount);
-        
+
         setCalculatedMonthlyInstallment(newMonthlyAmt);
         setCalculatedQuarterlyInstallment(newQuarterlyAmt);
         setMonthlyInstallment(newMonthlyAmt);
@@ -403,12 +400,12 @@ export default function SaleAgreementForm() {
   const handleMonthlyInstallmentChange = (value: string) => {
     const newMonthlyAmt = parseFloat(value) || 0;
     setCalculatedMonthlyInstallment(newMonthlyAmt);
-    
+
     // Recalculate quarterly if applicable
     if (installmentDetails?.installmentType === 'MONTHLY_AND_QUARTERLY') {
       const monthlyCount = installmentDetails.monthlyInstallments || 0;
       const quarterlyCount = installmentDetails.quarterlyInstallments || 0;
-      
+
       if (quarterlyCount > 0) {
         const totalMonthlyPayments = newMonthlyAmt * monthlyCount;
         const remainingForQuarterly = duePayment - totalMonthlyPayments;
@@ -422,12 +419,12 @@ export default function SaleAgreementForm() {
   const handleQuarterlyInstallmentChange = (value: string) => {
     const newQuarterlyAmt = parseFloat(value) || 0;
     setCalculatedQuarterlyInstallment(newQuarterlyAmt);
-    
+
     // Recalculate monthly
     if (installmentDetails) {
       const monthlyCount = installmentDetails.monthlyInstallments || 0;
       const quarterlyCount = installmentDetails.quarterlyInstallments || 0;
-      
+
       if (monthlyCount > 0) {
         const totalQuarterlyPayments = newQuarterlyAmt * quarterlyCount;
         const remainingForMonthly = duePayment - totalQuarterlyPayments;
@@ -439,7 +436,7 @@ export default function SaleAgreementForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate CNIC format
     if (!/^\d{13}$/.test(formData.cnic)) {
       toast({
@@ -459,7 +456,7 @@ export default function SaleAgreementForm() {
       });
       return;
     }
-    
+
     createAgreementMutation.mutate(formData);
   };
 
@@ -474,12 +471,12 @@ export default function SaleAgreementForm() {
             </svg>
           </div>
           <p className="text-sm">
-            {isUrdu 
-              ? 'فارم جمع کروانے سے پہلے تمام معلومات کی درستگی کی تصدیق یقینی بنائیں۔ منتقل شدہ پلاٹ کے لیے نئے مالک کے لیے فروخت کا معاہدہ بنائیں۔' 
+            {isUrdu
+              ? 'فارم جمع کروانے سے پہلے تمام معلومات کی درستگی کی تصدیق یقینی بنائیں۔ منتقل شدہ پلاٹ کے لیے نئے مالک کے لیے فروخت کا معاہدہ بنائیں۔'
               : 'Please ensure to verify all information before submitting the form. For TRANSFERRED plots, create a sale agreement for the new owner to complete the transfer.'}
           </p>
         </div>
-        
+
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('approvals.saleAgreement')}</h1>
         </div>
@@ -517,7 +514,7 @@ export default function SaleAgreementForm() {
                             const status = plot.status === 'TRANSFERRED' ? ' [TRANSFERRED]' : '';
                             return (
                               <SelectItem key={plot.id} value={plot.id}>
-                                {plot.plotNo} - {formatEnum(plot.project)} ({formatSize(plot.size)}){status}
+                                {plot.plotNo} - {formatEnum(plot.project)} ({formatSizeDisplay(plot.size)}){status}
                               </SelectItem>
                             );
                           })
@@ -535,7 +532,7 @@ export default function SaleAgreementForm() {
                       </div>
                       <div className="space-y-2">
                         <Label>{t('inventory.size')}</Label>
-                        <Input value={formatSize(selectedPlot.size)} disabled className="bg-muted" />
+                        <Input value={formatSizeDisplay(selectedPlot.size)} disabled className="bg-muted" />
                       </div>
                       <div className="space-y-2">
                         <Label>Location</Label>
@@ -712,7 +709,7 @@ export default function SaleAgreementForm() {
                       Total Price - Down Payment - Biyana Amount = Due Payment (PKR)
                     </p>
                   </div>
-                  
+
                   {/* Show calculated installment details */}
                   {installmentDetails && calculatedMonthlyInstallment > 0 && (
                     <>
@@ -732,7 +729,7 @@ export default function SaleAgreementForm() {
                           {installmentDetails.monthlyInstallments} monthly installments = PKR {(Math.ceil(calculatedMonthlyInstallment) * installmentDetails.monthlyInstallments).toLocaleString()}
                         </p>
                       </div>
-                      
+
                       {installmentDetails.installmentType === 'MONTHLY_AND_QUARTERLY' && (
                         <div className="space-y-2">
                           <Label htmlFor="quarterlyInstallment">
@@ -753,7 +750,7 @@ export default function SaleAgreementForm() {
                       )}
                     </>
                   )}
-                  
+
                   {/* Fallback to calculated monthly installment if no Biyana form details */}
                   {(!installmentDetails || installmentDetails.monthlyInstallmentAmount === 0) && formData.paymentPlan && formData.paymentPlan !== "FULL_PAYMENT" && monthlyInstallment > 0 && (
                     <div className="space-y-2 md:col-span-2">
@@ -777,7 +774,7 @@ export default function SaleAgreementForm() {
                       <Label>{isUrdu ? 'قسط کی قسم' : 'Installment Type'}</Label>
                       <Input
                         type="text"
-                        value={installmentDetails.installmentType === 'MONTHLY_ONLY' 
+                        value={installmentDetails.installmentType === 'MONTHLY_ONLY'
                           ? (isUrdu ? 'صرف ماہانہ اقساط' : 'Monthly Installments Only')
                           : (isUrdu ? 'ماہانہ + سہ ماہی اقساط' : 'Monthly + Quarterly Installments')
                         }
@@ -828,7 +825,7 @@ export default function SaleAgreementForm() {
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-900">
-                      {isUrdu 
+                      {isUrdu
                         ? 'یہ قسط کی تفصیلات بیعانہ فارم سے خودکار طور پر بھری گئی ہیں۔'
                         : 'These installment details are auto-filled from the Biyana Form.'}
                     </p>

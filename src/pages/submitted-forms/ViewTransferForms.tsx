@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,35 +20,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI } from "@/lib/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+
+
 import { toTitleCase } from "@/lib/utils";
-import { FileOutput, Loader2, Eye, Printer, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
+import { FileOutput, Loader2, Eye, Printer, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import PrintableTransferForm from "../forms/PrintableTransferForm";
-import {
-  formatCurrency,
-  formatDate as formatDateUtil,
-  formatDateWithOptions,
-  formatEnum,
-  formatSize as formatSizeUtil,
-  formatProjectName as formatProjectNameUtil
-} from "@/utils/formatters";
+import { useFormatters } from "@/hooks/useFormatters";
 
 const ViewTransferForms = () => {
   const { t, i18n } = useTranslation();
   const isUrdu = i18n.language === 'ur';
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isPrintView, setIsPrintView] = useState(false);
 
-  // Local wrappers for formatters
-  const formatDate = (dateString: string) => formatDateWithOptions(dateString, 'en-PK', { year: 'numeric', month: 'short', day: 'numeric' });
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatSize = (value: string) => formatSizeUtil(value, t);
 
+  const { formatDateShort: formatDate, formatProjectName, formatSize, formatCurrency, formatEnum } = useFormatters();
 
 
   // Helper function to get status display and styling
@@ -139,13 +127,13 @@ const ViewTransferForms = () => {
                         <TableCell>
                           <div>
                             <div className="font-medium">{form.fromCustomer?.name || 'N/A'}</div>
-                            <div className="text-xs text-muted-foreground">{form.fromCustomer?.cnic || ''}</div>
+
                           </div>
                         </TableCell>
                         <TableCell>
                           <div>
                             <div className="font-medium">{form.toCustomer?.name || 'N/A'}</div>
-                            <div className="text-xs text-muted-foreground">{form.toCustomer?.cnic || ''}</div>
+
                           </div>
                         </TableCell>
                         <TableCell>{form.plot?.plotNo || 'N/A'}</TableCell>
@@ -155,17 +143,17 @@ const ViewTransferForms = () => {
                         <TableCell>
                           <div className="flex items-center justify-center">
                             {form.status === 'APPROVED' || form.status === 'COMPLETED' ? (
-                              <CheckCircle 
+                              <CheckCircle
                                 className="w-4 h-4 text-green-600"
                                 aria-label={getStatusInfo(form.status).label}
                               />
                             ) : form.status === 'REJECTED' ? (
-                              <XCircle 
+                              <XCircle
                                 className="w-4 h-4 text-red-600"
                                 aria-label={getStatusInfo(form.status).label}
                               />
                             ) : (
-                              <Clock 
+                              <Clock
                                 className="w-4 h-4 text-yellow-500"
                                 aria-label={getStatusInfo(form.status).label}
                               />
@@ -333,13 +321,13 @@ const ViewTransferForms = () => {
                               {isUrdu ? 'اگلا قدم' : 'Next Step Required'}
                             </h4>
                             <p className="text-sm text-blue-800">
-                              {isUrdu 
+                              {isUrdu
                                 ? 'یہ منتقلی منظور شدہ ہے۔ اب نئے مالک کے لیے فروخت کا معاہدہ بنانا ضروری ہے۔'
                                 : 'This transfer has been approved. You now need to create a Sale Agreement for the new owner to complete the transfer process.'
                               }
                             </p>
                             <p className="text-xs text-blue-700 mt-2">
-                              {isUrdu 
+                              {isUrdu
                                 ? 'Sales Agreement → Forms → Sale Agreement پر جائیں'
                                 : 'Go to Forms → Sale Agreement to create the new agreement'
                               }

@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { PackagePlus, Save, RotateCcw } from "lucide-react";
 import { inventoryAPI } from "@/lib/api";
 import { useTranslation } from "react-i18next";
-import { formatEnum, formatSize, formatProjectName, getMarlaCount } from "@/utils/formatters";
+import { formatEnum, formatSize, formatProjectName, getMarlaCount, formatPlotNumberInput } from "@/utils/formatters";
 import { PROJECTS } from "@/constants/projects";
 
 const sizes = ["FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
@@ -42,15 +42,15 @@ export default function AddInventory() {
   // Calculate total price automatically when perMarlaPrice, size, or isCornerPlot changes
   const calculateTotalPrice = () => {
     if (!formData.perMarlaPrice || !formData.size) return "";
-    
+
     const perMarla = parseFloat(formData.perMarlaPrice);
     const marlaCount = getMarlaCount(formData.size);
     const isCorner = formData.isCornerPlot === "true";
-    
+
     // Add 10% if corner plot
     const adjustedPerMarlaPrice = isCorner ? perMarla * 1.1 : perMarla;
     const totalPrice = adjustedPerMarlaPrice * marlaCount;
-    
+
     return totalPrice.toFixed(0);
   };
 
@@ -94,7 +94,7 @@ export default function AddInventory() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const totalPrice = calculateTotalPrice();
     if (!totalPrice) {
       toast({
@@ -104,7 +104,7 @@ export default function AddInventory() {
       });
       return;
     }
-    
+
     // Convert form data to API format
     const inventoryData = {
       plotNo: formData.plotNo,
@@ -116,7 +116,7 @@ export default function AddInventory() {
       description: formData.description || undefined,
       status: "AVAILABLE",
     };
-    
+
     createInventoryMutation.mutate(inventoryData);
   };
 
@@ -159,7 +159,7 @@ export default function AddInventory() {
                     id="plotNo"
                     placeholder="e.g., A-101"
                     value={formData.plotNo}
-                    onChange={(e) => setFormData({ ...formData, plotNo: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, plotNo: formatPlotNumberInput(e.target.value) })}
                     required
                   />
                 </div>

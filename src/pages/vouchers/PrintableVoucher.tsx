@@ -7,14 +7,7 @@ import { Printer, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
-import {
-  formatCurrency,
-  formatDate as formatDateUtil,
-  formatEnum,
-  formatProjectName as formatProjectNameUtil,
-  formatPaymentMethod as formatPaymentMethodUtil,
-  formatPaymentType as formatPaymentTypeUtil
-} from "@/utils/formatters";
+import { useFormatters } from "@/hooks/useFormatters";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -36,11 +29,7 @@ export default function PrintableVoucher() {
     enabled: !!voucherId,
   });
 
-  // Local wrappers for formatters
-  const formatDate = (dateString: string) => formatDateUtil(dateString, 'en-PK', { year: 'numeric', month: 'long', day: 'numeric' });
-  const formatProjectName = (value: string) => formatProjectNameUtil(value, t);
-  const formatPaymentMethod = (method: string) => formatPaymentMethodUtil(method, t);
-  const formatPaymentType = (type: string) => formatPaymentTypeUtil(type, t);
+  const { formatDateLong: formatDate, formatProjectName, formatPaymentMethod, formatPaymentType, formatCurrency, formatEnum } = useFormatters();
 
   const handlePrint = () => {
     window.print();
@@ -49,7 +38,7 @@ export default function PrintableVoucher() {
   const renderReceiptContent = (copyLabel: string) => (
     <div className="receipt-copy" style={{ position: 'relative' }}>
       {/* Logo Watermark */}
-      <div className="watermark-logo" style={{ 
+      <div className="watermark-logo" style={{
         position: 'absolute',
         top: '50%',
         left: '50%',
@@ -65,7 +54,7 @@ export default function PrintableVoucher() {
       }}>
         <img src="/Logo.png" alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
       </div>
-      
+
       <div style={{ position: 'relative', zIndex: 1 }}>
         {/* Voucher Title */}
         <div className="text-center mb-6">
@@ -140,7 +129,7 @@ export default function PrintableVoucher() {
               <p className="font-semibold text-gray-800">{formatPaymentMethod(voucher.paymentMethod)}</p>
             </div>
           </div>
-          
+
           {/* Payment Type */}
           {voucher.formType && (
             <div className="mb-4 pt-3 border-t border-gray-300">
@@ -208,9 +197,9 @@ export default function PrintableVoucher() {
             {voucher.status === 'APPROVED' ? (
               <div className="flex flex-col items-center">
                 <div className="w-full border-b-2 border-gray-800 h-16 mb-2 flex items-center justify-center">
-                  <img 
+                  <img
                     src={voucher.approvedBy?.signature ? `${API_BASE_URL}${voucher.approvedBy.signature}` : `${API_BASE_URL}/signatures/admin-signature.png`}
-                    alt="Authorized Signature" 
+                    alt="Authorized Signature"
                     className="max-h-12 object-contain"
                     onLoad={() => console.log('✅ Signature loaded')}
                     onError={(e) => {
@@ -219,7 +208,7 @@ export default function PrintableVoucher() {
                     }}
                   />
                 </div>
-                <p className="text-sm text-gray-600 text-center">{t('vouchers.receivedBy')}</p>
+                <p className="text-sm text-gray-600 text-center">{t('vouchers.authorizedSignature')}</p>
                 <p className="text-xs text-gray-500 text-center mt-1">{voucher.approvedBy?.name || 'Admin'}</p>
               </div>
             ) : (
@@ -227,7 +216,7 @@ export default function PrintableVoucher() {
                 <div className="border-b-2 border-gray-800 h-16 mb-2 flex items-center justify-center">
                   <span className="text-gray-500 text-sm"></span>
                 </div>
-                <p className="text-sm text-gray-600 text-center">{t('vouchers.receivedBy')}</p>
+                <p className="text-sm text-gray-600 text-center">{t('vouchers.authorizedSignature')}</p>
                 <p className="text-xs text-gray-500 text-center mt-1">{voucher.approvedBy?.name || 'Admin'}</p>
               </div>
             )}
@@ -246,6 +235,9 @@ export default function PrintableVoucher() {
           </p>
           <p className="text-xs text-gray-500 mt-1">
             {t('vouchers.contactOffice')}
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            Created by: {voucher.createdBy?.name || 'System'}
           </p>
         </div>
 
@@ -295,17 +287,17 @@ export default function PrintableVoucher() {
         <div className="letterhead-header w-full print:hidden" style={{ marginBottom: '20px' }}>
           <img src="/letterhead header.png" alt="Header" className="w-full" style={{ display: 'block', width: '100%', maxWidth: '100%' }} />
         </div>
-        
+
         <div className="p-6 print:p-4 page-content">
           {/* Customer Copy */}
           {renderReceiptContent(t('vouchers.customerCopy'))}
-          
+
           {/* Seller Copy - Hidden on screen, visible on print */}
           <div className="hidden print:block mt-8 print:mt-0">
             {renderReceiptContent(isUrdu ? 'فروخت کنندہ کی کاپی' : 'SELLER COPY')}
           </div>
         </div>
-        
+
         {/* Letterhead Footer - Screen only */}
         <div className="letterhead-footer w-full print:hidden">
           <img src="/letterhead footer.png" alt="Footer" className="w-full" style={{ display: 'block', width: '100%', maxWidth: '100%' }} />

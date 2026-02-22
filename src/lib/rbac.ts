@@ -1,6 +1,6 @@
 // Role-based access control utilities
 
-export type UserRole = 'ADMIN' | 'MANAGER' | 'AGENT';
+export type UserRole = 'ADMIN' | 'MANAGER';
 
 export interface User {
   id: string;
@@ -23,7 +23,7 @@ export const getUserData = (): User | null => {
 
 export const getUserRole = (): UserRole => {
   const user = getUserData();
-  return user?.role || 'AGENT';
+  return user?.role || 'MANAGER';
 };
 
 export const isAdmin = (): boolean => {
@@ -45,28 +45,28 @@ export const ROUTE_PERMISSIONS = {
   '/inventory/sold': ['ADMIN', 'MANAGER'],
   '/inventory/unsold': ['ADMIN', 'MANAGER'],
   '/inventory/add': ['ADMIN', 'MANAGER'],
-  
+
   // Forms
   '/forms/biyana': ['ADMIN', 'MANAGER'],
   '/forms/sale-agreement': ['ADMIN', 'MANAGER'],
   '/forms/transfer': ['ADMIN', 'MANAGER'],
-  
+
   // Submitted Forms
   '/submitted-forms/biyana': ['ADMIN', 'MANAGER'],
   '/submitted-forms/sale-agreement': ['ADMIN', 'MANAGER'],
   '/submitted-forms/transfer': ['ADMIN', 'MANAGER'],
-  
+
   // Payments
   '/payments/record': ['ADMIN', 'MANAGER'],
-  
+
   // Reports
   '/reports/sales': ['ADMIN'],
   '/reports/payment': ['ADMIN'],
   '/reports/comparison': ['ADMIN'],
-  
+
   // Vouchers
   '/vouchers': ['ADMIN'],
-  
+
   // Approvals
   '/approvals': ['ADMIN'],
 } as const;
