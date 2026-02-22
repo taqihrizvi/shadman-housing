@@ -80,7 +80,7 @@ const Index = () => {
   const isUrdu = i18n.language === 'ur';
   const navigate = useNavigate();
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  
+
   // Sold inventory detail states
   const [selectedPlot, setSelectedPlot] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -95,9 +95,9 @@ const Index = () => {
   const [soldStatusFilter, setSoldStatusFilter] = useState("All Status");
   const [selectedPaymentPlot, setSelectedPaymentPlot] = useState<any>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  
+
   const statusOptions = ["All Status", "SOLD", "TRANSFERRED"];
-  
+
   // Fetch dashboard stats from API
   const { data: dashboardStats, isLoading } = useQuery({
     queryKey: ['dashboardStats'],
@@ -165,12 +165,12 @@ const Index = () => {
     if (plot.status === 'TRANSFERRED') {
       return 'TRANSFERRED';
     }
-    
+
     const transfer = getPlotTransfer(plot.id);
     if (transfer && transfer.status === 'COMPLETED') {
       return 'SOLD (Transferred)';
     }
-    
+
     return 'SOLD';
   };
 
@@ -210,7 +210,7 @@ const Index = () => {
       alert("No Biyana form found for this plot");
       return;
     }
-    
+
     const data = {
       customerName: plot.buyer?.name || "",
       fatherHusbandName: biyana.fatherHusbandName || plot.buyer?.fatherName || "",
@@ -251,7 +251,7 @@ const Index = () => {
       alert("No Sale Agreement found for this plot");
       return;
     }
-    
+
     try {
       // Fetch full sale agreement details including all related data
       const response = await formsAPI.getSaleAgreementById(saleAgreement.id);
@@ -270,7 +270,7 @@ const Index = () => {
       alert("No Transfer form found for this plot");
       return;
     }
-    
+
     const data = {
       transferNumber: transfer.transferNumber,
       transferDate: transfer.transferDate,
@@ -474,37 +474,37 @@ const Index = () => {
         }
         return acc;
       }, {});
-    
+
     const paymentData = Object.values(activeAgreements)
       .map((agreement: any) => {
         // Get voucher payments for this plot
         const plotPayments = (vouchersData || [])
           .filter((v: any) => v.plotId === agreement.plotId)
           .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        
+
         // Get biyana for this plot
         const plotBiyana = biyanaForms?.find((b: any) => b.plotId === agreement.plotId);
-        
+
         // Check if vouchers already exist for BIYANA and SALES_AGREEMENT
         const hasBiyanaVoucher = plotPayments.some((p: any) => p.formType === 'BIYANA');
         const hasSalesVoucher = plotPayments.some((p: any) => p.formType === 'SALES_AGREEMENT');
-        
+
         // Calculate total received from vouchers only
         let totalReceived = plotPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-        
+
         // Add biyana amount only if no biyana voucher exists
         if (!hasBiyanaVoucher && plotBiyana && plotBiyana.tokenAmount) {
           totalReceived += plotBiyana.tokenAmount;
         }
-        
+
         // Add down payment only if no sales agreement voucher exists
         if (!hasSalesVoucher && agreement.downPayment) {
           totalReceived += agreement.downPayment;
         }
-        
+
         const totalReceivable = agreement.totalAmount || 0;
         const agreementDate = agreement.agreementDate ? new Date(agreement.agreementDate).toLocaleDateString('en-GB') : 'N/A';
-        
+
         return {
           plotNo: agreement.plot?.plotNo || 'N/A',
           customerName: agreement.customer?.name || 'N/A',
@@ -513,7 +513,7 @@ const Index = () => {
           totalReceivable: totalReceivable,
         };
       });
-    
+
     return `
       <div style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden;">
         <div style="background: linear-gradient(135deg, #1a5a4a 0%, #154238 100%); padding: 20px; border-bottom: 4px solid #154238;">
@@ -533,7 +533,7 @@ const Index = () => {
             </thead>
             <tbody>
               ${paymentData.map((payment: any, index: number) => {
-                return `
+      return `
                   <tr style="background-color: ${index % 2 === 0 ? 'white' : '#f9fafb'}; border-bottom: 1px solid #e5e7eb;">
                     <td style="padding: 12px; color: #374151; border-right: 1px solid #e5e7eb;">${payment.agreementDate}</td>
                     <td style="padding: 12px; font-weight: 600; color: #1a5a4a; border-right: 1px solid #e5e7eb;">${payment.plotNo}</td>
@@ -542,7 +542,7 @@ const Index = () => {
                     <td style="padding: 12px; text-align: right; font-weight: 600; color: #1a5a4a;">${formatCurrency(payment.totalReceivable)}</td>
                   </tr>
                 `;
-              }).join('')}
+    }).join('')}
             </tbody>
           </table>
           ${paymentData.length === 0 ? `
@@ -562,10 +562,10 @@ const Index = () => {
     element.style.fontFamily = "'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
     element.style.lineHeight = '1.6';
 
-    const today = new Date().toLocaleDateString("en-PK", { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const today = new Date().toLocaleDateString("en-PK", {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
 
     let fileName = 'dashboard-report';
@@ -777,14 +777,14 @@ const Index = () => {
       margin: [0, 0, 0, 0] as [number, number, number, number],
       filename: `${fileName}-${new Date().toISOString().split('T')[0]}.pdf`,
       image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
+      html2canvas: {
+        scale: 2,
         useCORS: true,
         letterRendering: true,
         allowTaint: false
       },
-      jsPDF: { 
-        unit: 'mm' as const, 
+      jsPDF: {
+        unit: 'mm' as const,
         format: !selectedCard ? [297, 215] : 'a4' as any,
         orientation: (selectedCard ? 'portrait' : 'landscape') as 'portrait' | 'landscape',
         compress: true,
@@ -858,8 +858,8 @@ const Index = () => {
               variant="accent"
             />
           </div>
-          <div 
-            onClick={() => setSelectedCard('payments')} 
+          <div
+            onClick={() => setSelectedCard('payments')}
             className="cursor-pointer transition-all hover:scale-105 group"
           >
             <Card className="border-l-4 border-l-accent card-hover h-full bg-gradient-to-br from-accent/5 to-transparent overflow-hidden relative">
@@ -1009,7 +1009,7 @@ const Index = () => {
                   return transfer ? (
                     <>
                       <div>
-                        <div 
+                        <div
                           className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
                           onClick={() => setShowTransferDetails(!showTransferDetails)}
                         >
@@ -1069,7 +1069,7 @@ const Index = () => {
                             </div>
                             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                               <p className="text-sm text-amber-800">
-                                <strong>Note:</strong> This plot was transferred from {transfer.fromCustomer?.name} to {transfer.toCustomer?.name}. 
+                                <strong>Note:</strong> This plot was transferred from {transfer.fromCustomer?.name} to {transfer.toCustomer?.name}.
                                 {t('payments.saleAgreementDetails')}
                               </p>
                             </div>
@@ -1087,7 +1087,7 @@ const Index = () => {
                   const biyana = getPlotBiyana(selectedPlot.id);
                   return (
                     <div>
-                      <div 
+                      <div
                         className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
                         onClick={() => setShowBiyanaDetails(!showBiyanaDetails)}
                       >
@@ -1132,16 +1132,16 @@ const Index = () => {
                               <p className="text-sm text-muted-foreground">{t('payments.paymentMethod')}</p>
                               <p className="font-semibold">{formatEnum(biyana.paymentMethod)}</p>
                             </div>
-                          {biyana.remarks && (
-                            <div className="col-span-2">
-                              <p className="text-sm text-muted-foreground">Remarks</p>
-                              <p className="text-sm">{biyana.remarks}</p>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground p-4 border rounded-lg">No Biyana form found</p>
-                      ))}
+                            {biyana.remarks && (
+                              <div className="col-span-2">
+                                <p className="text-sm text-muted-foreground">Remarks</p>
+                                <p className="text-sm">{biyana.remarks}</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground p-4 border rounded-lg">No Biyana form found</p>
+                        ))}
                     </div>
                   );
                 })()}
@@ -1161,10 +1161,10 @@ const Index = () => {
                   // Pending calculation should subtract all payments (biyana + down payment + installments)
                   const totalReceived = downPayment + biyanaAmount + paymentsTotal;
                   const calculatedPending = saleAgreement?.totalAmount ? saleAgreement.totalAmount - totalReceived : 0;
-                  
+
                   return (
                     <div>
-                      <div 
+                      <div
                         className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
                         onClick={() => setShowSaleAgreementDetails(!showSaleAgreementDetails)}
                       >
@@ -1192,58 +1192,58 @@ const Index = () => {
                       </div>
                       {showSaleAgreementDetails && (
                         saleAgreement ? (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
-                            <div>
-                              <p className="text-sm text-muted-foreground">{t('payments.agreementNumber')}</p>
-                              <p className="font-semibold">{saleAgreement.agreementNumber}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Customer</p>
-                              <p className="font-semibold">{toTitleCase(saleAgreement.customer?.name || "N/A")}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Total Amount</p>
-                              <p className="font-semibold text-blue-600">{formatCurrency(saleAgreement.totalAmount)}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">{t('payments.downPayment')}</p>
-                              <p className="font-semibold text-green-600">{formatCurrency(saleAgreement.downPayment)}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Total Paid (Installments)</p>
-                              <p className="font-semibold text-green-600">
-                                {formatCurrency(calculatedTotalPaid)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Pending Amount</p>
-                              <p className="font-semibold text-orange-600">
-                                {formatCurrency(calculatedPending)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Date</p>
-                              <p className="font-semibold">{saleAgreement.agreementDate ? formatDate(saleAgreement.agreementDate) : 'N/A'}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Payment Plan</p>
-                              <p className="font-semibold">{saleAgreement.installmentMonths !== null ? 
-                                (saleAgreement.installmentMonths === 0 ? t('payments.fullPayment') : 
-                                 `${saleAgreement.installmentMonths} Months Installment`) 
-                                : 'N/A'}</p>
-                            </div>
-                            {saleAgreement.remarks && (
-                              <div className="col-span-2">
-                                <p className="text-sm text-muted-foreground">Remarks</p>
-                                <p className="text-sm">{saleAgreement.remarks}</p>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
+                              <div>
+                                <p className="text-sm text-muted-foreground">{t('payments.agreementNumber')}</p>
+                                <p className="font-semibold">{saleAgreement.agreementNumber}</p>
                               </div>
-                            )}
+                              <div>
+                                <p className="text-sm text-muted-foreground">Customer</p>
+                                <p className="font-semibold">{toTitleCase(saleAgreement.customer?.name || "N/A")}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Total Amount</p>
+                                <p className="font-semibold text-blue-600">{formatCurrency(saleAgreement.totalAmount)}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">{t('payments.downPayment')}</p>
+                                <p className="font-semibold text-green-600">{formatCurrency(saleAgreement.downPayment)}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Total Paid (Installments)</p>
+                                <p className="font-semibold text-green-600">
+                                  {formatCurrency(calculatedTotalPaid)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Pending Amount</p>
+                                <p className="font-semibold text-orange-600">
+                                  {formatCurrency(calculatedPending)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Date</p>
+                                <p className="font-semibold">{saleAgreement.agreementDate ? formatDate(saleAgreement.agreementDate) : 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Payment Plan</p>
+                                <p className="font-semibold">{saleAgreement.installmentMonths !== null ?
+                                  (saleAgreement.installmentMonths === 0 ? t('payments.fullPayment') :
+                                    `${saleAgreement.installmentMonths} Months Installment`)
+                                  : 'N/A'}</p>
+                              </div>
+                              {saleAgreement.remarks && (
+                                <div className="col-span-2">
+                                  <p className="text-sm text-muted-foreground">Remarks</p>
+                                  <p className="text-sm">{saleAgreement.remarks}</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground p-4 border rounded-lg">No Sale Agreement found</p>
-                      ))}
+                        ) : (
+                          <p className="text-sm text-muted-foreground p-4 border rounded-lg">No Sale Agreement found</p>
+                        ))}
                     </div>
                   );
                 })()}
@@ -1256,7 +1256,7 @@ const Index = () => {
                   const totalPaid = payments.reduce((sum: number, p: any) => sum + p.amount, 0);
                   return (
                     <div>
-                      <div 
+                      <div
                         className="flex items-center justify-between cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 mb-3"
                         onClick={() => setShowPaymentDetails(!showPaymentDetails)}
                       >
@@ -1270,44 +1270,44 @@ const Index = () => {
                       {showPaymentDetails && (
                         payments.length > 0 ? (
                           <div className="space-y-3">
-                          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <p className="text-sm text-green-700">{t('payments.totalPaidInstallments')}</p>
-                            <p className="text-2xl font-bold text-green-700">{formatCurrency(totalPaid)}</p>
-                          </div>
-                          <div className="border rounded-lg overflow-hidden">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Voucher No</TableHead>
-                                  <TableHead>Date</TableHead>
-                                  <TableHead>{t('payments.amount')}</TableHead>
-                                  <TableHead>Method</TableHead>
-                                  <TableHead>Description</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {payments.map((payment: any) => (
-                                  <TableRow key={payment.id}>
-                                    <TableCell className="font-medium">{payment.voucherNo}</TableCell>
-                                    <TableCell>{formatDate(payment.date)}</TableCell>
-                                    <TableCell className="font-semibold text-green-600">
-                                      {formatCurrency(payment.amount)}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline">{formatEnum(payment.paymentMethod)}</Badge>
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {payment.description || "N/A"}
-                                    </TableCell>
+                            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                              <p className="text-sm text-green-700">{t('payments.totalPaidInstallments')}</p>
+                              <p className="text-2xl font-bold text-green-700">{formatCurrency(totalPaid)}</p>
+                            </div>
+                            <div className="border rounded-lg overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Voucher No</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>{t('payments.amount')}</TableHead>
+                                    <TableHead>Method</TableHead>
+                                    <TableHead>Description</TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
+                                </TableHeader>
+                                <TableBody>
+                                  {payments.map((payment: any) => (
+                                    <TableRow key={payment.id}>
+                                      <TableCell className="font-medium">{payment.voucherNo}</TableCell>
+                                      <TableCell>{formatDate(payment.date)}</TableCell>
+                                      <TableCell className="font-semibold text-green-600">
+                                        {formatCurrency(payment.amount)}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline">{formatEnum(payment.paymentMethod)}</Badge>
+                                      </TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {payment.description || "N/A"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground p-4 border rounded-lg">{t('payments.noPaymentsRecorded')}</p>
-                      ))}
+                        ) : (
+                          <p className="text-sm text-muted-foreground p-4 border rounded-lg">{t('payments.noPaymentsRecorded')}</p>
+                        ))}
                     </div>
                   );
                 })()}
@@ -1321,25 +1321,25 @@ const Index = () => {
           <Dialog open={isPrintOpen} onOpenChange={setIsPrintOpen}>
             <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 overflow-y-auto">
               <DialogTitle className="sr-only">
-                {formType === 'biyana' ? 'Print Biyana Form' : 
-                 formType === 'saleAgreement' ? 'Print Sale Agreement' : 
-                 'Print Transfer Form'}
+                {formType === 'biyana' ? 'Print Biyana Form' :
+                  formType === 'saleAgreement' ? 'Print Sale Agreement' :
+                    'Print Transfer Form'}
               </DialogTitle>
               {formType === 'biyana' && (
-                <PrintableBiyanaFormSimple 
-                  data={printData} 
+                <PrintableBiyanaFormSimple
+                  data={printData}
                   onClose={() => setIsPrintOpen(false)}
                 />
               )}
               {formType === 'saleAgreement' && (
-                <PrintableSaleAgreementForm 
-                  data={printData} 
+                <PrintableSaleAgreementForm
+                  data={printData}
                   onClose={() => setIsPrintOpen(false)}
                 />
               )}
               {formType === 'transfer' && (
-                <PrintableTransferForm 
-                  data={printData} 
+                <PrintableTransferForm
+                  data={printData}
                   onClose={() => setIsPrintOpen(false)}
                 />
               )}
@@ -1362,16 +1362,16 @@ const Index = () => {
               const agreement = saleAgreements?.find((a: any) => a.plotId === selectedPaymentPlot.plotId);
               // Get biyana form for this plot
               const biyana = biyanaForms?.find((b: any) => b.plotId === selectedPaymentPlot.plotId);
-              
+
               // Combine all payments: vouchers + biyana payment + down payment
               let allPayments = [...(selectedPaymentPlot.payments || [])];
-              
+
               // Check if a SALES_AGREEMENT voucher already exists
               const hasSalesAgreementVoucher = allPayments.some((p: any) => p.formType === 'SALES_AGREEMENT');
-              
+
               // Check if a BIYANA voucher already exists
               const hasBiyanaVoucher = allPayments.some((p: any) => p.formType === 'BIYANA');
-              
+
               // Add down payment if it exists from sale agreement and no voucher exists
               if (agreement && agreement.downPayment && !hasSalesAgreementVoucher) {
                 allPayments.push({
@@ -1385,7 +1385,7 @@ const Index = () => {
                   type: 'DOWN_PAYMENT'
                 });
               }
-              
+
               // Add biyana payment if it exists and no voucher exists
               if (biyana && biyana.tokenAmount && !hasBiyanaVoucher) {
                 allPayments.push({
@@ -1399,21 +1399,21 @@ const Index = () => {
                   type: 'BIYANA'
                 });
               }
-              
+
               // Sort all payments by date
-              allPayments = allPayments.sort((a: any, b: any) => 
+              allPayments = allPayments.sort((a: any, b: any) =>
                 new Date(a.date).getTime() - new Date(b.date).getTime()
               );
-              
+
               // Calculate total paid - ONLY installments (exclude BIYANA and DOWN_PAYMENT)
-              const installmentPayments = allPayments.filter((p: any) => 
+              const installmentPayments = allPayments.filter((p: any) =>
                 p.type !== 'BIYANA' && p.type !== 'DOWN_PAYMENT'
               );
               const totalPaidInstallments = installmentPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-              
+
               // Calculate total received (includes everything)
               const totalReceived = allPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-              
+
               return (
                 <div className="space-y-6">
                   {/* Sale Agreement Information */}
@@ -1512,7 +1512,7 @@ const Index = () => {
                         </Button>
                       )}
                     </div>
-                    
+
                     {allPayments.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         {t('payments.noPaymentsReceived')}
@@ -1577,93 +1577,93 @@ const Index = () => {
                             </tbody>
                           </table>
                         </div>
-                        
+
                         {/* Visible table */}
-                      <div className="border rounded-lg overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>{t('payments.dateOfPayment')}</TableHead>
-                              <TableHead>{t('payments.paymentType')}</TableHead>
-                              <TableHead>{t('payments.paymentMethod')}</TableHead>
-                              <TableHead>Bank & Account</TableHead>
-                              <TableHead>Slip Number</TableHead>
-                              <TableHead className="text-right">{t('payments.amount')}</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {allPayments.map((payment: any) => {
-                              // Determine payment type and styling
-                              const isBiyana = payment.type === 'BIYANA' || payment.formType === 'BIYANA';
-                              const isSalesAgreement = payment.type === 'DOWN_PAYMENT' || payment.formType === 'SALES_AGREEMENT';
-                              const rowClass = isBiyana ? 'bg-blue-50' : isSalesAgreement ? 'bg-green-50' : '';
-                              
-                              return (
-                                <TableRow key={payment.id} className={rowClass}>
-                                  <TableCell>{formatDate(payment.date)}</TableCell>
-                                  <TableCell>
-                                    <div>
-                                      {isBiyana ? (
-                                        <>
-                                          <Badge variant="default" className="bg-blue-600">Biyana</Badge>
-                                          {payment.description && 
-                                           payment.description !== 'Biyana Payment' &&
-                                           !payment.description.includes('BF-') && (
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                              {payment.description.replace(/Biyana Payment - /g, '')}
-                                            </div>
-                                          )}
-                                        </>
-                                      ) : isSalesAgreement ? (
-                                        <>
-                                          <Badge variant="default" className="bg-green-600">Down Payment</Badge>
-                                          {payment.description && 
-                                           payment.description !== 'Down Payment' &&
-                                           !payment.description.includes('SA-') && (
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                              {payment.description.replace(/Sales Agreement Down Payment - /g, '')}
-                                            </div>
-                                          )}
-                                        </>
-                                      ) : (
-                                        payment.description || t('payments.installment')
-                                      )}
-                                      {(payment.voucherNo || payment.voucherNumber) && (
-                                        <div className="text-xs text-muted-foreground mt-1">
-                                          {t('payments.voucher')}: {payment.voucherNo || payment.voucherNumber}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline">{formatEnum(payment.paymentMethod)}</Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    {payment.bankName ? (
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>{t('payments.dateOfPayment')}</TableHead>
+                                <TableHead>{t('payments.paymentType')}</TableHead>
+                                <TableHead>{t('payments.paymentMethod')}</TableHead>
+                                <TableHead>Bank & Account</TableHead>
+                                <TableHead>Slip Number</TableHead>
+                                <TableHead className="text-right">{t('payments.amount')}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {allPayments.map((payment: any) => {
+                                // Determine payment type and styling
+                                const isBiyana = payment.type === 'BIYANA' || payment.formType === 'BIYANA';
+                                const isSalesAgreement = payment.type === 'DOWN_PAYMENT' || payment.formType === 'SALES_AGREEMENT';
+                                const rowClass = isBiyana ? 'bg-blue-50' : isSalesAgreement ? 'bg-green-50' : '';
+
+                                return (
+                                  <TableRow key={payment.id} className={rowClass}>
+                                    <TableCell>{formatDate(payment.date)}</TableCell>
+                                    <TableCell>
                                       <div>
-                                        <div className="font-semibold">{formatEnum(payment.bankName)}</div>
-                                        {payment.accountNumber && (
-                                          <div className="text-xs text-muted-foreground">{payment.accountNumber}</div>
+                                        {isBiyana ? (
+                                          <>
+                                            <Badge variant="default" className="bg-blue-600">Biyana</Badge>
+                                            {payment.description &&
+                                              payment.description !== 'Biyana Payment' &&
+                                              !payment.description.includes('BF-') && (
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                  {payment.description.replace(/Biyana Payment - /g, '')}
+                                                </div>
+                                              )}
+                                          </>
+                                        ) : isSalesAgreement ? (
+                                          <>
+                                            <Badge variant="default" className="bg-green-600">Down Payment</Badge>
+                                            {payment.description &&
+                                              payment.description !== 'Down Payment' &&
+                                              !payment.description.includes('SA-') && (
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                  {payment.description.replace(/Sales Agreement Down Payment - /g, '')}
+                                                </div>
+                                              )}
+                                          </>
+                                        ) : (
+                                          payment.description || t('payments.installment')
+                                        )}
+                                        {(payment.voucherNo || payment.voucherNumber) && (
+                                          <div className="text-xs text-muted-foreground mt-1">
+                                            {t('payments.voucher')}: {payment.voucherNo || payment.voucherNumber}
+                                          </div>
                                         )}
                                       </div>
-                                    ) : (
-                                      <span className="text-muted-foreground">N/A</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {payment.slipNumber ? (
-                                      <Badge variant="outline">{payment.slipNumber}</Badge>
-                                    ) : (
-                                      <span className="text-muted-foreground">N/A</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="text-right font-semibold">{formatCurrency(payment.amount)}</TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline">{formatEnum(payment.paymentMethod)}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      {payment.bankName ? (
+                                        <div>
+                                          <div className="font-semibold">{formatEnum(payment.bankName)}</div>
+                                          {payment.accountNumber && (
+                                            <div className="text-xs text-muted-foreground">{payment.accountNumber}</div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span className="text-muted-foreground">N/A</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {payment.slipNumber ? (
+                                        <Badge variant="outline">{payment.slipNumber}</Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground">N/A</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold">{formatCurrency(payment.amount)}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </>
                     )}
                   </div>
@@ -1682,7 +1682,7 @@ const Index = () => {
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-2">Total Paid (Installments)</p>
                         <p className="text-3xl font-bold text-green-600">{formatCurrency(totalPaidInstallments)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">(Excluding Biyana & Down Payment)</p>
+                        <p className="text-xs text-muted-foreground mt-1">(Including Biyana & Down Payment)</p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-2">{t('payments.remainingAmount')}</p>
@@ -1721,7 +1721,7 @@ const Index = () => {
       const soldPlots = (inventoryData || [])
         .filter((plot: any) => plot.status === 'SOLD' || plot.status === 'TRANSFERRED')
         .filter((plot: any) => {
-          const matchesSearch = !soldSearchTerm || 
+          const matchesSearch = !soldSearchTerm ||
             plot.plotNo?.toLowerCase().includes(soldSearchTerm.toLowerCase()) ||
             plot.buyer?.name?.toLowerCase().includes(soldSearchTerm.toLowerCase());
           const matchesStatus = soldStatusFilter === "All Status" || plot.status === soldStatusFilter;
@@ -1780,7 +1780,7 @@ const Index = () => {
                   {soldPlots.map((item: any) => {
                     const plotStatus = getPlotStatus(item);
                     const isTransferred = item.status === 'TRANSFERRED';
-                    
+
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.plotNo}</TableCell>
@@ -1793,7 +1793,7 @@ const Index = () => {
                         </TableCell>
                         <TableCell>{toTitleCase(item.buyer?.name || "N/A")}</TableCell>
                         <TableCell>
-                          <Badge 
+                          <Badge
                             variant={isTransferred ? "secondary" : "default"}
                             className={isTransferred ? "bg-purple-100 text-purple-800" : ""}
                           >
@@ -1803,8 +1803,8 @@ const Index = () => {
                         <TableCell>{formatDate(item.soldDate)}</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(item.price)}</TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={(e) => {
                               e.preventDefault();
@@ -1861,7 +1861,7 @@ const Index = () => {
         const currentMonth = new Date();
         currentMonth.setDate(1);
         currentMonth.setHours(0, 0, 0, 0);
-        
+
         data = (inventoryData || [])
           .filter((plot: any) => {
             if (plot.status !== 'SOLD' || !plot.soldDate) return false;
@@ -1908,36 +1908,36 @@ const Index = () => {
             }
             return acc;
           }, {});
-        
+
         const paymentData = Object.values(activeAgreements)
           .map((agreement: any) => {
             // Get voucher payments for this plot with formType included
             const plotPayments = (vouchersData || [])
               .filter((v: any) => v.plotId === agreement.plotId)
               .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            
+
             // Get biyana for this plot
             const plotBiyana = biyanaForms?.find((b: any) => b.plotId === agreement.plotId);
-            
+
             // Check if vouchers already exist for BIYANA and SALES_AGREEMENT
             const hasBiyanaVoucher = plotPayments.some((p: any) => p.formType === 'BIYANA');
             const hasSalesVoucher = plotPayments.some((p: any) => p.formType === 'SALES_AGREEMENT');
-            
+
             // Calculate total received from vouchers only
             let totalReceived = plotPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-            
+
             // Add biyana amount only if no biyana voucher exists
             if (!hasBiyanaVoucher && plotBiyana && plotBiyana.tokenAmount) {
               totalReceived += plotBiyana.tokenAmount;
             }
-            
+
             // Add down payment only if no sales agreement voucher exists
             if (!hasSalesVoucher && agreement.downPayment) {
               totalReceived += agreement.downPayment;
             }
-            
+
             const totalReceivable = agreement.totalAmount || 0;
-            
+
             return {
               id: agreement.id,
               plotId: agreement.plotId,
