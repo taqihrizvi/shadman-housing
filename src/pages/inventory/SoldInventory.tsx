@@ -495,7 +495,7 @@ export default function SoldInventory() {
                                     setPlotToMakeAvailable(item);
                                     setIsMakeAvailableDialogOpen(true);
                                   }}
-                                  title="Make Available (Admin Only)"
+                                  title="Make Available"
                                   className="cursor-pointer text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                 >
                                   <ArrowRightLeft className="h-4 w-4" />
