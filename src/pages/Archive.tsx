@@ -22,7 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formsAPI, voucherAPI } from "@/lib/api";
-import { Archive as ArchiveIcon, Loader2, Eye, Search, ArrowRightLeft, Receipt, FileText } from "lucide-react";
+import { Archive as ArchiveIcon, Loader2, Eye, Search, ArrowRightLeft, Receipt, FileText, FileSignature } from "lucide-react";
+import { StatCard } from "@/components/dashboard/StatCard";
 
 import { useTranslation } from 'react-i18next';
 import { toTitleCase } from "@/lib/utils";
@@ -58,7 +59,6 @@ const Archive = () => {
       const response = await formsAPI.getArchivedBiyanaForms();
       return response.data;
     },
-    enabled: activeTab === 'biyana',
   });
 
   const { data: archivedVouchersData, isLoading: loadingVouchers } = useQuery({
@@ -67,7 +67,6 @@ const Archive = () => {
       const response = await voucherAPI.getArchived();
       return response.data;
     },
-    enabled: activeTab === 'vouchers',
   });
 
   const { data: archivedTransfersData, isLoading: loadingTransfers } = useQuery({
@@ -76,7 +75,6 @@ const Archive = () => {
       const response = await formsAPI.getArchivedTransferForms();
       return response.data;
     },
-    enabled: activeTab === 'transfers',
   });
 
   const archivedVouchers = archivedVouchersData ?? [];
@@ -144,6 +142,42 @@ const Archive = () => {
           </div>
         </div>
 
+        {/* Stats Grid */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div onClick={() => setActiveTab("agreements")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatCard
+              title="Archived Sale Agreements"
+              value={loadingAgreements ? "..." : String(archivedAgreements?.length || 0)}
+              icon={FileSignature}
+              variant="primary"
+            />
+          </div>
+          <div onClick={() => setActiveTab("biyana")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatCard
+              title="Archived Biyana Forms"
+              value={loadingBiyana ? "..." : String(archivedBiyana?.length || 0)}
+              icon={FileText}
+              variant="warning"
+            />
+          </div>
+          <div onClick={() => setActiveTab("transfers")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatCard
+              title="Archived Transfer Forms"
+              value={loadingTransfers ? "..." : String(archivedTransfers.length || 0)}
+              icon={ArrowRightLeft}
+              variant="success"
+            />
+          </div>
+          <div onClick={() => setActiveTab("vouchers")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatCard
+              title="Archived Vouchers"
+              value={loadingVouchers ? "..." : String(archivedVouchers.length || 0)}
+              icon={Receipt}
+              variant="accent"
+            />
+          </div>
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <TabsList className="inline-flex flex-wrap items-center justify-start gap-2 h-auto w-full md:w-auto bg-muted/50 p-1 rounded-lg">
@@ -158,21 +192,21 @@ const Archive = () => {
                 <FileText className="h-4 w-4" />
                 Biyana Forms
                 <span className="rounded-full bg-background/50 px-2 py-0.5 text-xs">
-                  {activeTab === 'biyana' ? (archivedBiyana?.length ?? 0) : '...'}
+                  {archivedBiyana?.length ?? 0}
                 </span>
               </TabsTrigger>
               <TabsTrigger value="transfers" className="flex items-center gap-2 px-4 py-2">
                 <ArrowRightLeft className="h-4 w-4" />
                 Transfer Forms
                 <span className="rounded-full bg-background/50 px-2 py-0.5 text-xs">
-                  {activeTab === 'transfers' ? archivedTransfers.length : '...'}
+                  {archivedTransfers.length}
                 </span>
               </TabsTrigger>
               <TabsTrigger value="vouchers" className="flex items-center gap-2 px-4 py-2">
                 <Receipt className="h-4 w-4" />
                 Vouchers
                 <span className="rounded-full bg-background/50 px-2 py-0.5 text-xs">
-                  {activeTab === 'vouchers' ? archivedVouchers.length : '...'}
+                  {archivedVouchers.length}
                 </span>
               </TabsTrigger>
             </TabsList>
