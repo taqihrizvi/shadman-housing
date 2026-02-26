@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Download, ShoppingCart, MapPin, Pencil, X } from "lucide-react";
+import { Search, ShoppingCart, MapPin, Pencil, FilterX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryAPI } from "@/lib/api";
@@ -42,7 +42,7 @@ import {
   formatPlotType,
   formatPlotNumberInput
 } from "@/utils/formatters";
-import { PROJECTS, PROJECTS_WITH_ALL } from "@/constants/projects";
+import { PROJECTS } from "@/constants/projects";
 
 const sizes = ["All Sizes", "FIVE_MARLA", "SEVEN_MARLA", "TEN_MARLA", "ONE_KANAL", "TWO_KANAL"];
 
@@ -54,7 +54,7 @@ export default function UnsoldInventory() {
   const userRole = getUserRole();
   const isManager = userRole === 'MANAGER';
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProject, setSelectedProject] = useState("All Projects");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedSize, setSelectedSize] = useState("All Sizes");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -70,10 +70,11 @@ export default function UnsoldInventory() {
 
   // Fetch unsold inventory from API
   const { data: inventoryData, isLoading } = useQuery({
-    queryKey: ['unsoldInventory', selectedProject, selectedSize, searchTerm],
+    queryKey: ['unsoldInventory', selectedStatus, selectedSize, searchTerm],
     queryFn: async () => {
-      const params: any = { status: 'AVAILABLE,PENDING,RESERVED' };
-      if (selectedProject !== "All Projects") params.project = selectedProject;
+      const params: any = {
+        status: selectedStatus === 'ALL' ? 'AVAILABLE,PENDING,RESERVED' : selectedStatus,
+      };
       if (searchTerm) params.search = searchTerm;
       const response = await inventoryAPI.getAll(params);
       return response.data;
@@ -143,18 +144,21 @@ export default function UnsoldInventory() {
   };
 
   const filteredInventory = (inventoryData || []).filter((item: any) => {
-    if (selectedSize !== "All Sizes") {
-      return item.size === selectedSize;
-    }
+    if (selectedSize !== "All Sizes" && item.size !== selectedSize) return false;
+    if (selectedStatus !== "ALL" && item.status !== selectedStatus) return false;
     return true;
   });
 
+  const availableCount = filteredInventory.filter((i: any) => i.status === "AVAILABLE").length;
+  const pendingCount = filteredInventory.filter((i: any) => i.status === "PENDING").length;
+  const reservedCount = filteredInventory.filter((i: any) => i.status === "RESERVED").length;
   const totalValue = filteredInventory.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
 
   const getCardTitle = (cardType: string) => {
     switch (cardType) {
-      case 'totalUnits': return t('inventory.unsoldInventory');
-      case 'available': return t('inventory.available');
+      case 'available': return t('inventory.availableToSell');
+      case 'pendingReservation': return t('inventory.pendingReservationPlot');
+      case 'reserved': return t('inventory.reservedPlot');
       case 'totalValue': return t('inventory.totalValue');
       default: return '';
     }
@@ -163,10 +167,14 @@ export default function UnsoldInventory() {
   const renderCardTable = (cardType: string) => {
     let data: any[] = [];
     let columns: string[] = [];
+    const statusFilter = cardType === 'available' ? 'AVAILABLE' : cardType === 'pendingReservation' ? 'PENDING' : 'RESERVED';
+    const filtered = filteredInventory.filter((i: any) => i.status === statusFilter);
 
     switch (cardType) {
-      case 'totalUnits':
-        data = filteredInventory.map((item: any) => ({
+      case 'available':
+      case 'pendingReservation':
+      case 'reserved':
+        data = filtered.map((item: any) => ({
           plotNo: item.plotNo,
           project: formatProjectName(item.project, t),
           size: formatSize(item.size, t),
@@ -175,16 +183,6 @@ export default function UnsoldInventory() {
           status: formatEnum(item.status),
         }));
         columns = ['plotNo', 'project', 'size', 'plotType', 'price', 'status'];
-        break;
-      case 'available':
-        data = filteredInventory.filter(i => i.status === "AVAILABLE").map((item: any) => ({
-          plotNo: item.plotNo,
-          project: formatProjectName(item.project, t),
-          size: formatSize(item.size, t),
-          plotType: formatPlotType(item.isCornerPlot),
-          price: formatCurrency(item.price),
-        }));
-        columns = ['plotNo', 'project', 'size', 'plotType', 'price'];
         break;
       case 'totalValue':
         data = filteredInventory.map((item: any) => ({
@@ -243,40 +241,12 @@ export default function UnsoldInventory() {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in" dir={isUrdu ? 'rtl' : 'ltr'}>
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t('inventory.unsoldInventory')}</h1>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              {t('reports.exportPDF')}
-            </Button>
-            <Button>
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              {t('common.add')}
-            </Button>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t('inventory.unsoldInventory')}</h1>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card
-            className="border-l-4 border-l-warning cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => setSelectedCard('totalUnits')}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('inventory.unsoldInventory')}</p>
-                  <p className="text-2xl font-bold">{filteredInventory.length}</p>
-                </div>
-                <div className="rounded-xl bg-warning/10 p-3">
-                  <MapPin className="h-6 w-6 text-warning" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid gap-4 md:grid-cols-4">
           <Card
             className="border-l-4 border-l-success cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => setSelectedCard('available')}
@@ -284,19 +254,58 @@ export default function UnsoldInventory() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('inventory.available')}</p>
-                  <p className="text-2xl font-bold">
-                    {filteredInventory.filter(i => i.status === "AVAILABLE").length}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t('inventory.availableToSell')}</p>
+                  <p className="text-2xl font-bold">{availableCount}</p>
                 </div>
                 <div className="rounded-xl bg-success/10 p-3">
                   <ShoppingCart className="h-6 w-6 text-success" />
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {isUrdu ? 'غیر فروخت شدہ پلاٹ جو فروخت کے لیے دستیاب ہیں' : 'Unsold plots available to sell'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card
+            className="border-l-4 border-l-warning cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setSelectedCard('pendingReservation')}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('inventory.pendingReservationPlot')}</p>
+                  <p className="text-2xl font-bold">{pendingCount}</p>
+                </div>
+                <div className="rounded-xl bg-warning/10 p-3">
+                  <MapPin className="h-6 w-6 text-warning" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {isUrdu ? 'بائعہ فارم زیرِ منظوری' : 'Biyana form pending for approval'}
+              </p>
             </CardContent>
           </Card>
           <Card
             className="border-l-4 border-l-accent cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setSelectedCard('reserved')}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('inventory.reservedPlot')}</p>
+                  <p className="text-2xl font-bold">{reservedCount}</p>
+                </div>
+                <div className="rounded-xl bg-accent/20 p-3">
+                  <MapPin className="h-6 w-6" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {isUrdu ? 'بائعہ فارم منظور' : 'Biyana form approved'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card
+            className="border-l-4 border-l-primary cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => setSelectedCard('totalValue')}
           >
             <CardContent className="pt-6">
@@ -305,10 +314,13 @@ export default function UnsoldInventory() {
                   <p className="text-sm text-muted-foreground">{t('inventory.totalValue')}</p>
                   <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
                 </div>
-                <div className="rounded-xl bg-accent/20 p-3">
-                  <MapPin className="h-6 w-6" />
+                <div className="rounded-xl bg-primary/10 p-3">
+                  <MapPin className="h-6 w-6 text-primary" />
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {isUrdu ? 'غیر فروخت شدہ انوینٹری کی کل مالیت' : 'Total value of unsold inventory'}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -317,40 +329,61 @@ export default function UnsoldInventory() {
         {!selectedCard && (
           <Card>
             <CardContent className="pt-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder={t('common.search')}
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="grid gap-4 md:grid-cols-3 flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder={t('common.search')}
+                      className="pl-10"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('inventory.status')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">
+                        {isUrdu ? 'سب' : 'All'}
+                      </SelectItem>
+                      <SelectItem value="AVAILABLE">
+                        {t('inventory.availableToSell')}
+                      </SelectItem>
+                      <SelectItem value="PENDING">
+                        {t('inventory.pendingReservationPlot')}
+                      </SelectItem>
+                      <SelectItem value="RESERVED">
+                        {t('inventory.reservedPlot')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedSize} onValueChange={setSelectedSize}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sizes.map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {size === "All Sizes" ? size : formatSize(size, t)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select value={selectedProject} onValueChange={setSelectedProject}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('inventory.project')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROJECTS_WITH_ALL.map((project) => (
-                      <SelectItem key={project} value={project}>
-                        {project === "All Projects" ? project : formatProjectName(project, t)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedSize} onValueChange={setSelectedSize}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sizes.map((size) => (
-                      <SelectItem key={size} value={size}>
-                        {size === "All Sizes" ? size : formatSize(size, t)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedStatus("ALL");
+                    setSelectedSize("All Sizes");
+                  }}
+                  title={isUrdu ? 'فلٹر ری سیٹ کریں' : 'Reset filters'}
+                >
+                  <FilterX className="h-4 w-4" />
+                </Button>
               </div>
             </CardContent>
           </Card>

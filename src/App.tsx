@@ -70,7 +70,7 @@ const App = () => {
             <Route path="/calculator" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><Calculator /></ProtectedRoute>} />
             <Route path="/inventory/sold" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><SoldInventory /></ProtectedRoute>} />
             <Route path="/inventory/unsold" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><UnsoldInventory /></ProtectedRoute>} />
-            <Route path="/inventory/add" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><AddInventory /></ProtectedRoute>} />
+            <Route path="/inventory/add" element={<ProtectedRoute allowedRoles={['ADMIN']}><AddInventory /></ProtectedRoute>} />
             <Route path="/forms/biyana" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><BiyanaForm /></ProtectedRoute>} />
             <Route path="/forms/sale-agreement" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><SaleAgreementForm /></ProtectedRoute>} />
             <Route path="/forms/transfer" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><TransferForm /></ProtectedRoute>} />

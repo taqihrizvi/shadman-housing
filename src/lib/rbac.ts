@@ -44,7 +44,7 @@ export const ROUTE_PERMISSIONS = {
   // Inventory
   '/inventory/sold': ['ADMIN', 'MANAGER'],
   '/inventory/unsold': ['ADMIN', 'MANAGER'],
-  '/inventory/add': ['ADMIN', 'MANAGER'],
+  '/inventory/add': ['ADMIN'],
 
   // Forms
   '/forms/biyana': ['ADMIN', 'MANAGER'],

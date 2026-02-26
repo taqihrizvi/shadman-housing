@@ -108,6 +108,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           titleKey: "inventory.addInventory",
           href: "/inventory/add",
           icon: <PackagePlus className="h-4 w-4" />,
+          roles: ['ADMIN'],
         },
       ],
     },
