@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, FileCheck, Wallet, Eye, Check, X, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, Clock, FileCheck, Wallet, Check, X, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import PrintableBiyanaFormSimple from "@/pages/forms/PrintableBiyanaFormSimple";
 import PrintableSaleAgreementForm from "@/pages/forms/PrintableSaleAgreementForm";
@@ -57,6 +57,8 @@ export default function Approvals() {
   const [isPrintPaymentOpen, setIsPrintPaymentOpen] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  // When opening view from Approve (tick), show Approve button in view dialog
+  const [approvalViewMode, setApprovalViewMode] = useState<{ type: 'biyana' | 'payment' | 'agreement' | 'transfer'; item: any } | null>(null);
 
   // Print handler functions
   const handlePrintBiyana = (biyana: any) => {
@@ -530,16 +532,26 @@ export default function Approvals() {
   const handleApprove = (item: any, type: 'biyana' | 'payment' | 'agreement' | 'transfer') => {
     setSelectedItem(item);
     setApprovalType(type);
-    setShowDialog(true);
+    setApprovalViewMode({ type, item });
+    if (type === 'biyana') handlePrintBiyana(item);
+    else if (type === 'agreement') handlePrintAgreement(item);
+    else if (type === 'transfer') handlePrintTransfer(item);
+    else if (type === 'payment') {
+      setSelectedPaymentId(item.id);
+      setIsPrintPaymentOpen(true);
+    }
   };
 
-  const handleReject = (item: any, type: 'biyana' | 'payment' | 'agreement' | 'transfer') => {
-    setSelectedItem(item);
-    setApprovalType(type);
-    setShowRejectDialog(true);
+  const closeViewAndClearApproval = () => {
+    setApprovalViewMode(null);
+    setIsPrintBiyanaOpen(false);
+    setIsPrintAgreementOpen(false);
+    setIsPrintTransferOpen(false);
+    setIsPrintPaymentOpen(false);
+    setSelectedPaymentId(null);
   };
 
-  const confirmApprove = () => {
+  const confirmApproveFromView = () => {
     if (selectedItem) {
       if (approvalType === 'biyana') {
         approveBiyanaMutation.mutate(selectedItem.id);
@@ -551,7 +563,15 @@ export default function Approvals() {
         approveAgreementMutation.mutate(selectedItem.id);
       }
     }
+    closeViewAndClearApproval();
   };
+
+  const handleReject = (item: any, type: 'biyana' | 'payment' | 'agreement' | 'transfer') => {
+    setSelectedItem(item);
+    setApprovalType(type);
+    setShowRejectDialog(true);
+  };
+
 
   const confirmReject = () => {
     if (selectedItem && rejectReason.trim()) {
@@ -775,19 +795,19 @@ export default function Approvals() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>{t('forms.date')}</TableHead>
                         <TableHead>{t('forms.formNumber')}</TableHead>
                         <TableHead>{t('forms.customer')}</TableHead>
                         <TableHead>{t('inventory.plotNo')}</TableHead>
                         <TableHead>{t('payments.amount')}</TableHead>
                         <TableHead>{t('approvals.submittedBy')}</TableHead>
-                        <TableHead>{t('forms.date')}</TableHead>
-                        <TableHead className="text-center">{t('common.view')}</TableHead>
                         <TableHead className="w-32">{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {pendingBiyanas.map((biyana: any) => (
                         <TableRow key={biyana.id}>
+                          <TableCell>{formatDate(biyana.date)}</TableCell>
                           <TableCell>{biyana.formNumber}</TableCell>
                           <TableCell>
                             <div>{biyana.customer?.name || '-'}</div>
@@ -800,18 +820,6 @@ export default function Approvals() {
                           <TableCell>
                             <div>{biyana.createdBy?.name || '-'}</div>
                             <div className="text-xs text-muted-foreground">{biyana.createdBy?.email || '-'}</div>
-                          </TableCell>
-                          <TableCell>{formatDate(biyana.date)}</TableCell>
-                          <TableCell className="text-center">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handlePrintBiyana(biyana)}
-                              className="h-8 w-8 p-0"
-                              title="View Print Preview"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
@@ -862,6 +870,7 @@ export default function Approvals() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Date</TableHead>
                         <TableHead>{t('forms.agreementNumber')}</TableHead>
                         <TableHead>{t('forms.customer')}</TableHead>
                         <TableHead>{t('inventory.plotNo')}</TableHead>
@@ -869,14 +878,13 @@ export default function Approvals() {
                         <TableHead>{t('forms.downPayment')}</TableHead>
                         <TableHead>{t('forms.installmentMonths')}</TableHead>
                         <TableHead>Submitted By</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-center">{t('common.view')}</TableHead>
                         <TableHead className="w-32">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {pendingAgreements.map((agreement: any) => (
                         <TableRow key={agreement.id}>
+                          <TableCell>{formatDate(agreement.agreementDate)}</TableCell>
                           <TableCell>{agreement.agreementNumber}</TableCell>
                           <TableCell>
                             <div>{agreement.customer?.name || '-'}</div>
@@ -900,18 +908,6 @@ export default function Approvals() {
                           <TableCell>
                             <div>{agreement.createdBy?.name || '-'}</div>
                             <div className="text-xs text-muted-foreground">{agreement.createdBy?.email || '-'}</div>
-                          </TableCell>
-                          <TableCell>{formatDate(agreement.agreementDate)}</TableCell>
-                          <TableCell className="text-center">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handlePrintAgreement(agreement)}
-                              className="h-8 w-8 p-0"
-                              title="View Print Preview"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
@@ -963,6 +959,7 @@ export default function Approvals() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>{t('forms.date')}</TableHead>
                           <TableHead>{t('forms.transferNumber')}</TableHead>
                           <TableHead>{t('forms.fromCustomer')}</TableHead>
                           <TableHead>{t('forms.toCustomer')}</TableHead>
@@ -970,14 +967,13 @@ export default function Approvals() {
                           <TableHead>{t('forms.transferFee')}</TableHead>
                           <TableHead>{t('forms.transferReason')}</TableHead>
                           <TableHead>{t('approvals.submittedBy')}</TableHead>
-                          <TableHead>{t('forms.date')}</TableHead>
-                          <TableHead className="text-center">{t('common.view')}</TableHead>
                           <TableHead className="w-32">{t('common.actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {pendingTransfers.map((transfer: any) => (
                           <TableRow key={transfer.id}>
+                            <TableCell>{formatDate(transfer.transferDate)}</TableCell>
                             <TableCell>{transfer.transferNumber}</TableCell>
                             <TableCell>
                               <div>{transfer.fromCustomer?.name || '-'}</div>
@@ -995,18 +991,6 @@ export default function Approvals() {
                             <TableCell>
                               <div>{transfer.createdBy?.name || '-'}</div>
                               <div className="text-xs text-muted-foreground">{transfer.createdBy?.email || '-'}</div>
-                            </TableCell>
-                            <TableCell>{formatDate(transfer.transferDate)}</TableCell>
-                            <TableCell className="text-center">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handlePrintTransfer(transfer)}
-                                className="h-8 w-8 p-0"
-                                title="View Print Preview"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
@@ -1058,6 +1042,7 @@ export default function Approvals() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>{t('forms.date')}</TableHead>
                         <TableHead>{t('vouchers.voucherNo')}</TableHead>
                         <TableHead>{t('vouchers.type')}</TableHead>
                         <TableHead>{t('forms.customer')}</TableHead>
@@ -1065,14 +1050,13 @@ export default function Approvals() {
                         <TableHead>{t('payments.amount')}</TableHead>
                         <TableHead>{t('payments.paymentMethod')}</TableHead>
                         <TableHead>{t('approvals.submittedBy')}</TableHead>
-                        <TableHead>{t('forms.date')}</TableHead>
-                        <TableHead className="text-center">{t('common.view')}</TableHead>
                         <TableHead className="w-32">{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {pendingPayments.map((payment: any) => (
                         <TableRow key={payment.id}>
+                          <TableCell>{formatDate(payment.date)}</TableCell>
                           <TableCell>{payment.voucherNo}</TableCell>
                           <TableCell>{formatEnum(payment.type)}</TableCell>
                           <TableCell>
@@ -1093,18 +1077,6 @@ export default function Approvals() {
                           <TableCell>
                             <div>{payment.createdBy?.name || '-'}</div>
                             <div className="text-xs text-muted-foreground">{payment.createdBy?.email || '-'}</div>
-                          </TableCell>
-                          <TableCell>{formatDate(payment.date)}</TableCell>
-                          <TableCell className="text-center">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handlePrintPayment(payment)}
-                              className="h-8 w-8 p-0"
-                              title="View Print Preview"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
@@ -1136,151 +1108,6 @@ export default function Approvals() {
             </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Approve Dialog */}
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {t('approvals.approve')}{' '}
-                {approvalType === 'biyana'
-                  ? t('forms.biyanaForm')
-                  : approvalType === 'transfer'
-                    ? t('forms.transferForm')
-                    : approvalType === 'agreement'
-                      ? t('forms.saleAgreement')
-                      : t('vouchers.title')}
-              </DialogTitle>
-              <DialogDescription>
-                {t('approvals.confirmApprove')}
-              </DialogDescription>
-            </DialogHeader>
-            {selectedItem && (
-              <div className="space-y-4">
-                <div>
-                  <div className="text-sm font-medium">
-                    {approvalType === 'biyana'
-                      ? t('forms.formNumber')
-                      : approvalType === 'transfer'
-                        ? t('forms.transferNumber')
-                        : approvalType === 'agreement'
-                          ? t('forms.agreementNumber')
-                          : t('vouchers.voucherNo')}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {approvalType === 'biyana'
-                      ? selectedItem.formNumber
-                      : approvalType === 'transfer'
-                        ? selectedItem.transferNumber
-                        : approvalType === 'agreement'
-                          ? selectedItem.agreementNumber
-                          : selectedItem.voucherNo}
-                  </div>
-                </div>
-                {approvalType === 'transfer' ? (
-                  <>
-                    <div>
-                      <div className="text-sm font-medium">{t('forms.fromCustomer')}</div>
-                      <div className="text-sm text-muted-foreground">{selectedItem.fromCustomer?.name}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{t('forms.toCustomer')}</div>
-                      <div className="text-sm text-muted-foreground">{selectedItem.toCustomer?.name}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{t('inventory.plotNo')}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {selectedItem.plot?.plotNo} - {selectedItem.plot?.project ? formatProjectName(selectedItem.plot.project) : ''}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {selectedItem.customer && (
-                      <div>
-                        <div className="text-sm font-medium">{t('forms.customer')}</div>
-                        <div className="text-sm text-muted-foreground">{selectedItem.customer?.name}</div>
-                      </div>
-                    )}
-                    {selectedItem.plot && (
-                      <div>
-                        <div className="text-sm font-medium">{t('inventory.plotNo')}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {selectedItem.plot?.plotNo} {selectedItem.plot?.project ? `- ${formatProjectName(selectedItem.plot.project)}` : ''}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-                <div>
-                  <div className="text-sm font-medium">
-                    {approvalType === 'transfer' ? t('forms.transferFee') : t('payments.amount')}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {formatCurrency(
-                      approvalType === 'biyana'
-                        ? selectedItem.tokenAmount
-                        : approvalType === 'transfer'
-                          ? selectedItem.transferFee
-                          : approvalType === 'agreement'
-                            ? selectedItem.downPayment
-                            : selectedItem.amount
-                    )}
-                  </div>
-                </div>
-                {approvalType === 'payment' && (
-                  <>
-                    {selectedItem.formType && (
-                      <div>
-                        <div className="text-sm font-medium">{t('payments.paymentType')}</div>
-                        <div className="text-sm text-muted-foreground">{formatPaymentType(selectedItem.formType)}</div>
-                      </div>
-                    )}
-                    {selectedItem.paymentMethod === 'BANK_DEPOSIT' && (
-                      <>
-                        {selectedItem.bankName && (
-                          <div>
-                            <div className="text-sm font-medium">{t('vouchers.bankName')}</div>
-                            <div className="text-sm text-muted-foreground">{formatEnum(selectedItem.bankName)}</div>
-                          </div>
-                        )}
-                        {selectedItem.accountNumber && (
-                          <div>
-                            <div className="text-sm font-medium">Account Number</div>
-                            <div className="text-sm text-muted-foreground">{selectedItem.accountNumber}</div>
-                          </div>
-                        )}
-                        {selectedItem.slipNumber && (
-                          <div>
-                            <div className="text-sm font-medium">Slip Number</div>
-                            <div className="text-sm text-muted-foreground">{selectedItem.slipNumber}</div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-                <div>
-                  <div className="text-sm font-medium">{t('forms.date')}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {formatDate(
-                      approvalType === 'transfer'
-                        ? selectedItem.transferDate
-                        : approvalType === 'agreement'
-                          ? selectedItem.agreementDate
-                          : selectedItem.date
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            <DialogFooter>
-              <Button onClick={confirmApprove}>
-                {t('approvals.confirmApproval')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {/* Reject Dialog */}
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
@@ -1323,7 +1150,10 @@ export default function Approvals() {
 
 
         {/* Biyana Print Dialog */}
-        <Dialog open={isPrintBiyanaOpen} onOpenChange={setIsPrintBiyanaOpen}>
+        <Dialog open={isPrintBiyanaOpen} onOpenChange={(open) => {
+          setIsPrintBiyanaOpen(open);
+          if (!open) setApprovalViewMode(null);
+        }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <VisuallyHidden>
               <DialogTitle>Biyana Form Preview</DialogTitle>
@@ -1335,11 +1165,20 @@ export default function Approvals() {
                 hidePrintButton={true}
               />
             )}
+            {approvalViewMode?.type === 'biyana' && (
+              <DialogFooter className="border-t pt-4 mt-4">
+                <Button variant="outline" onClick={closeViewAndClearApproval}>{t('common.cancel')}</Button>
+                <Button onClick={confirmApproveFromView}>{t('approvals.confirmApproval')}</Button>
+              </DialogFooter>
+            )}
           </DialogContent>
         </Dialog>
 
         {/* Sale Agreement Print Dialog */}
-        <Dialog open={isPrintAgreementOpen} onOpenChange={setIsPrintAgreementOpen}>
+        <Dialog open={isPrintAgreementOpen} onOpenChange={(open) => {
+          setIsPrintAgreementOpen(open);
+          if (!open) setApprovalViewMode(null);
+        }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <VisuallyHidden>
               <DialogTitle>Sale Agreement Preview</DialogTitle>
@@ -1351,11 +1190,20 @@ export default function Approvals() {
                 hidePrintButton={true}
               />
             )}
+            {approvalViewMode?.type === 'agreement' && (
+              <DialogFooter className="border-t pt-4 mt-4">
+                <Button variant="outline" onClick={closeViewAndClearApproval}>{t('common.cancel')}</Button>
+                <Button onClick={confirmApproveFromView}>{t('approvals.confirmApproval')}</Button>
+              </DialogFooter>
+            )}
           </DialogContent>
         </Dialog>
 
         {/* Transfer Print Dialog */}
-        <Dialog open={isPrintTransferOpen} onOpenChange={setIsPrintTransferOpen}>
+        <Dialog open={isPrintTransferOpen} onOpenChange={(open) => {
+          setIsPrintTransferOpen(open);
+          if (!open) setApprovalViewMode(null);
+        }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <VisuallyHidden>
               <DialogTitle>Transfer Form Preview</DialogTitle>
@@ -1368,13 +1216,22 @@ export default function Approvals() {
                 isApprovalView={true}
               />
             )}
+            {approvalViewMode?.type === 'transfer' && (
+              <DialogFooter className="border-t pt-4 mt-4">
+                <Button variant="outline" onClick={closeViewAndClearApproval}>{t('common.cancel')}</Button>
+                <Button onClick={confirmApproveFromView}>{t('approvals.confirmApproval')}</Button>
+              </DialogFooter>
+            )}
           </DialogContent>
         </Dialog>
 
         {/* Payment Voucher Print Dialog */}
         <Dialog open={isPrintPaymentOpen} onOpenChange={(open) => {
           setIsPrintPaymentOpen(open);
-          if (!open) setSelectedPaymentId(null);
+          if (!open) {
+            setSelectedPaymentId(null);
+            setApprovalViewMode(null);
+          }
         }}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
             <VisuallyHidden>
@@ -1383,11 +1240,14 @@ export default function Approvals() {
             </VisuallyHidden>
             {voucherData && (
               <div className="p-6">
-                <PrintableVoucherContent voucher={voucherData} onClose={() => {
-                  setIsPrintPaymentOpen(false);
-                  setSelectedPaymentId(null);
-                }} />
+                <PrintableVoucherContent voucher={voucherData} onClose={closeViewAndClearApproval} />
               </div>
+            )}
+            {approvalViewMode?.type === 'payment' && voucherData && (
+              <DialogFooter className="border-t pt-4 mt-4 px-6 pb-6">
+                <Button variant="outline" onClick={closeViewAndClearApproval}>{t('common.cancel')}</Button>
+                <Button onClick={confirmApproveFromView}>{t('approvals.confirmApproval')}</Button>
+              </DialogFooter>
             )}
           </DialogContent>
         </Dialog>

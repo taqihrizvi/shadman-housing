@@ -23,7 +23,6 @@ const seedData = async () => {
 
     // Hash password
     const hashedPassword = await bcrypt.hash('admin123', 12);
-    const agentPassword = await bcrypt.hash('agent123', 12);
 
     // Create admin user
     const admin = await prisma.user.create({
@@ -35,37 +34,6 @@ const seedData = async () => {
       },
     });
     console.log('👤 Admin user created');
-
-    // Create agents
-    const ali = await prisma.user.create({
-      data: {
-        name: 'Ali Hassan',
-        email: 'ali@shadmanhousing.com',
-        password: agentPassword,
-        role: 'AGENT',
-      },
-    });
-
-    const usman = await prisma.user.create({
-      data: {
-        name: 'Usman Shah',
-        email: 'usman@shadmanhousing.com',
-        password: agentPassword,
-        role: 'AGENT',
-      },
-    });
-
-    const kamran = await prisma.user.create({
-      data: {
-        name: 'Kamran Iqbal',
-        email: 'kamran@shadmanhousing.com',
-        password: agentPassword,
-        role: 'AGENT',
-      },
-    });
-
-    const agents = [ali, usman, kamran];
-    console.log('👥 Agents created');
 
     // Create customers
     const customer1 = await prisma.customer.create({
@@ -123,13 +91,11 @@ const seedData = async () => {
       let status = 'AVAILABLE';
       let buyerId = null;
       let soldDate = null;
-      let agentId = null;
 
       // Make 70% of plots sold
       if (Math.random() > 0.3) {
         status = 'SOLD';
         buyerId = customers[Math.floor(Math.random() * customers.length)].id;
-        agentId = agents[Math.floor(Math.random() * agents.length)].id;
         soldDate = new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1);
       }
 
@@ -141,7 +107,6 @@ const seedData = async () => {
           price: basePrices[size] + Math.floor(Math.random() * 500000),
           status,
           buyerId,
-          agentId,
           soldDate,
           description: `Beautiful ${size.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())} plot in ${project.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}`,
           createdById: admin.id,
@@ -154,8 +119,6 @@ const seedData = async () => {
     console.log('\n📝 Login Credentials:');
     console.log('Email: admin@shadmanhousing.com');
     console.log('Password: admin123');
-    console.log('\nAgent Credentials:');
-    console.log('Email: ali@shadmanhousing.com | Password: agent123');
 
     process.exit(0);
   } catch (error) {

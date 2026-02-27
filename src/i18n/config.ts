@@ -82,7 +82,6 @@ const resources = {
         createdAt: 'Created At',
         actions: 'Actions',
         buyer: 'Buyer',
-        agent: 'Agent',
       },
 
       // Forms
@@ -692,7 +691,6 @@ const resources = {
         totalInvestment: 'کل سرمایہ کاری',
         createdAt: 'تخلیق کی تاریخ',
         actions: 'اقدامات', buyer: 'خریدار',
-        agent: 'ایجنٹ',
       },
 
       // Forms

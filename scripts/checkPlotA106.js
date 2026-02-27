@@ -12,7 +12,6 @@ async function checkPlotA106() {
       where: { plotNo: 'A-106' },
       include: {
         buyer: true,
-        agent: true,
         createdBy: true
       }
     });

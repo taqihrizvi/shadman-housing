@@ -562,10 +562,6 @@ export default function SoldInventory() {
                       <p className="text-sm text-muted-foreground">Buyer</p>
                       <p className="font-semibold">{toTitleCase(selectedPlot.buyer?.name || "N/A")}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Agent</p>
-                      <p className="font-semibold">{selectedPlot.agent?.name || "N/A"}</p>
-                    </div>
                   </div>
                 </div>
 

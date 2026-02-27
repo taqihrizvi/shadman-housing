@@ -40,9 +40,6 @@ router.get('/', protect, async (req, res) => {
         buyer: {
           select: { name: true, cnic: true, phone: true },
         },
-        agent: {
-          select: { name: true, email: true },
-        },
         biyanaForms: {
           select: { 
             tokenAmount: true, 
@@ -100,9 +97,6 @@ router.get('/:id', protect, async (req, res) => {
       include: {
         buyer: {
           select: { name: true, cnic: true, phone: true, email: true, address: true },
-        },
-        agent: {
-          select: { name: true, email: true },
         },
         createdBy: {
           select: { name: true },

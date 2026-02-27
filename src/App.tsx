@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useEffect } from "react";
 import { initInactivityTracker } from "./lib/inactivityTracker";
@@ -79,6 +79,7 @@ const App = () => {
             <Route path="/submitted-forms/transfer" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><ViewTransferForms /></ProtectedRoute>} />
             <Route path="/payments/record" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}><RecordPayment /></ProtectedRoute>} />
             <Route path="/vouchers/print/:id" element={<PrintableVoucher />} />
+            <Route path="/reports" element={<ProtectedRoute allowedRoles={['ADMIN']}><Navigate to="/reports/sales" replace /></ProtectedRoute>} />
             <Route path="/reports/sales" element={<ProtectedRoute allowedRoles={['ADMIN']}><SalesReport /></ProtectedRoute>} />
             <Route path="/reports/payment" element={<ProtectedRoute allowedRoles={['ADMIN']}><PaymentReport /></ProtectedRoute>} />
             <Route path="/reports/comparison" element={<ProtectedRoute allowedRoles={['ADMIN']}><ComparisonReport /></ProtectedRoute>} />
