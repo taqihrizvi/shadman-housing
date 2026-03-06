@@ -198,7 +198,7 @@ export default function PrintableSaleAgreementForm({ data, onClose, hidePrintBut
   const remainingBalance = duePayment;
 
   return (
-    <div className="bg-gray-50 max-h-screen overflow-auto print:max-h-none print:overflow-visible">
+    <div className={`bg-gray-50 print:max-h-none print:overflow-visible ${hidePrintButton ? '' : 'max-h-screen overflow-auto'}`}>
       {/* Print Controls - Hidden during print */}
       <div className="print:hidden sticky top-0 z-50 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">

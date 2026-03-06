@@ -170,9 +170,9 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
   };
 
   return (
-    <div className="bg-gray-50 max-h-screen overflow-auto print:max-h-none print:overflow-visible print:bg-white">
+    <div className={`bg-gray-50 print:max-h-none print:overflow-visible print:bg-white ${hidePrintButton ? '' : 'max-h-screen overflow-auto'}`}>
       {/* Print Controls - Hidden during print */}
-      <div className="print:hidden sticky top-0 z-50 bg-white border-b shadow-sm">
+      <div className="print:hidden">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t('printableForms.biyanaReceipt')} - {data.formNumber || data.plot.plotNo}</h2>
           <div className="flex gap-2 items-center">
@@ -180,11 +180,6 @@ export default function PrintableBiyanaForm({ data, onClose, hidePrintButton }: 
               <Button onClick={handlePrint} variant="outline">
                 <Printer className="mr-2 h-4 w-4" />
                 {t('printableForms.printDocument')}
-              </Button>
-            )}
-            {onClose && (
-              <Button onClick={onClose} variant="ghost" size="icon">
-                <X className="h-5 w-5" />
               </Button>
             )}
           </div>
